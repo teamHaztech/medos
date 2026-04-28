@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 11px;
+        line-height: 1.6;
+        color: #1e293b;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px;
+    }
+    h1 {
+        font-size: 28px;
+        color: #1e40af;
+        border-bottom: 3px solid #1e40af;
+        padding-bottom: 8px;
+        margin-top: 35px;
+    }
+    h2 {
+        font-size: 20px;
+        color: #1e40af;
+        border-bottom: 1px solid #cbd5e1;
+        padding-bottom: 5px;
+        margin-top: 30px;
+    }
+    h3 {
+        font-size: 15px;
+        color: #334155;
+        margin-top: 20px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+        font-size: 10px;
+    }
+    th {
+        background: #1e293b;
+        color: white;
+        padding: 8px 10px;
+        text-align: left;
+        font-weight: 600;
+    }
+    td {
+        padding: 6px 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    tr:nth-child(even) {
+        background: #f8fafc;
+    }
+    code {
+        background: #f1f5f9;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-family: 'SF Mono', Monaco, monospace;
+    }
+    pre {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 9px;
+        line-height: 1.5;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    pre code {
+        background: none;
+        color: inherit;
+        padding: 0;
+    }
+    hr {
+        border: none;
+        border-top: 2px solid #e2e8f0;
+        margin: 25px 0;
+    }
+    strong { color: #0f172a; }
+</style>
+</head>
+<body>
+<div style="text-align:center; padding:80px 0 60px 0;">
+    <div style="font-size:48px; font-weight:800; color:#1e40af; margin-bottom:10px;">MedOS</div>
+    <div style="font-size:18px; color:#64748b; margin-bottom:40px;">Hospital Operating System</div>
+    <div style="font-size:14px; color:#94a3b8;">Complete System Lifecycle Document</div>
+    <div style="font-size:12px; color:#94a3b8; margin-top:10px;">Version 1.0 | March 2026</div>
+    <div style="font-size:12px; color:#94a3b8; margin-top:40px;">Built by <strong style="color:#1e40af;">Haztech</strong> Digital Innovation Agency</div>
+</div>
+<hr>
+<h1 id="medos-hospital-operating-system">MedOS - Hospital Operating System</h1>
+<h2 id="complete-system-lifecycle-document">Complete System Lifecycle Document</h2>
+<p><strong>Version:</strong> 1.0
+<strong>Date:</strong> March 2026
+<strong>Built by:</strong> Haztech Digital Innovation Agency</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#1-system-overview">System Overview</a></li>
+<li><a href="#2-complete-patient-journey">Complete Patient Journey</a></li>
+<li><a href="#3-module-architecture">Module Architecture</a></li>
+<li><a href="#4-detailed-lifecycle-flow">Detailed Lifecycle Flow</a></li>
+<li><a href="#5-background-processes">Background Processes</a></li>
+<li><a href="#6-data-flow-summary">Data Flow Summary</a></li>
+<li><a href="#7-api-reference">API Reference</a></li>
+<li><a href="#8-web-pages-reference">Web Pages Reference</a></li>
+<li><a href="#9-database-schema">Database Schema</a></li>
+<li><a href="#10-tech-stack">Tech Stack</a></li>
+</ol>
+<hr />
+<h2 id="1-system-overview">1. System Overview</h2>
+<p>MedOS is an AI-native Hospital Operating System that automates the entire patient journey from first WhatsApp message to long-term retention. It replaces 80% of reception interactions with AI while keeping doctors in full control.</p>
+<p><strong>Key Numbers:</strong>
+- 14 backend modules (87 PHP files)
+- 17 database tables
+- 73 API + web routes
+- 25 tested endpoints (all passing)
+- 11 web pages (all working)
+- 5 artisan commands + scheduled jobs
+- 4 event-driven listeners</p>
+<p><strong>Target Markets:</strong> India (primary), UAE (secondary)
+<strong>Primary Interface:</strong> WhatsApp (500M+ users in India, no app download needed)
+<strong>Languages:</strong> English, Hindi/Hinglish, Arabic</p>
+<hr />
+<h2 id="2-complete-patient-journey">2. Complete Patient Journey</h2>
+<p>The patient journey has 13 stages, each mapped to actual code modules:</p>
+<h3 id="stage-1-first-contact">Stage 1: First Contact</h3>
+<p>Patient sends a message via WhatsApp, phone call, web, or walks into the kiosk.</p>
+<p><strong>Code Path:</strong> <code>WhatsApp Webhook</code> -&gt; <code>ProcessIncomingMessage Job</code> -&gt; <code>ConversationManager</code></p>
+<h3 id="stage-2-ai-receptionist">Stage 2: AI Receptionist</h3>
+<p>The AI identifies/creates the patient, detects language, and begins conversational intake.</p>
+<p><strong>Code Path:</strong> <code>ConversationManager::handleIncomingMessage()</code> -&gt; <code>LanguageDetector</code> -&gt; <code>AIService</code></p>
+<h3 id="stage-3-ai-intake">Stage 3: AI Intake</h3>
+<p>Conversational extraction of symptoms (not a form). AI asks follow-up questions naturally.</p>
+<p><strong>Code Path:</strong> <code>IntakeHandler::handle()</code> -&gt; <code>AIService::extractIntakeData()</code> -&gt; Structured JSON output</p>
+<h3 id="stage-4-smart-triage">Stage 4: Smart Triage</h3>
+<p>Three-layer safety-first scoring: Rules (always win) -&gt; Clinical (ESI-adapted) -&gt; ML (can only increase)</p>
+<p><strong>Code Path:</strong> <code>TriageService::assess()</code> -&gt; <code>RuleEngine</code> + <code>ClinicalScorer</code> -&gt; <code>SpecialtyMapper</code></p>
+<h3 id="stage-5-insurance-pre-flight">Stage 5: Insurance Pre-Flight</h3>
+<p>Verifies eligibility, coverage, and co-pay BEFORE the appointment is booked.</p>
+<p><strong>Code Path:</strong> <code>InsuranceService::verifyEligibility()</code> -&gt; <code>UAEDHAProvider</code> / <code>IndiaTPAProvider</code></p>
+<h3 id="stage-6-smart-scheduling">Stage 6: Smart Scheduling</h3>
+<p>Constraint-optimization: matches patient to optimal doctor slot based on urgency, preference, load balance.</p>
+<p><strong>Code Path:</strong> <code>SchedulingService::findOptimalSlots()</code> -&gt; <code>SlotGenerator::generate()</code> -&gt; Score + rank</p>
+<h3 id="stage-7-booking-confirmation">Stage 7: Booking Confirmation</h3>
+<p>Creates appointment, generates token, sends WhatsApp confirmation with QR code.</p>
+<p><strong>Code Path:</strong> <code>BookingHandler::confirmBooking()</code> -&gt; <code>SendWhatsAppMessage Job</code> -&gt; <code>TemplateManager</code></p>
+<h3 id="stage-8-reminders">Stage 8: Reminders</h3>
+<p>Automated reminders at 24h and 2h before appointment.</p>
+<p><strong>Code Path:</strong> <code>medos:send-reminders</code> (cron every 15 min) -&gt; <code>SendAppointmentReminder Job</code></p>
+<h3 id="stage-9-arrival-check-in">Stage 9: Arrival &amp; Check-In</h3>
+<p>Patient checks in via WhatsApp geo-fence, kiosk QR scan, or token entry.</p>
+<p><strong>Code Path:</strong> <code>KioskController::processCheckin()</code> or <code>AppointmentController::checkIn()</code> -&gt; <code>QueueService::addToQueue()</code></p>
+<h3 id="stage-10-queue-management">Stage 10: Queue Management</h3>
+<p>Real-time priority queue with weighted scoring and active reshuffling.</p>
+<p><strong>Code Path:</strong> <code>QueueService::reshuffleQueue()</code> -&gt; <code>EvaluateQueue Job</code> (every 60s) -&gt; WhatsApp notifications</p>
+<p><strong>Priority Formula:</strong></p>
+<pre><code>score = urgency(0.40) + wait_time(0.25) + appointment(0.20) + age(0.10) + vip(0.05)
+</code></pre>
+<p>Starvation prevention: +0.01 per minute waited, auto-escalate at 45 minutes.</p>
+<h3 id="stage-11-consultation">Stage 11: Consultation</h3>
+<p>Doctor sees AI-generated briefing, manages queue, writes SOAP notes, orders labs/pharmacy.</p>
+<p><strong>Code Path:</strong> <code>BriefingService::generateBriefing()</code> -&gt; <code>DoctorDashboardController</code> -&gt; <code>completeConsultation()</code></p>
+<h3 id="stage-12-post-consultation-cascade">Stage 12: Post-Consultation Cascade</h3>
+<p>Event-driven: auto-billing, insurance claim, lab/pharmacy routing, follow-up scheduling.</p>
+<p><strong>Code Path:</strong> <code>EncounterCompleted Event</code> -&gt; <code>EncounterCompletedListener</code> triggers:
+- <code>BillingService::generateBill()</code>
+- <code>InsuranceService::submitClaim()</code>
+- <code>EngagementService::scheduleFollowUpReminder()</code>
+- <code>SendFeedbackRequest Job</code> (2h delay)</p>
+<h3 id="stage-13-retention-re-engagement">Stage 13: Retention &amp; Re-engagement</h3>
+<p>Medication reminders, follow-up scheduling, feedback collection, chronic patient re-engagement.</p>
+<p><strong>Code Path:</strong> <code>medos:re-engage</code> (weekly cron) -&gt; <code>EngagementService::checkReEngagement()</code></p>
+<hr />
+<h2 id="3-module-architecture">3. Module Architecture</h2>
+<pre><code>medos/app/Modules/
+|-- Core/              # Models, Enums, Traits, Events, Services
+|-- Auth/              # Sanctum auth, login, hospital setup
+|-- AIReceptionist/    # Conversation state machine, AI service, prompts
+|-- WhatsApp/          # Meta/Gupshup API, webhooks, message jobs
+|-- Triage/            # Rule engine, clinical scorer, specialty mapper
+|-- Appointment/       # Smart scheduling, slot generator
+|-- Queue/             # Priority queue, reshuffle, events
+|-- Insurance/         # UAE DHA + India TPA, eligibility, claims
+|-- Billing/           # Auto bill generation, payments
+|-- Patient/           # Patient service, search, timeline
+|-- DoctorAssist/      # Pre-consultation briefings
+|-- Engagement/        # Reminders, feedback, re-engagement
+|-- Multilingual/      # Language detection, medical dictionary
+|-- Analytics/         # KPIs, revenue, doctor performance
+|-- Admin/             # Dashboard, RBAC middleware
+</code></pre>
+<h3 id="module-details">Module Details</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Files</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core</td>
+<td>15</td>
+<td>Hospital, Staff, AuditLog models; 8 enums; HasUuid, BelongsToHospital, Auditable traits</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>3</td>
+<td>Sanctum token auth with role-based abilities</td>
+</tr>
+<tr>
+<td>AIReceptionist</td>
+<td>11</td>
+<td>Conversation state machine (10 states), dual-provider AI (Claude/GPT), emergency detection</td>
+</tr>
+<tr>
+<td>WhatsApp</td>
+<td>6</td>
+<td>Meta Cloud API + Gupshup, webhook handling, async message jobs, 7 templates</td>
+</tr>
+<tr>
+<td>Triage</td>
+<td>5</td>
+<td>8 hard-coded clinical rules, ESI-adapted scorer (60+ complaints), multilingual keywords</td>
+</tr>
+<tr>
+<td>Appointment</td>
+<td>4</td>
+<td>Constraint-based scheduling, dynamic slot sizing, overbooking intelligence</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>5</td>
+<td>Weighted priority scoring, starvation prevention, real-time reshuffling</td>
+</tr>
+<tr>
+<td>Insurance</td>
+<td>7</td>
+<td>UAE DHA + India TPA providers, eligibility cache, pre-auth, claim lifecycle</td>
+</tr>
+<tr>
+<td>Billing</td>
+<td>3</td>
+<td>Auto bill generation from encounters, insurance coverage, payment links</td>
+</tr>
+<tr>
+<td>Patient</td>
+<td>3</td>
+<td>Find/create by phone, fuzzy search, merged timeline, patient merge</td>
+</tr>
+<tr>
+<td>DoctorAssist</td>
+<td>2</td>
+<td>Pre-consultation briefing from patient graph</td>
+</tr>
+<tr>
+<td>Engagement</td>
+<td>3</td>
+<td>Follow-up reminders, feedback (alert if &lt; 3), chronic re-engagement</td>
+</tr>
+<tr>
+<td>Multilingual</td>
+<td>3</td>
+<td>Script detection, Hinglish detection, 60+ medical terms in EN/HI/AR</td>
+</tr>
+<tr>
+<td>Analytics</td>
+<td>2</td>
+<td>Dashboard KPIs, hourly flow, doctor metrics, AI metrics, revenue breakdown</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-detailed-lifecycle-flow">4. Detailed Lifecycle Flow</h2>
+<h3 id="phase-1-patient-first-contact-via-whatsapp">Phase 1: Patient First Contact via WhatsApp</h3>
+<pre><code>Patient WhatsApp Message
+    |
+    v
+WhatsApp Webhook (POST /api/v1/whatsapp/webhook)
+    |-- WebhookController@handle
+    |-- Parse Meta payload (entry[].changes[].value.messages[])
+    |-- Extract: phone, message_type, content, message_id
+    |-- Return 200 immediately
+    |
+    v
+ProcessIncomingMessage Job (queued)
+    |-- Mark message as read (blue ticks)
+    |-- Resolve hospital context
+    |-- Download media if image/document
+    |
+    v
+ConversationManager::handleIncomingMessage()
+    |-- Find or create Patient (by phone number)
+    |-- Find active Conversation or create new one
+    |-- Run EmergencyDetector (fast, no AI, keyword-based)
+    |       |-- English: &quot;chest pain&quot;, &quot;can't breathe&quot;, &quot;unconscious&quot;
+    |       |-- Hindi: &quot;seene mein dard&quot;, &quot;saans nahi&quot;, &quot;behosh&quot;
+    |       |-- Arabic: specific Arabic keywords
+    |       |-- If emergency detected -&gt; EMERGENCY FLOW
+    |
+    v
+processState() - State Machine Router
+    |
+    |-- State: GREETING
+    |       |-- LanguageDetector::detect() (script + keyword analysis)
+    |       |-- AIService::extractIntent() -&gt; BookAppointment/Cancel/Status/etc
+    |       |-- SystemPrompts::greeting() -&gt; AI response
+    |       |-- Transition -&gt; INTAKE
+    |
+    |-- State: INTAKE
+    |       |-- IntakeHandler::handle()
+    |       |-- AI extracts conversationally (not a form)
+    |       |-- Output: {chief_complaint, duration, severity, who}
+    |       |-- isIntakeComplete()? -&gt; Transition -&gt; TRIAGE
+    |
+    |-- State: TRIAGE
+    |       |-- TriageService::assess()
+    |       |-- Layer 1: RuleEngine (8 rules, hard-coded, safety-first)
+    |       |-- Layer 2: ClinicalScorer (ESI-adapted, 60+ complaint map)
+    |       |-- Layer 3: ML (optional, can only increase score)
+    |       |-- Output: score (0-1), classification, specialty
+    |       |-- Transition -&gt; INSURANCE_CHECK
+    |
+    |-- State: INSURANCE_CHECK
+    |       |-- InsuranceService::verifyEligibility()
+    |       |-- Check Redis cache -&gt; API call -&gt; Log transaction
+    |       |-- Output: eligible, copay, coverage
+    |       |-- Transition -&gt; BOOKING
+    |
+    |-- State: BOOKING
+    |       |-- BookingHandler::handle()
+    |       |-- SchedulingService::findOptimalSlots()
+    |       |-- Present top 3 options to patient
+    |       |-- Patient selects -&gt; confirmBooking()
+    |       |-- Create Encounter + Appointment + Token
+    |       |-- Transition -&gt; CONFIRMATION
+    |
+    |-- State: CONFIRMATION
+    |       |-- Send WhatsApp confirmation (template message)
+    |       |-- Schedule reminders (24h, 2h)
+    |       |-- Submit pre-auth if needed
+    |       |-- Transition -&gt; COMPLETED
+</code></pre>
+<h3 id="phase-2-patient-arrival-check-in">Phase 2: Patient Arrival &amp; Check-In</h3>
+<pre><code>Patient Arrives at Hospital
+    |
+    |-- Option A: WhatsApp Geo-fence Check-in
+    |       |-- Auto-prompt when within 200m
+    |       |-- Patient taps &quot;Check In&quot;
+    |
+    |-- Option B: Kiosk Check-in
+    |       |-- Scan QR from WhatsApp confirmation
+    |       |-- Or enter token number / phone
+    |       |-- KioskController::processCheckin()
+    |
+    |-- Option C: Walk-in (no prior booking)
+    |       |-- Kiosk initiates full AI intake
+    |       |-- Or scan QR to continue on WhatsApp
+    |
+    v
+Appointment::checkIn()
+    |-- Update status -&gt; checked_in
+    |-- Set check_in_time
+    |
+    v
+QueueService::addToQueue()
+    |-- Calculate priority score (weighted formula)
+    |-- Generate token (e.g., &quot;GEN-007&quot;)
+    |-- Set initial position
+    |-- Notify patient: position + estimated wait
+</code></pre>
+<h3 id="phase-3-queue-consultation">Phase 3: Queue &amp; Consultation</h3>
+<pre><code>Queue Engine (runs every 60 seconds)
+    |
+    v
+EvaluateQueue Job
+    |-- For each doctor with active queue:
+    |       |-- QueueService::reshuffleQueue()
+    |       |-- Recalculate all priorities
+    |       |-- Detect no-shows (5 min timeout)
+    |       |-- Update estimated wait times
+    |
+    |-- If positions changed:
+    |       |-- QueueUpdated Event -&gt; QueueUpdateNotifier
+    |       |-- WhatsApp: &quot;You're now #2, wait ~8 min&quot;
+    |
+    |-- Doctor clicks &quot;Call Next&quot;:
+    |       |-- QueueService::callNext()
+    |       |-- PatientCalled Event -&gt; PatientCalledNotifier
+    |       |-- WhatsApp: &quot;Dr. Meera is ready. Room 204&quot;
+
+Doctor Consultation
+    |
+    v
+Doctor Dashboard (/doctor)
+    |-- Left: Queue panel (token, name, complaint, urgency)
+    |-- Right: Patient briefing (BriefingService)
+    |       |-- Demographics + language
+    |       |-- Chief complaint + intake data
+    |       |-- Triage score + classification
+    |       |-- Previous 5 encounters
+    |       |-- Allergies + medications (highlighted)
+    |       |-- Insurance status + coverage
+    |
+    |-- During consultation:
+    |       |-- SOAP notes form
+    |       |-- Quick-add orders (Lab/Pharmacy/Imaging)
+    |
+    |-- &quot;Complete Consultation&quot; clicked:
+    |       |-- Save SOAP notes (encrypted)
+    |       |-- Create orders
+    |       |-- Encounter status -&gt; completed
+    |       |-- Fire EncounterCompleted Event
+</code></pre>
+<h3 id="phase-4-post-consultation-cascade">Phase 4: Post-Consultation Cascade</h3>
+<pre><code>EncounterCompleted Event
+    |
+    v
+EncounterCompletedListener (queued)
+    |
+    |-- 1. AUTO-BILLING
+    |       |-- BillingService::generateBill()
+    |       |-- Consultation fee (by department)
+    |       |-- + Lab charges + Pharmacy charges
+    |       |-- Apply insurance coverage
+    |       |-- Calculate patient payable
+    |       |-- Send bill via WhatsApp with payment link
+    |
+    |-- 2. INSURANCE CLAIM
+    |       |-- InsuranceService::submitClaim()
+    |       |-- Auto-assemble: ICD-10 + CPT codes + docs
+    |       |-- Submit to DHA/TPA portal
+    |       |-- Track: submitted -&gt; adjudicated -&gt; paid/denied
+    |
+    |-- 3. FOLLOW-UP
+    |       |-- If follow_up_date set:
+    |       |-- Schedule reminder (24h before)
+    |       |-- medos:process-follow-ups handles daily
+    |
+    |-- 4. FEEDBACK
+    |       |-- SendFeedbackRequest Job (delayed 2 hours)
+    |       |-- WhatsApp: &quot;Rate your visit 1-5&quot;
+    |       |-- If rating &lt; 3: alert admin + callback offer
+    |
+    |-- 5. LAB/PHARMACY ROUTING
+    |       |-- If lab ordered: &quot;Go to Lab, Floor 3&quot;
+    |       |-- Results -&gt; patient graph -&gt; doctor review
+    |       |-- If pharmacy: Rx sent, &quot;Ready in 8 min&quot;
+</code></pre>
+<h3 id="phase-5-long-term-engagement">Phase 5: Long-term Engagement</h3>
+<pre><code>Ongoing (Background Cron Jobs)
+    |
+    |-- Every 15 min: medos:send-reminders
+    |       |-- Find appointments in 24h/2h window
+    |       |-- Send WhatsApp reminders
+    |
+    |-- Daily 9 AM: medos:process-follow-ups
+    |       |-- Find encounters with follow_up_date = today
+    |       |-- Send follow-up reminders
+    |
+    |-- Weekly Monday 10 AM: medos:re-engage
+    |       |-- Find chronic patients (diabetes, BP, etc.)
+    |       |-- No visit in 6+ months
+    |       |-- Send gentle re-engagement message
+    |
+    |-- Return Patient (next visit):
+    |       |-- System recognizes by phone number
+    |       |-- Loads full patient graph (history, meds, allergies)
+    |       |-- &quot;Welcome back! Book with Dr. Meera for diabetes follow-up?&quot;
+    |       |-- Skip intake for known conditions
+</code></pre>
+<hr />
+<h2 id="5-background-processes">5. Background Processes</h2>
+<h3 id="scheduler-laravel-cron">Scheduler (Laravel Cron)</h3>
+<table>
+<thead>
+<tr>
+<th>Schedule</th>
+<th>Command</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Every 1 min</td>
+<td><code>medos:evaluate-queues</code></td>
+<td>Reshuffle active queues, detect no-shows</td>
+</tr>
+<tr>
+<td>Every 15 min</td>
+<td><code>medos:send-reminders</code></td>
+<td>24h and 2h appointment reminders</td>
+</tr>
+<tr>
+<td>Daily 9 AM</td>
+<td><code>medos:process-follow-ups</code></td>
+<td>Follow-up reminders for today</td>
+</tr>
+<tr>
+<td>Weekly Mon 10 AM</td>
+<td><code>medos:re-engage</code></td>
+<td>Chronic patient re-engagement</td>
+</tr>
+<tr>
+<td>Daily</td>
+<td><code>sanctum:prune-expired</code></td>
+<td>Clean expired API tokens</td>
+</tr>
+</tbody>
+</table>
+<h3 id="event-listeners-queued">Event Listeners (Queued)</h3>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Listener</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EncounterCompleted</td>
+<td>EncounterCompletedListener</td>
+<td>Bill, claim, feedback, follow-up</td>
+</tr>
+<tr>
+<td>EmergencyDetected</td>
+<td>EmergencyAlertListener</td>
+<td>SMS to ER, dashboard alert, logging</td>
+</tr>
+<tr>
+<td>QueueUpdated</td>
+<td>QueueUpdateNotifier</td>
+<td>WhatsApp position updates</td>
+</tr>
+<tr>
+<td>PatientCalled</td>
+<td>PatientCalledNotifier</td>
+<td>WhatsApp "Doctor is ready"</td>
+</tr>
+</tbody>
+</table>
+<h3 id="queue-workers">Queue Workers</h3>
+<table>
+<thead>
+<tr>
+<th>Queue Name</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>default</td>
+<td>General jobs</td>
+</tr>
+<tr>
+<td>whatsapp</td>
+<td>Message sending (rate-limited 80/sec)</td>
+</tr>
+<tr>
+<td>ai</td>
+<td>AI processing (may be slow)</td>
+</tr>
+<tr>
+<td>notifications</td>
+<td>Reminders, engagement</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-data-flow-summary">6. Data Flow Summary</h2>
+<pre><code>INBOUND:
+Patient -&gt; WhatsApp API -&gt; Webhook -&gt; Job Queue -&gt; ConversationManager -&gt; AI -&gt; Response
+
+CONSULTATION:
+Doctor Dashboard -&gt; Briefing Service -&gt; SOAP Notes -&gt; Complete -&gt; Event Cascade
+
+OUTBOUND:
+Events -&gt; Listeners -&gt; Jobs -&gt; WhatsApp API -&gt; Patient
+
+ADMIN:
+Admin Dashboard -&gt; Analytics Service -&gt; Database Aggregations -&gt; JSON/Charts
+</code></pre>
+<hr />
+<h2 id="7-api-reference">7. API Reference</h2>
+<h3 id="authentication">Authentication</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td>/api/v1/auth/login</td>
+<td>Login, get Sanctum token</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/auth/logout</td>
+<td>Revoke token</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/auth/me</td>
+<td>Current user + hospital</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/auth/register</td>
+<td>Register staff (admin only)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/auth/hospital/setup</td>
+<td>Create hospital + admin</td>
+</tr>
+</tbody>
+</table>
+<h3 id="patients">Patients</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td>/api/v1/patients</td>
+<td>List (paginated, searchable)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/patients</td>
+<td>Create patient</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/patients/{id}</td>
+<td>Show patient</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td>/api/v1/patients/{id}</td>
+<td>Update patient</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/patients/{id}/encounters</td>
+<td>Patient encounters</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/patients/{id}/timeline</td>
+<td>Merged timeline</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/patients-search</td>
+<td>Search by phone</td>
+</tr>
+</tbody>
+</table>
+<h3 id="appointments">Appointments</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td>/api/v1/appointments</td>
+<td>List (filterable)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/appointments</td>
+<td>Create appointment</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/appointments/{id}</td>
+<td>Show appointment</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/appointments/{id}/check-in</td>
+<td>Check in patient</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/appointments/{id}/cancel</td>
+<td>Cancel appointment</td>
+</tr>
+</tbody>
+</table>
+<h3 id="queue">Queue</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td>/api/v1/queue/doctor/{id}</td>
+<td>Doctor's queue</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/queue/doctor/{id}/call-next</td>
+<td>Call next patient</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/queue/patient/{id}/status</td>
+<td>Patient position + wait</td>
+</tr>
+</tbody>
+</table>
+<h3 id="doctor">Doctor</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td>/api/v1/doctor/dashboard</td>
+<td>Today's overview</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/doctor/queue</td>
+<td>My queue</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/doctor/briefing/{id}</td>
+<td>Patient briefing</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/doctor/encounters/{id}/complete</td>
+<td>Complete consultation</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/doctor/encounters/{id}/orders</td>
+<td>Add orders</td>
+</tr>
+</tbody>
+</table>
+<h3 id="insurance">Insurance</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td>/api/v1/insurance/verify</td>
+<td>Verify eligibility</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/insurance/pre-auth</td>
+<td>Submit pre-authorization</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/insurance/claim</td>
+<td>Submit claim</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/insurance/claim/{id}/status</td>
+<td>Check claim status</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/insurance/transactions</td>
+<td>List transactions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="billing">Billing</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td>/api/v1/billing/{id}</td>
+<td>Show bill</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/billing/generate</td>
+<td>Generate bill for encounter</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/billing/{id}/charge</td>
+<td>Add line item</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/billing/{id}/pay</td>
+<td>Record payment</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/billing/patient/{id}</td>
+<td>Patient's bills</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/billing/revenue/summary</td>
+<td>Revenue analytics</td>
+</tr>
+</tbody>
+</table>
+<h3 id="admin">Admin</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td>/api/v1/admin/dashboard</td>
+<td>KPIs + overview</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/admin/patient-flow</td>
+<td>Hourly patient counts</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/admin/doctor-performance</td>
+<td>Per-doctor metrics</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/admin/ai-performance</td>
+<td>AI automation metrics</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/admin/configuration</td>
+<td>Hospital config</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td>/api/v1/admin/configuration</td>
+<td>Update config</td>
+</tr>
+</tbody>
+</table>
+<h3 id="analytics">Analytics</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td>/api/v1/analytics/dashboard</td>
+<td>Combined analytics</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/analytics/revenue</td>
+<td>Revenue breakdown</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/analytics/insurance</td>
+<td>Insurance analytics</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/analytics/export</td>
+<td>Export as CSV</td>
+</tr>
+</tbody>
+</table>
+<h3 id="whatsapp">WhatsApp</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td>/api/v1/whatsapp/webhook</td>
+<td>Meta verification</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/whatsapp/webhook</td>
+<td>Incoming messages</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-web-pages-reference">8. Web Pages Reference</h2>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>URL</th>
+<th>Auth Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Login</td>
+<td>/login</td>
+<td>No</td>
+<td>Email + password authentication</td>
+</tr>
+<tr>
+<td>Admin Dashboard</td>
+<td>/admin</td>
+<td>Yes (admin)</td>
+<td>KPI cards, queues, activity, quick stats</td>
+</tr>
+<tr>
+<td>Patients</td>
+<td>/admin/patients</td>
+<td>Yes</td>
+<td>Search, list, add patients</td>
+</tr>
+<tr>
+<td>Patient Detail</td>
+<td>/admin/patients/{id}</td>
+<td>Yes</td>
+<td>Profile, timeline, encounters, bills tabs</td>
+</tr>
+<tr>
+<td>Appointments</td>
+<td>/admin/appointments</td>
+<td>Yes</td>
+<td>Date filter, doctor filter, status badges</td>
+</tr>
+<tr>
+<td>Staff</td>
+<td>/admin/staff</td>
+<td>Yes</td>
+<td>Staff list, roles, add staff</td>
+</tr>
+<tr>
+<td>Settings</td>
+<td>/admin/settings</td>
+<td>Yes</td>
+<td>Hospital config, departments, modules</td>
+</tr>
+<tr>
+<td>Analytics</td>
+<td>/admin/analytics</td>
+<td>Yes</td>
+<td>Charts and reports</td>
+</tr>
+<tr>
+<td>Doctor Dashboard</td>
+<td>/doctor</td>
+<td>Yes (doctor)</td>
+<td>Queue panel + patient briefing + SOAP notes</td>
+</tr>
+<tr>
+<td>Kiosk</td>
+<td>/kiosk</td>
+<td>No</td>
+<td>Check-in home (QR scan / token entry)</td>
+</tr>
+<tr>
+<td>Queue Display</td>
+<td>/kiosk/queue-display</td>
+<td>No</td>
+<td>TV screen for waiting area (auto-refresh)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-database-schema">9. Database Schema</h2>
+<h3 id="tables-17-total">Tables (17 total)</h3>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Primary Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>users</td>
+<td>UUID</td>
+<td>Auth users with roles</td>
+</tr>
+<tr>
+<td>hospitals</td>
+<td>UUID</td>
+<td>Multi-tenant base</td>
+</tr>
+<tr>
+<td>staff</td>
+<td>UUID</td>
+<td>Doctors, nurses, admin</td>
+</tr>
+<tr>
+<td>patients</td>
+<td>UUID</td>
+<td>Patient records (soft delete)</td>
+</tr>
+<tr>
+<td>encounters</td>
+<td>UUID</td>
+<td>Clinical encounters</td>
+</tr>
+<tr>
+<td>appointments</td>
+<td>UUID</td>
+<td>Scheduled appointments</td>
+</tr>
+<tr>
+<td>conversations</td>
+<td>UUID</td>
+<td>AI conversation history</td>
+</tr>
+<tr>
+<td>insurance_transactions</td>
+<td>UUID</td>
+<td>Eligibility, pre-auth, claims</td>
+</tr>
+<tr>
+<td>orders</td>
+<td>UUID</td>
+<td>Lab, pharmacy, imaging</td>
+</tr>
+<tr>
+<td>bills</td>
+<td>UUID</td>
+<td>Billing with line items</td>
+</tr>
+<tr>
+<td>queue_entries</td>
+<td>UUID</td>
+<td>Real-time queue positions</td>
+</tr>
+<tr>
+<td>notifications_log</td>
+<td>UUID</td>
+<td>All notification tracking</td>
+</tr>
+<tr>
+<td>audit_logs</td>
+<td>UUID</td>
+<td>Full audit trail (7yr retention)</td>
+</tr>
+<tr>
+<td>personal_access_tokens</td>
+<td>ID</td>
+<td>Sanctum API tokens</td>
+</tr>
+<tr>
+<td>cache</td>
+<td>key</td>
+<td>Laravel cache</td>
+</tr>
+<tr>
+<td>jobs</td>
+<td>ID</td>
+<td>Laravel queue</td>
+</tr>
+<tr>
+<td>sessions</td>
+<td>string</td>
+<td>Laravel sessions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-relationships">Key Relationships</h3>
+<ul>
+<li>Hospital has many: Staff, Patients, Encounters, Appointments</li>
+<li>Patient has many: Encounters, Appointments, Conversations, Bills</li>
+<li>Encounter belongs to: Patient, Doctor (Staff), has one: Appointment, many: Orders, Bills</li>
+<li>Appointment belongs to: Patient, Doctor, Encounter (nullable)</li>
+<li>Conversation belongs to: Patient, Encounter (nullable)</li>
+</ul>
+<hr />
+<h2 id="10-tech-stack">10. Tech Stack</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Technology</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Framework</td>
+<td>Laravel 13 (PHP 8.5)</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>SQLite (dev), PostgreSQL (production)</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>Laravel Sanctum (API tokens + session)</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td>Blade + Tailwind CSS v4 + Alpine.js</td>
+</tr>
+<tr>
+<td>Build</td>
+<td>Vite</td>
+</tr>
+<tr>
+<td>AI</td>
+<td>Anthropic Claude / OpenAI GPT-4o</td>
+</tr>
+<tr>
+<td>WhatsApp</td>
+<td>Meta Cloud API / Gupshup</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>Laravel Queue (database/Redis)</td>
+</tr>
+<tr>
+<td>Scheduler</td>
+<td>Laravel Scheduler</td>
+</tr>
+<tr>
+<td>OCR</td>
+<td>Azure Document Intelligence (stubbed)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Document generated by MedOS v1.0 - Built by Haztech</em></p>
+</body>
+</html>

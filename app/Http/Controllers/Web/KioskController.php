@@ -1,0 +1,526 @@
+<?php
+
+namespace App\Http\Controllers\Web;
+
+use App\Http\Controllers\Controller;
+use App\Modules\Appointment\Models\Appointment;
+use App\Modules\Appointment\Models\QueueEntry;
+use App\Modules\Core\Models\Hospital;
+use App\Modules\Core\Models\Staff;
+use App\Modules\Patient\Models\Patient;
+use App\Modules\Patient\Models\Encounter;
+use App\Modules\Triage\Services\SpecialtyMapper;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+
+class KioskController extends Controller
+{
+    public function index()
+    {
+        return view('kiosk.index');
+    }
+
+    public function checkin()
+    {
+        return view('kiosk.checkin');
+    }
+
+    public function processCheckin(Request $request)
+    {
+        $request->validate([
+            'token' => ['required', 'string', 'min:2'],
+        ]);
+
+        $input = trim($request->input('token'));
+        $todayStatuses = ['scheduled', 'confirmed', 'checked_in', 'in_progress'];
+
+        // Try to find by token (stored in notes field)
+        $appointment = Appointment::whereDate('slot_start', today())
+            ->where('notes', $input)
+            ->whereIn('status', $todayStatuses)
+            ->with(['patient', 'doctor'])
+            ->first();
+
+        // Try phone number (with or without +91 prefix)
+        if (!$appointment) {
+            $phoneCleaned = preg_replace('/[^0-9]/', '', $input);
+            if (strlen($phoneCleaned) >= 10) {
+                $appointment = Appointment::whereDate('slot_start', today())
+                    ->whereIn('status', $todayStatuses)
+                    ->whereHas('patient', function ($q) use ($phoneCleaned) {
+                        $q->where('phone', 'like', '%' . substr($phoneCleaned, -10));
+                    })
+                    ->with(['patient', 'doctor'])
+                    ->latest('created_at')
+                    ->first();
+            }
+        }
+
+        // Try patient name (partial match)
+        if (!$appointment && strlen($input) > 2 && !is_numeric($input)) {
+            $appointment = Appointment::whereDate('slot_start', today())
+                ->whereIn('status', $todayStatuses)
+                ->whereHas('patient', function ($q) use ($input) {
+                    $q->where('name', 'like', '%' . $input . '%');
+                })
+                ->with(['patient', 'doctor'])
+                ->latest('created_at')
+                ->first();
+        }
+
+        if (!$appointment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No appointment found. Try your token number, phone number, or name.',
+            ], 404);
+        }
+
+        // Check in if not already
+        $aptStatus = is_object($appointment->status) ? $appointment->status->value : $appointment->status;
+        if (in_array($aptStatus, ['scheduled', 'confirmed'])) {
+            $appointment->update([
+                'status' => 'checked_in',
+                'check_in_time' => now(),
+            ]);
+        }
+
+        // Count patients ahead
+        $ahead = Appointment::where('doctor_id', $appointment->doctor_id)
+            ->whereDate('slot_start', today())
+            ->where('slot_start', '<', $appointment->slot_start)
+            ->whereIn('status', ['checked_in', 'in_progress'])
+            ->count();
+
+        $consultationMinutes = $appointment->doctor?->consultation_duration_default ?? 15;
+        $estimatedWait = $ahead * $consultationMinutes;
+
+        return response()->json([
+            'success'       => true,
+            'patientName'   => $appointment->patient?->name ?? 'Patient',
+            'queuePosition' => $ahead + 1,
+            'doctorName'    => $appointment->doctor?->name ?? 'Doctor',
+            'department'    => $appointment->doctor?->department ?? 'General',
+            'token'         => $appointment->notes ?? 'N/A',
+            'estimatedWait' => $estimatedWait . ' minutes',
+            'room'          => 'Floor 2, Waiting Area',
+        ]);
+    }
+
+    public function register()
+    {
+        return view('kiosk.register');
+    }
+
+    public function doctors()
+    {
+        $hospital = Hospital::where('is_active', true)->first();
+        if (!$hospital) {
+            return response()->json([]);
+        }
+
+        $doctors = Staff::where('hospital_id', $hospital->id)
+            ->where('is_active', true)
+            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->orderBy('department')
+            ->orderBy('name')
+            ->get(['id', 'name', 'department', 'specialization'])
+            ->map(fn ($d) => [
+                'id'         => $d->id,
+                'name'       => $d->name,
+                'department' => $d->department,
+                'specialization' => $d->specialization,
+            ]);
+
+        $departments = $doctors->pluck('department')->unique()->values();
+
+        return response()->json([
+            'doctors'     => $doctors,
+            'departments' => $departments,
+        ]);
+    }
+
+    public function matchDoctors(Request $request)
+    {
+        $complaint = $request->get('complaint', 'general');
+        $hospital = Hospital::where('is_active', true)->first();
+        if (!$hospital) return response()->json([]);
+
+        // Map complaint to specialty
+        $mapper = new SpecialtyMapper();
+        $specialty = $mapper->suggest($complaint);
+
+        // Build mapping: specialty -> department names that could handle it
+        $specialtyToDept = [
+            'general_medicine'    => ['General Medicine'],
+            'cardiology'          => ['Cardiology', 'General Medicine'],
+            'orthopedics'         => ['Orthopedics', 'General Medicine'],
+            'pediatrics'          => ['Pediatrics', 'General Medicine'],
+            'gynecology'          => ['Gynecology', 'General Medicine'],
+            'dermatology'         => ['Dermatology', 'General Medicine'],
+            'ent'                 => ['ENT', 'General Medicine'],
+            'dental'              => ['Dental'],
+            'gastroenterology'    => ['General Medicine', 'Gastroenterology'],
+            'neurology'           => ['General Medicine', 'Neurology'],
+            'ophthalmology'       => ['General Medicine', 'Ophthalmology'],
+            'pulmonology'         => ['General Medicine', 'Pulmonology'],
+            'endocrinology'       => ['General Medicine', 'Endocrinology'],
+            'nephrology/urology'  => ['General Medicine', 'Nephrology', 'Urology'],
+            'psychiatry'          => ['General Medicine', 'Psychiatry'],
+            'oncology'            => ['General Medicine', 'Oncology'],
+        ];
+
+        $matchingDepts = $specialtyToDept[$specialty] ?? ['General Medicine'];
+
+        // Get all doctors, grouped by relevance
+        $allDoctors = Staff::where('hospital_id', $hospital->id)
+            ->where('is_active', true)
+            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->orderBy('department')->orderBy('name')
+            ->get(['id', 'name', 'department', 'specialization', 'consultation_duration_default']);
+
+        // Count today's queue per doctor
+        $queueCounts = \DB::table('appointments')
+            ->whereDate('slot_start', today())
+            ->whereIn('status', ['scheduled', 'confirmed', 'checked_in', 'in_progress'])
+            ->selectRaw('doctor_id, count(*) as cnt')
+            ->groupBy('doctor_id')
+            ->pluck('cnt', 'doctor_id');
+
+        $recommended = [];
+        $others = [];
+
+        foreach ($allDoctors as $doc) {
+            $isMatch = in_array($doc->department, $matchingDepts);
+            $entry = [
+                'id'         => $doc->id,
+                'name'       => $doc->name,
+                'department' => $doc->department,
+                'queue'      => $queueCounts[$doc->id] ?? 0,
+                'duration'   => $doc->consultation_duration_default ?? 15,
+            ];
+
+            if ($isMatch) {
+                $recommended[] = $entry;
+            } else {
+                $others[] = $entry;
+            }
+        }
+
+        return response()->json([
+            'specialty'   => $specialty,
+            'recommended' => $recommended,
+            'others'      => $others,
+        ]);
+    }
+
+    public function checkPhone(Request $request)
+    {
+        $phone = preg_replace('/[^0-9]/', '', $request->get('phone', ''));
+        if (strlen($phone) === 10) {
+            $phone = '+91' . $phone;
+        }
+
+        $patient = Patient::where('phone', $phone)->first()
+            ?? Patient::where('phone', 'like', '%' . substr($phone, -10))->first();
+
+        if ($patient) {
+            return response()->json([
+                'exists' => true,
+                'name'   => $patient->name,
+                'gender' => $patient->gender,
+                'phone'  => $patient->phone,
+            ]);
+        }
+
+        return response()->json(['exists' => false]);
+    }
+
+    public function verifyAbha(Request $request)
+    {
+        $abha = preg_replace('/[^0-9]/', '', $request->get('abha', ''));
+
+        if (strlen($abha) !== 14) {
+            return response()->json([
+                'exists' => false,
+                'message' => 'Invalid ABHA number. Must be 14 digits.',
+            ], 422);
+        }
+
+        // Search in patients table
+        $patient = Patient::where('abha_number', $abha)->first();
+
+        if ($patient) {
+            $age = $patient->date_of_birth
+                ? \Carbon\Carbon::parse($patient->date_of_birth)->age
+                : $patient->age_approximate;
+
+            return response()->json([
+                'exists'  => true,
+                'name'    => $patient->name,
+                'phone'   => $patient->phone,
+                'gender'  => $patient->gender,
+                'age'     => $age,
+                'profile' => [
+                    'name'   => $patient->name,
+                    'phone'  => $patient->phone,
+                    'gender' => $patient->gender,
+                ],
+            ]);
+        }
+
+        // Mock ABHA verification service (in production, call ABDM API)
+        // For now, return not found so user can proceed with manual entry
+        return response()->json([
+            'exists'  => false,
+            'message' => 'ABHA number not found in our records. Please register with phone number.',
+        ]);
+    }
+
+    public function processRegister(Request $request)
+    {
+        $validated = $request->validate([
+            'name'         => 'required|string|max:255',
+            'phone'        => 'required|string|min:4|max:15',
+            'age'          => 'nullable|integer|min:0|max:120',
+            'gender'       => 'nullable|in:male,female,other',
+            'complaint'    => 'required|string|max:1000',
+            'language'     => 'nullable|in:en,hi,ar',
+            'is_emergency' => 'nullable|boolean',
+            'doctor_id'    => 'nullable|string|exists:staff,id',
+            'department'   => 'nullable|string|max:100',
+            'abha_number'  => 'nullable|string|size:14',
+        ]);
+
+        // Get first hospital (kiosk is per-hospital in production, defaulting for now)
+        $hospital = Hospital::where('is_active', true)->first();
+        if (!$hospital) {
+            return response()->json(['success' => false, 'message' => 'Hospital not configured.'], 500);
+        }
+
+        // Normalize phone
+        $phone = preg_replace('/[^0-9+]/', '', $validated['phone']);
+        if (!str_starts_with($phone, '+')) {
+            $phone = strlen($phone) === 10 ? '+91' . $phone : '+' . $phone;
+        }
+
+        // Find or create patient
+        $patient = Patient::where('hospital_id', $hospital->id)->where('phone', $phone)->first();
+
+        // Update existing patient's ABHA if provided and not already set
+        if ($patient && !empty($validated['abha_number']) && !$patient->abha_number) {
+            $patient->update(['abha_number' => $validated['abha_number']]);
+        }
+
+        if (!$patient) {
+            $patientData = [
+                'id'                  => Str::uuid()->toString(),
+                'hospital_id'        => $hospital->id,
+                'name'               => $validated['name'],
+                'phone'              => $phone,
+                'phone_verified'     => false,
+                'age_approximate'    => $validated['age'] ?? null,
+                'gender'             => $validated['gender'] ?? 'unknown',
+                'language_preference' => $validated['language'] ?? 'en',
+                'created_via'        => 'kiosk',
+            ];
+            if (!empty($validated['abha_number'])) {
+                $patientData['abha_number'] = $validated['abha_number'];
+            }
+            $patient = Patient::create($patientData);
+        }
+
+        // Find doctor: by direct selection, department, or complaint mapping
+        $doctor = null;
+
+        if (!empty($validated['doctor_id'])) {
+            $doctor = Staff::where('id', $validated['doctor_id'])
+                ->where('hospital_id', $hospital->id)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        if (!$doctor && !empty($validated['department'])) {
+            $doctor = Staff::where('hospital_id', $hospital->id)
+                ->where('is_active', true)
+                ->whereIn('role', ['doctor', 'hospital_admin'])
+                ->where('department', $validated['department'])
+                ->inRandomOrder()
+                ->first();
+        }
+
+        if (!$doctor) {
+            $mapper = new SpecialtyMapper();
+            $specialty = $mapper->suggest(
+                $validated['complaint'],
+                isset($validated['age']) ? (int) $validated['age'] : null,
+                $validated['gender'] ?? null
+            );
+
+            $doctor = Staff::where('hospital_id', $hospital->id)
+                ->where('is_active', true)
+                ->whereIn('role', ['doctor', 'hospital_admin'])
+                ->where(function ($q) use ($specialty) {
+                    $q->where('department', 'like', '%' . str_replace('_', ' ', $specialty) . '%')
+                      ->orWhere('specialization', 'like', '%' . str_replace('_', ' ', $specialty) . '%');
+                })
+                ->first();
+        }
+
+        // Fallback to any available doctor
+        if (!$doctor) {
+            $doctor = Staff::where('hospital_id', $hospital->id)
+                ->where('is_active', true)
+                ->whereIn('role', ['doctor', 'hospital_admin'])
+                ->first();
+        }
+
+        if (!$doctor) {
+            return response()->json(['success' => false, 'message' => 'No doctors available at this time.'], 422);
+        }
+
+        // Create encounter
+        $isEmergency = $validated['is_emergency'] ?? false;
+        $encounterNumber = 'ENC-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4));
+        $encounter = Encounter::create([
+            'id'                    => Str::uuid()->toString(),
+            'hospital_id'          => $hospital->id,
+            'patient_id'           => $patient->id,
+            'doctor_id'            => $doctor->id,
+            'encounter_number'     => $encounterNumber,
+            'type'                 => $isEmergency ? 'emergency' : 'consultation',
+            'status'               => 'checked_in',
+            'channel'              => 'kiosk',
+            'triage_classification' => $isEmergency ? 'emergency' : null,
+            'triage_score'         => $isEmergency ? 0.95 : null,
+            'intake_data'          => [
+                'chief_complaint' => $validated['complaint'],
+                'who'             => 'self',
+                'source'          => 'kiosk_registration',
+                'is_emergency'    => $isEmergency,
+            ],
+        ]);
+
+        // Generate token
+        $deptPrefix = strtoupper(substr(str_replace(' ', '', $doctor->department ?? 'GEN'), 0, 3));
+        $todayCount = Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('slot_start', today())
+            ->count();
+        $token = $deptPrefix . '-' . str_pad($todayCount + 1, 3, '0', STR_PAD_LEFT);
+
+        // Create appointment
+        $slotStart = now()->addMinutes(15); // next available roughly
+        $appointment = Appointment::create([
+            'id'                       => Str::uuid()->toString(),
+            'hospital_id'             => $hospital->id,
+            'encounter_id'            => $encounter->id,
+            'patient_id'              => $patient->id,
+            'doctor_id'               => $doctor->id,
+            'slot_start'              => $slotStart,
+            'slot_end'                => $slotStart->copy()->addMinutes($doctor->consultation_duration_default ?? 15),
+            'predicted_duration_minutes' => $doctor->consultation_duration_default ?? 15,
+            'status'                  => 'checked_in',
+            'check_in_time'           => now(),
+            'booking_source'          => 'kiosk',
+            'notes'                   => $token,
+        ]);
+
+        // Calculate position
+        $position = Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('slot_start', today())
+            ->whereIn('status', ['checked_in', 'in_progress'])
+            ->where('id', '!=', $appointment->id)
+            ->count() + 1;
+
+        $waitMinutes = ($position - 1) * ($doctor->consultation_duration_default ?? 15);
+
+        return response()->json([
+            'success'    => true,
+            'name'       => $patient->name,
+            'token'      => $token,
+            'doctor'     => $doctor->name,
+            'department' => $doctor->department ?? 'General Medicine',
+            'position'   => $position,
+            'wait'       => $waitMinutes . ' minutes',
+        ]);
+    }
+
+    public function roomDisplay(string $doctorId)
+    {
+        // Accept UUID or name (first name, lowercase)
+        $doctor = Staff::find($doctorId);
+        if (!$doctor) {
+            $doctor = Staff::whereRaw("LOWER(name) LIKE ?", ['%' . strtolower($doctorId) . '%'])
+                ->whereIn('role', ['doctor', 'hospital_admin'])
+                ->first();
+        }
+        if (!$doctor) abort(404, 'Doctor not found');
+
+        $appointments = Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('slot_start', today())
+            ->whereIn('status', ['checked_in', 'in_progress', 'completed'])
+            ->orderByRaw("CASE status WHEN 'in_progress' THEN 0 WHEN 'checked_in' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END, slot_start")
+            ->with('patient')
+            ->get()
+            ->map(function ($apt) {
+                $status = is_object($apt->status) ? $apt->status->value : ($apt->status ?? '');
+                $encounter = Encounter::where('patient_id', $apt->patient_id)
+                    ->where('doctor_id', $apt->doctor_id)
+                    ->whereDate('created_at', today())->first();
+                $intake = is_array($encounter?->intake_data) ? $encounter->intake_data : [];
+                $triage = is_object($encounter?->triage_classification) ? $encounter->triage_classification->value : ($encounter?->triage_classification ?? '');
+
+                return [
+                    'token'   => $apt->notes ?? '',
+                    'name'    => $apt->patient?->name ?? 'Patient',
+                    'status'  => $status,
+                    'urgency' => $triage,
+                    'isReferral' => ($intake['source'] ?? '') === 'referral',
+                ];
+            });
+
+        return view('kiosk.room-display', [
+            'doctor'       => $doctor,
+            'appointments' => $appointments,
+        ]);
+    }
+
+    public function queueDisplay()
+    {
+        $doctors = Staff::where('is_active', true)
+            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->get()
+            ->map(function ($doctor) {
+                $appointments = Appointment::where('doctor_id', $doctor->id)
+                    ->whereDate('slot_start', today())
+                    ->whereIn('status', ['checked_in', 'in_progress'])
+                    ->orderBy('slot_start')
+                    ->with('patient')
+                    ->get();
+
+                $current = $appointments->first(fn ($a) =>
+                    (is_object($a->status) ? $a->status->value : $a->status) === 'in_progress'
+                );
+                $waiting = $appointments->filter(fn ($a) =>
+                    (is_object($a->status) ? $a->status->value : $a->status) === 'checked_in'
+                )->values();
+
+                return [
+                    'id'         => $doctor->id,
+                    'name'       => $doctor->name,
+                    'department' => $doctor->department ?? 'General',
+                    'current'    => $current ? [
+                        'token' => $current->notes ?? 'N/A',
+                        'name'  => $current->patient?->name ?? 'Patient',
+                    ] : null,
+                    'waiting' => $waiting->map(fn ($a) => [
+                        'token' => $a->notes ?? 'N/A',
+                        'name'  => $a->patient?->name ?? 'Patient',
+                    ])->toArray(),
+                ];
+            })
+            ->filter(fn ($d) => $d['current'] || count($d['waiting']) > 0)
+            ->values();
+
+        return view('kiosk.queue-display', ['doctors' => $doctors]);
+    }
+}

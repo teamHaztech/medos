@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Haztech — Digital Innovation Agency</title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800,900" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', -apple-system, sans-serif; background: #0f172a; color: #fff; min-height: 100vh; }
+
+        .hero { text-align: center; padding: 80px 20px 40px; }
+        .hero h1 { font-size: 3rem; font-weight: 900; background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { color: #94a3b8; font-size: 1.1rem; margin-top: 12px; max-width: 600px; margin-left: auto; margin-right: auto; }
+
+        .products { max-width: 900px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; }
+
+        .product-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 32px;
+            transition: all 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+        .product-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255,255,255,0.2);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            border-radius: 20px 20px 0 0;
+        }
+        .product-card.medos::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+        .product-card.realestate::before { background: linear-gradient(90deg, #10b981, #84cc16); }
+
+        .product-icon {
+            width: 56px; height: 56px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        .medos .product-icon { background: rgba(59,130,246,0.15); }
+        .realestate .product-icon { background: rgba(16,185,129,0.15); }
+
+        .product-card h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; }
+        .product-card .subtitle { color: #94a3b8; font-size: 0.85rem; margin-bottom: 16px; }
+        .product-card .description { color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; margin-bottom: 20px; }
+
+        .features { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }
+        .feature-tag {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .medos .feature-tag { background: rgba(59,130,246,0.1); color: #60a5fa; }
+        .realestate .feature-tag { background: rgba(16,185,129,0.1); color: #34d399; }
+
+        .cta-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: #fff;
+        }
+        .medos .cta-btn { background: #3b82f6; }
+        .medos .cta-btn:hover { background: #2563eb; }
+        .realestate .cta-btn { background: #10b981; }
+        .realestate .cta-btn:hover { background: #059669; }
+
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .status-live { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        footer { text-align: center; padding: 60px 20px 30px; color: #475569; font-size: 0.8rem; }
+        footer a { color: #64748b; text-decoration: none; }
+        footer a:hover { color: #94a3b8; }
+
+        @media (max-width: 480px) {
+            .hero h1 { font-size: 2rem; }
+            .products { grid-template-columns: 1fr; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="hero">
+        <h1>Haztech</h1>
+        <p>Digital Innovation Agency — Building next-generation systems that automate businesses</p>
+    </div>
+
+    <div class="products">
+
+        <!-- MedOS -->
+        <a href="https://medos.haztech.cloud" class="product-card medos">
+            <div class="product-icon">🏥</div>
+            <div class="status-badge status-live"><span class="status-dot"></span> Live Demo</div>
+            <h2>MedOS</h2>
+            <p class="subtitle">AI-First Hospital Operating System</p>
+            <p class="description">
+                Automates the entire patient journey — from WhatsApp booking to doctor consultation.
+                AI receptionist, smart scheduling, real-time queue, multilingual support, ABHA integration.
+            </p>
+            <div class="features">
+                <span class="feature-tag">WhatsApp Bot</span>
+                <span class="feature-tag">AI Triage</span>
+                <span class="feature-tag">Smart Queue</span>
+                <span class="feature-tag">5 Languages</span>
+                <span class="feature-tag">ABHA/ABDM</span>
+                <span class="feature-tag">India + UAE</span>
+            </div>
+            <span class="cta-btn">Open MedOS →</span>
+        </a>
+
+        <!-- Real Estate -->
+        <a href="https://property.haztech.cloud" class="product-card realestate">
+            <div class="product-icon">🏠</div>
+            <div class="status-badge status-live"><span class="status-dot"></span> Live Demo</div>
+            <h2>PropOS</h2>
+            <p class="subtitle">Real Estate Management System</p>
+            <p class="description">
+                End-to-end property management — listings, leads, tenants, payments, documents.
+                Built for real estate agencies and property managers.
+            </p>
+            <div class="features">
+                <span class="feature-tag">Property Listings</span>
+                <span class="feature-tag">Lead Management</span>
+                <span class="feature-tag">Tenant Portal</span>
+                <span class="feature-tag">Payment Tracking</span>
+                <span class="feature-tag">Documents</span>
+                <span class="feature-tag">Analytics</span>
+            </div>
+            <span class="cta-btn">Open PropOS →</span>
+        </a>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Haztech Digital Innovation Agency</p>
+        <p style="margin-top: 8px;">
+            <a href="mailto:hello@haztech.cloud">hello@haztech.cloud</a>
+        </p>
+    </footer>
+
+</body>
+</html>
