@@ -1,9 +1,6 @@
-/node_modules
-/public/build
 /public/hot
 /public/storage
 /storage/*.key
-/vendor
 .env
 .env.backup
 .phpunit.result.cache
@@ -18,3 +15,4 @@ yarn-error.log
 /.wwebjs_auth
 database/database.sqlite
 docs/MedOS-System-Lifecycle.pdf
+/node_modules
