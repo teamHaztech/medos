@@ -5,7 +5,7 @@
  * Run ONCE after git deploy, then DELETE this file.
  */
 
-if ($_GET['key'] ?? '' !== 'haztech2026') { die('Unauthorized'); }
+if (($_GET['key'] ?? '') !== 'haztech2026') { die('Unauthorized'); }
 
 echo "<pre>\n";
 echo "=== MedOS Deployment ===\n\n";
