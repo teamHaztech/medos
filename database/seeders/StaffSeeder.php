@@ -90,7 +90,7 @@ class StaffSeeder extends Seeder
                 'user_id'      => SeedData::USER_RAJESH,
                 'hospital_id'  => SeedData::CITY_CARE_ID,
                 'name'         => 'Dr. Rajesh Kumar',
-                'email'        => 'rajesh.kumar@city-care.medos.local',
+                'email'        => 'admin@haztech.in',
                 'phone'        => '+919845012345',
                 'role'         => 'hospital_admin',
                 'department'   => 'General Medicine',
@@ -104,7 +104,7 @@ class StaffSeeder extends Seeder
                 'user_id'      => SeedData::USER_PRIYA,
                 'hospital_id'  => SeedData::CITY_CARE_ID,
                 'name'         => 'Dr. Priya Sharma',
-                'email'        => 'priya.sharma@city-care.medos.local',
+                'email'        => 'priya@haztech.in',
                 'phone'        => '+919845112345',
                 'role'         => 'doctor',
                 'department'   => 'Pediatrics',
@@ -118,7 +118,7 @@ class StaffSeeder extends Seeder
                 'user_id'      => SeedData::USER_AMIT,
                 'hospital_id'  => SeedData::CITY_CARE_ID,
                 'name'         => 'Dr. Amit Patel',
-                'email'        => 'amit.patel@city-care.medos.local',
+                'email'        => 'amit@haztech.in',
                 'phone'        => '+919845212345',
                 'role'         => 'doctor',
                 'department'   => 'Cardiology',
@@ -291,7 +291,24 @@ class StaffSeeder extends Seeder
 
         $allStaff = array_merge($cityStaff, $gulfStaff);
 
-        // Insert users first (so user_id FK is valid when staff rows reference them)
+        // Insert super admin user first
+        DB::table('users')->insert([
+            'id'                => Str::uuid()->toString(),
+            'name'              => 'Haztech Admin',
+            'email'             => 'superadmin@haztech.in',
+            'email_verified_at' => $now,
+            'password'          => $password,
+            'hospital_id'       => SeedData::CITY_CARE_ID,
+            'role'              => 'super_admin',
+            'staff_id'          => null,
+            'phone'             => null,
+            'is_active'         => true,
+            'remember_token'    => null,
+            'created_at'        => $now,
+            'updated_at'        => $now,
+        ]);
+
+        // Insert users (so user_id FK is valid when staff rows reference them)
         foreach ($allStaff as $s) {
             DB::table('users')->insert([
                 'id'                => $s['user_id'],

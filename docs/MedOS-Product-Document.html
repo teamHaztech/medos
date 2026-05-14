@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+body { font-family: -apple-system, sans-serif; font-size: 11px; line-height: 1.6; color: #1e293b; max-width: 800px; margin: 0 auto; padding: 40px; }
+h1 { font-size: 28px; color: #1e40af; border-bottom: 3px solid #1e40af; padding-bottom: 8px; }
+h2 { font-size: 20px; color: #1e40af; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-top: 30px; }
+h3 { font-size: 14px; color: #334155; margin-top: 20px; }
+table { width: 100%%; border-collapse: collapse; margin: 12px 0; font-size: 10px; }
+th { background: #1e293b; color: white; padding: 8px 10px; text-align: left; }
+td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; }
+tr:nth-child(even) { background: #f8fafc; }
+code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 10px; }
+pre { background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 8px; font-size: 9px; white-space: pre-wrap; }
+pre code { background: none; color: inherit; }
+hr { border: none; border-top: 2px solid #e2e8f0; margin: 20px 0; }
+blockquote { border-left: 4px solid #3b82f6; padding-left: 16px; margin: 16px 0; color: #475569; font-style: italic; }
+</style></head><body>
+<div style="text-align:center;padding:60px 0 40px">
+<div style="font-size:48px;font-weight:800;color:#1e40af">MedOS</div>
+<div style="font-size:16px;color:#64748b;margin-top:8px">AI-First Hospital Operating System</div>
+<div style="font-size:12px;color:#94a3b8;margin-top:30px">Product Document | 2026</div>
+<div style="font-size:12px;color:#94a3b8;margin-top:8px">Built by <b style="color:#1e40af">Haztech</b> Digital Innovation Agency</div>
+</div><hr>
+<h1>MedOS — AI-First Hospital Operating System</h1>
+<h2>Product Document</h2>
+<p><strong>Built by Haztech Digital Innovation Agency</strong>
+<strong>Version 1.0 | 2026</strong></p>
+<hr />
+<h2>What is MedOS?</h2>
+<p>MedOS is a next-generation Hospital Operating System that <strong>automates 80% of hospital reception and patient management</strong> using AI — from the moment a patient sends a WhatsApp message to their follow-up after treatment.</p>
+<p>It's not a typical Hospital Management System. It's an <strong>intelligent operating system</strong> that runs the hospital's patient-facing operations with minimal human intervention.</p>
+<p><strong>Live Demo:</strong> https://medos.haztech.cloud
+<strong>Login:</strong> superadmin@haztech.in / password123</p>
+<hr />
+<h2>The Problem We Solve</h2>
+<table>
+<thead>
+<tr>
+<th>Current Hospital Reality</th>
+<th>With MedOS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3-5 receptionists handling 100+ patients/day</td>
+<td>AI handles 80% of interactions automatically</td>
+</tr>
+<tr>
+<td>Patients wait 30-60 min with no updates</td>
+<td>Real-time queue with wait time predictions</td>
+</tr>
+<tr>
+<td>Phone calls go unanswered during rush hours</td>
+<td>WhatsApp bot handles unlimited conversations 24/7</td>
+</tr>
+<tr>
+<td>Paper tokens, manual queue</td>
+<td>Digital tokens, smart queue with priority scoring</td>
+</tr>
+<tr>
+<td>Doctor spends 30% time on paperwork</td>
+<td>AI pre-fills patient briefing, one-tap prescriptions</td>
+</tr>
+<tr>
+<td>No follow-up after visit</td>
+<td>Automated reminders, feedback, re-engagement</td>
+</tr>
+<tr>
+<td>Insurance verified after consultation</td>
+<td>Insurance pre-verified before booking</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>How It Works (Patient Journey)</h2>
+<h3>1. Patient Sends WhatsApp Message</h3>
+<blockquote>
+<p>"Hi, mujhe bukhar hai 2 din se"</p>
+</blockquote>
+<ul>
+<li>Bot detects language (Hindi) and responds in Hindi</li>
+<li>Asks for phone number → recognizes returning patients</li>
+<li>Asks about symptoms conversationally</li>
+<li>Finds the right doctor based on complaint</li>
+<li>Shows available doctors with wait times</li>
+<li>Patient picks doctor and confirms</li>
+<li><strong>Appointment booked with token number — all via WhatsApp</strong></li>
+</ul>
+<h3>2. Patient Arrives at Hospital (Kiosk)</h3>
+<ul>
+<li>Walks to self-service kiosk (tablet at entrance)</li>
+<li>Enters phone number or ABHA number</li>
+<li>System recognizes them → shows token</li>
+<li>Directed to waiting area</li>
+<li><strong>No receptionist needed</strong></li>
+</ul>
+<h3>3. Waiting Room (TV Display)</h3>
+<ul>
+<li>Large screen outside each doctor's room</li>
+<li>Shows: NOW SERVING → Token XYZ, Patient Name</li>
+<li>Queue list below with position numbers</li>
+<li><strong>Voice announcement in 5 languages</strong> when next patient is called:</li>
+<li>English, Hindi, Marathi, Konkani, Arabic</li>
+<li>Three beeps → "Token number PED-003. Vikram Sharma. Please come in."</li>
+</ul>
+<h3>4. Doctor Consultation</h3>
+<ul>
+<li>Doctor sees patient queue on their screen (auto-refreshes every 5 seconds)</li>
+<li>Clicks patient → sees AI-generated briefing:</li>
+<li>Chief complaint, allergies, current medications</li>
+<li>Previous visit history</li>
+<li>Insurance status</li>
+<li>Referral context (if referred from another doctor)</li>
+<li><strong>6-tab consultation panel:</strong></li>
+<li><strong>Vitals</strong> — BP, temp, pulse, SpO2, weight (quick entry)</li>
+<li><strong>Diagnosis</strong> — 18 common diagnoses as one-tap buttons + custom</li>
+<li><strong>Tests</strong> — 74 lab/imaging tests from database, one-tap to order</li>
+<li><strong>Prescription</strong> — Search from 120+ medicines database, auto-fills dosage/frequency/timing</li>
+<li><strong>Refer</strong> — Select doctor, see their calendar, pick available slot, set urgency</li>
+<li><strong>Notes</strong> — SOAP notes with quick templates + patient advice toggles</li>
+<li>Clicks "Complete" → <strong>everything saves to database automatically</strong></li>
+</ul>
+<h3>5. After Consultation</h3>
+<ul>
+<li>Bill auto-generated (consultation + tests + medicines)</li>
+<li>Insurance claim auto-submitted (if insured)</li>
+<li>Patient gets WhatsApp confirmation</li>
+<li>Follow-up reminder scheduled automatically</li>
+<li>Feedback request sent after 2 hours</li>
+</ul>
+<h3>6. Referral Flow</h3>
+<ul>
+<li>Doctor A refers patient to Doctor B</li>
+<li>Doctor B sees referral in their dashboard with:</li>
+<li>Patient details, complaint, previous diagnosis</li>
+<li>Urgency level (Emergency / Priority / Normal)</li>
+<li>Preferred slot from Doctor A</li>
+<li>Doctor B clicks "Accept" → patient appears in their queue with all data pre-filled</li>
+<li><strong>Zero re-entry of information</strong></li>
+</ul>
+<hr />
+<h2>Key Features</h2>
+<h3>For Patients</h3>
+<ul>
+<li>📱 <strong>Book via WhatsApp</strong> — no app download needed</li>
+<li>🔢 <strong>Digital token</strong> — know your position in real-time</li>
+<li>🗣️ <strong>Multilingual</strong> — English, Hindi, Marathi, Konkani, Arabic</li>
+<li>⏱️ <strong>Wait time updates</strong> — "You're #3, estimated 12 minutes"</li>
+<li>🏥 <strong>ABHA integration</strong> — national health ID linked</li>
+</ul>
+<h3>For Doctors</h3>
+<ul>
+<li>📋 <strong>AI briefing</strong> — patient history pre-loaded before consultation</li>
+<li>💊 <strong>One-tap prescriptions</strong> — 120+ medicines with auto-fill</li>
+<li>🧪 <strong>One-tap tests</strong> — 74 tests, just tap to order</li>
+<li>🔄 <strong>Smart referrals</strong> — see other doctor's calendar, book slot directly</li>
+<li>📊 <strong>My Stats</strong> — daily/weekly/monthly performance dashboard</li>
+<li>🔴 <strong>Live queue</strong> — auto-refreshes every 5 seconds, no page reload</li>
+</ul>
+<h3>For Hospital Admin</h3>
+<ul>
+<li>📈 <strong>Dashboard</strong> — patients today, revenue, AI automation rate, queue depths</li>
+<li>👥 <strong>Staff management</strong> — add/edit doctors, nurses, receptionists</li>
+<li>🕐 <strong>Slot management</strong> — set doctor schedules with calendar preview</li>
+<li>🧪 <strong>Test management</strong> — add/remove available lab tests and imaging</li>
+<li>💊 <strong>Medicine database</strong> — manage 120+ medicines</li>
+<li>⚙️ <strong>Settings</strong> — hospital name, region (India/UAE), configuration</li>
+</ul>
+<h3>For Hospital Owner (Super Admin)</h3>
+<ul>
+<li>🏥 <strong>Multi-hospital</strong> — manage multiple hospitals from one panel</li>
+<li>🇮🇳🇦🇪 <strong>Region switching</strong> — India mode vs UAE mode (different currencies, languages, health IDs, insurance systems)</li>
+<li>📊 <strong>Cross-hospital analytics</strong></li>
+</ul>
+<hr />
+<h2>India vs UAE — One System, Two Modes</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>🇮🇳 India Mode</th>
+<th>🇦🇪 UAE Mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Currency</td>
+<td>₹ (INR)</td>
+<td>AED</td>
+</tr>
+<tr>
+<td>Health ID</td>
+<td>ABHA (Ayushman Bharat)</td>
+<td>Emirates ID</td>
+</tr>
+<tr>
+<td>Insurance</td>
+<td>PMJAY + TPA</td>
+<td>DHA / DoH (mandatory)</td>
+</tr>
+<tr>
+<td>Languages</td>
+<td>EN, HI, MR, KOK + 6 more</td>
+<td>EN, AR</td>
+</tr>
+<tr>
+<td>Voice Announcements</td>
+<td>English, Hindi, Marathi, Konkani</td>
+<td>English, Arabic</td>
+</tr>
+<tr>
+<td>Payment</td>
+<td>UPI, Cash, Card</td>
+<td>Card, Apple Pay, Insurance</td>
+</tr>
+<tr>
+<td>Tax</td>
+<td>GST 18%</td>
+<td>VAT 5%</td>
+</tr>
+<tr>
+<td>Emergency</td>
+<td>108</td>
+<td>999</td>
+</tr>
+<tr>
+<td>Compliance</td>
+<td>DPDP Act, ABDM</td>
+<td>PDPL, NABIDH</td>
+</tr>
+</tbody>
+</table>
+<p>Switch between modes in Settings → entire system adapts instantly.</p>
+<hr />
+<h2>Technical Highlights</h2>
+<ul>
+<li><strong>Built with:</strong> Laravel 13 (PHP 8.4), Tailwind CSS, Alpine.js</li>
+<li><strong>Database:</strong> SQLite (dev) / PostgreSQL (production)</li>
+<li><strong>WhatsApp Bot:</strong> whatsapp-web.js — just scan QR code, bot is live</li>
+<li><strong>No app download needed</strong> — patients use WhatsApp, staff use web browser</li>
+<li><strong>AI-powered:</strong> language detection, triage scoring, specialty mapping</li>
+<li><strong>Real-time:</strong> queue updates every 5 seconds, room display every 10 seconds</li>
+<li><strong>Secure:</strong> role-based access, audit logs, encrypted health data, ABHA consent management</li>
+<li><strong>19 database tables</strong>, 130+ PHP files, 25+ blade views</li>
+</ul>
+<hr />
+<h2>Revenue Model (SaaS)</h2>
+<h3>India Pricing</h3>
+<table>
+<thead>
+<tr>
+<th>Plan</th>
+<th>Target</th>
+<th>Monthly</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Starter</td>
+<td>1-3 doctors</td>
+<td>₹15,000/mo</td>
+</tr>
+<tr>
+<td>Professional</td>
+<td>4-15 doctors</td>
+<td>₹45,000/mo</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>15+ doctors</td>
+<td>₹1,20,000+/mo</td>
+</tr>
+</tbody>
+</table>
+<h3>UAE Pricing</h3>
+<table>
+<thead>
+<tr>
+<th>Plan</th>
+<th>Target</th>
+<th>Monthly</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Professional</td>
+<td>1-5 doctors</td>
+<td>AED 3,500/mo</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>5+ doctors</td>
+<td>AED 8,000+/mo</td>
+</tr>
+</tbody>
+</table>
+<h3>Setup Fees</h3>
+<ul>
+<li>Starter: ₹25,000 one-time</li>
+<li>Professional: ₹75,000 one-time</li>
+<li>Enterprise: ₹2,00,000+ one-time</li>
+</ul>
+<hr />
+<h2>Demo Credentials</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Email</th>
+<th>Password</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Super Admin</td>
+<td>superadmin@haztech.in</td>
+<td>password123</td>
+</tr>
+<tr>
+<td>Hospital Admin</td>
+<td>admin@haztech.in</td>
+<td>password123</td>
+</tr>
+<tr>
+<td>Doctor (Pediatrics)</td>
+<td>priya@haztech.in</td>
+<td>password123</td>
+</tr>
+<tr>
+<td>Doctor (Cardiology)</td>
+<td>amit@haztech.in</td>
+<td>password123</td>
+</tr>
+</tbody>
+</table>
+<h3>Demo Pages</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Login</td>
+<td>/login</td>
+</tr>
+<tr>
+<td>Admin Dashboard</td>
+<td>/admin</td>
+</tr>
+<tr>
+<td>Doctor Queue</td>
+<td>/doctor</td>
+</tr>
+<tr>
+<td>Kiosk</td>
+<td>/kiosk</td>
+</tr>
+<tr>
+<td>WhatsApp Bot Simulator</td>
+<td>/chat</td>
+</tr>
+<tr>
+<td>Room Display</td>
+<td>/kiosk/room/priya</td>
+</tr>
+<tr>
+<td>Queue Display (TV)</td>
+<td>/kiosk/queue-display</td>
+</tr>
+<tr>
+<td>Super Admin</td>
+<td>/super-admin</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>What Makes MedOS Different</h2>
+<ol>
+<li><strong>AI-native</strong> — AI is the system, not a chatbot bolted on top</li>
+<li><strong>WhatsApp-first</strong> — 500M+ Indian users, zero friction</li>
+<li><strong>No app download</strong> — patients use WhatsApp, staff use browser</li>
+<li><strong>Works offline</strong> — kiosk and queue display work without internet</li>
+<li><strong>5-language voice</strong> — announcements in English, Hindi, Marathi, Konkani, Arabic</li>
+<li><strong>India + UAE ready</strong> — one system, two regulatory frameworks</li>
+<li><strong>ABHA integrated</strong> — national health ID with consent management</li>
+<li><strong>Doctor-friendly</strong> — one-tap prescriptions, not forms to fill</li>
+</ol>
+<hr />
+<h2>Target Market</h2>
+<h3>Primary: India</h3>
+<ul>
+<li>70,000+ hospitals with 5-50 doctors</li>
+<li>Rising insurance penetration (PMJAY covering 500M people)</li>
+<li>WhatsApp penetration: 500M+ users</li>
+<li>Government push for digital health (ABDM)</li>
+</ul>
+<h3>Secondary: UAE</h3>
+<ul>
+<li>Mandatory health insurance for all residents</li>
+<li>High smartphone penetration</li>
+<li>DHA pushing for digital-first healthcare</li>
+<li>Expat population needs multilingual support</li>
+</ul>
+<hr />
+<h2>Built by Haztech</h2>
+<p>Haztech is a digital innovation agency building next-generation systems that automate businesses.</p>
+<p><strong>Products:</strong>
+- <strong>MedOS</strong> — Hospital Operating System
+- <strong>PropOS</strong> — Real Estate Management System</p>
+<p><strong>Contact:</strong> hello@haztech.cloud
+<strong>Website:</strong> https://haztech.cloud</p></body></html>

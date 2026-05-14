@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedOS — Hospital Operating System | Proposal</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --accent: #06b6d4;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --dark: #0f172a;
+        --text: #334155;
+        --muted: #64748b;
+        --light: #f8fafc;
+        --border: #e2e8f0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+        color: var(--text);
+        line-height: 1.7;
+        background: #fff;
+    }
+
+    .page {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 0 40px;
+    }
+
+    /* Cover */
+    .cover {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 60px 40px;
+        position: relative;
+        overflow: hidden;
+    }
+    .cover::before {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: radial-gradient(circle at 30% 50%, rgba(37,99,235,0.15) 0%, transparent 50%),
+                    radial-gradient(circle at 70% 50%, rgba(6,182,212,0.1) 0%, transparent 50%);
+    }
+    .cover * { position: relative; z-index: 1; }
+    .cover-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 20px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 50px;
+        color: rgba(255,255,255,0.7);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 40px;
+    }
+    .cover-badge .dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; }
+    .cover h1 {
+        font-size: 72px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #fff 0%, #93c5fd 50%, #06b6d4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -2px;
+        line-height: 1.1;
+    }
+    .cover h2 {
+        font-size: 22px;
+        font-weight: 500;
+        color: rgba(255,255,255,0.6);
+        margin-top: 16px;
+        max-width: 500px;
+    }
+    .cover-meta {
+        margin-top: 60px;
+        color: rgba(255,255,255,0.3);
+        font-size: 13px;
+    }
+    .cover-meta strong { color: rgba(255,255,255,0.6); }
+
+    /* Sections */
+    .section {
+        padding: 80px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .section:last-child { border-bottom: none; }
+
+    .section-label {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--primary);
+        margin-bottom: 12px;
+    }
+    .section-title {
+        font-size: 36px;
+        font-weight: 800;
+        color: var(--dark);
+        letter-spacing: -1px;
+        line-height: 1.2;
+        margin-bottom: 16px;
+    }
+    .section-subtitle {
+        font-size: 17px;
+        color: var(--muted);
+        max-width: 600px;
+        margin-bottom: 40px;
+    }
+
+    /* Problem/Solution */
+    .problem-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+    .problem-card, .solution-card {
+        padding: 28px;
+        border-radius: 16px;
+    }
+    .problem-card {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+    }
+    .solution-card {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+    }
+    .problem-card h4 { color: var(--danger); font-size: 14px; font-weight: 700; margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+    .solution-card h4 { color: var(--success); font-size: 14px; font-weight: 700; margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+    .problem-card li, .solution-card li {
+        font-size: 14px;
+        margin-bottom: 8px;
+        line-height: 1.5;
+    }
+    .problem-card ul, .solution-card ul { list-style: none; padding: 0; }
+    .problem-card li::before { content: '✗ '; color: var(--danger); font-weight: 700; }
+    .solution-card li::before { content: '✓ '; color: var(--success); font-weight: 700; }
+
+    /* Feature Cards */
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+    .feature-card {
+        padding: 28px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background: var(--light);
+        transition: all 0.2s;
+    }
+    .feature-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 8px 30px rgba(37,99,235,0.08);
+    }
+    .feature-icon {
+        width: 48px; height: 48px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 24px;
+        margin-bottom: 16px;
+    }
+    .feature-card h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 8px;
+    }
+    .feature-card p {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.6;
+    }
+
+    /* How it Works */
+    .step-list { counter-reset: step; }
+    .step-item {
+        display: flex;
+        gap: 24px;
+        padding: 24px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .step-item:last-child { border-bottom: none; }
+    .step-number {
+        width: 48px; height: 48px;
+        background: var(--primary);
+        color: #fff;
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px;
+        font-weight: 800;
+        flex-shrink: 0;
+    }
+    .step-content h3 { font-size: 18px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+    .step-content p { font-size: 14px; color: var(--muted); }
+
+    /* Stats */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin: 40px 0;
+    }
+    .stat-card {
+        text-align: center;
+        padding: 32px 20px;
+        background: var(--light);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+    }
+    .stat-card .number {
+        font-size: 36px;
+        font-weight: 900;
+        color: var(--primary);
+        line-height: 1;
+    }
+    .stat-card .label {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 8px;
+        font-weight: 500;
+    }
+
+    /* Pricing */
+    .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+    .price-card {
+        padding: 32px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        text-align: center;
+    }
+    .price-card.featured {
+        border-color: var(--primary);
+        background: linear-gradient(180deg, #eff6ff 0%, #fff 100%);
+        box-shadow: 0 8px 30px rgba(37,99,235,0.1);
+        position: relative;
+    }
+    .price-card.featured::before {
+        content: 'MOST POPULAR';
+        position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+        background: var(--primary); color: #fff;
+        padding: 4px 16px; border-radius: 20px;
+        font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    }
+    .price-card h3 { font-size: 20px; font-weight: 800; color: var(--dark); }
+    .price-card .target { font-size: 13px; color: var(--muted); margin: 4px 0 20px; }
+    .price-card .price {
+        font-size: 32px; font-weight: 900; color: var(--primary);
+    }
+    .price-card .price span { font-size: 14px; font-weight: 500; color: var(--muted); }
+    .price-card .setup {
+        font-size: 12px; color: var(--muted); margin-top: 4px;
+    }
+    .price-card ul {
+        list-style: none; padding: 0;
+        margin: 24px 0;
+        text-align: left;
+    }
+    .price-card li {
+        font-size: 13px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+    }
+    .price-card li::before { content: '✓ '; color: var(--success); font-weight: 700; }
+
+    /* Comparison */
+    .compare-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    .compare-table th {
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 700;
+        font-size: 13px;
+        border-bottom: 2px solid var(--dark);
+    }
+    .compare-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+    }
+    .compare-table tr:nth-child(even) { background: var(--light); }
+    .check { color: var(--success); font-weight: 700; }
+    .cross { color: #cbd5e1; }
+
+    /* CTA */
+    .cta-section {
+        background: linear-gradient(135deg, var(--dark) 0%, #1e293b 100%);
+        border-radius: 24px;
+        padding: 60px;
+        text-align: center;
+        margin: 60px 0;
+    }
+    .cta-section h2 { font-size: 32px; font-weight: 800; color: #fff; margin-bottom: 12px; }
+    .cta-section p { color: rgba(255,255,255,0.6); font-size: 16px; margin-bottom: 32px; }
+    .cta-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 16px 32px;
+        background: var(--primary);
+        color: #fff;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    /* Footer */
+    .footer {
+        text-align: center;
+        padding: 40px 0;
+        color: var(--muted);
+        font-size: 13px;
+    }
+
+    @media print {
+        .cover { min-height: auto; padding: 100px 40px; page-break-after: always; }
+        .section { page-break-inside: avoid; }
+    }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+    <div class="cover-badge"><span class="dot"></span> AI-Powered Healthcare</div>
+    <h1>MedOS</h1>
+    <h2>The AI-First Hospital Operating System that runs your hospital smarter</h2>
+    <div class="cover-meta">
+        <strong>Built by Haztech</strong> · Digital Innovation Agency<br>
+        India & UAE Ready · ABHA / ABDM Compliant
+    </div>
+</div>
+
+<div class="page">
+
+<!-- PROBLEM / SOLUTION -->
+<div class="section">
+    <div class="section-label">The Opportunity</div>
+    <div class="section-title">Hospitals lose patients because<br>of broken experiences</div>
+    <div class="section-subtitle">
+        Every day, hospitals lose revenue and patients because of manual processes,
+        long wait times, and zero digital engagement.
+    </div>
+
+    <div class="problem-grid">
+        <div class="problem-card">
+            <h4>Current Reality</h4>
+            <ul>
+                <li>3-5 receptionists handling 100+ patients daily</li>
+                <li>30-60 minute wait with no updates</li>
+                <li>Phone calls unanswered during rush</li>
+                <li>Paper tokens, manual queues</li>
+                <li>Doctors spend 30% time on paperwork</li>
+                <li>No follow-up after visits</li>
+                <li>Insurance verified after treatment</li>
+                <li>Zero patient engagement</li>
+            </ul>
+        </div>
+        <div class="solution-card">
+            <h4>With MedOS</h4>
+            <ul>
+                <li>AI handles 80% of interactions automatically</li>
+                <li>Real-time queue with wait predictions</li>
+                <li>WhatsApp bot handles unlimited 24/7</li>
+                <li>Digital tokens, smart priority queue</li>
+                <li>AI pre-fills everything, one-tap workflows</li>
+                <li>Automated reminders & re-engagement</li>
+                <li>Insurance pre-verified before booking</li>
+                <li>Full patient lifecycle management</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- IMPACT NUMBERS -->
+<div class="section">
+    <div class="section-label">Impact</div>
+    <div class="section-title">Measurable results from day one</div>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="number">80%</div>
+            <div class="label">Reception work automated</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">60%</div>
+            <div class="label">Wait time reduced</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">3x</div>
+            <div class="label">Patient throughput</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">40%</div>
+            <div class="label">Revenue increase</div>
+        </div>
+    </div>
+</div>
+
+<!-- FEATURES -->
+<div class="section">
+    <div class="section-label">Features</div>
+    <div class="section-title">Everything a modern hospital needs</div>
+    <div class="section-subtitle">Each module works independently or together as a complete operating system.</div>
+
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon" style="background:#eff6ff">📱</div>
+            <h3>WhatsApp AI Bot</h3>
+            <p>Patients book appointments via WhatsApp. Bot detects language, finds doctors, confirms booking — all automated.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon" style="background:#f0fdf4">🖥️</div>
+            <h3>Self-Service Kiosk</h3>
+            <p>Touch-screen at entrance. Patients check in with phone, ABHA, or token. No receptionist needed.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon" style="background:#fef3c7">⚡</div>
+            <h3>Smart Queue</h3>
+            <p>Priority-based queue with real-time updates. Patients see position on WhatsApp. Auto-reshuffles on delays.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon" style="background:#ede9fe">🩺</div>
+            <h3>Doctor Dashboard</h3>
+            <p>AI-generated patient briefings, one-tap prescriptions from 120+ medicines, lab orders, smart referrals.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon" style="background:#fce7f3">🔊</div>
+            <h3>Room Display + Voice</h3>
+            <p>TV screen outside each room. Announces patients in 5 languages with beep sound. Auto-refreshes.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon" style="background:#ecfdf5">💊</div>
+            <h3>Medicine & Test DB</h3>
+            <p>120+ medicines, 74 tests pre-loaded. Doctors search and prescribe in seconds. Admin manages inventory.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon" style="background:#fff7ed">🔄</div>
+            <h3>Referral System</h3>
+            <p>Doctor refers patient with one click. Receiving doctor sees calendar, picks slot, gets full patient context.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon" style="background:#f0f9ff">🏥</div>
+            <h3>ABHA / Emirates ID</h3>
+            <p>National health ID integration. Consent-based record sharing. ABDM and DHA compliant.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon" style="background:#fef2f2">🌍</div>
+            <h3>India + UAE Ready</h3>
+            <p>One system, two modes. Switch between ₹/AED, ABHA/Emirates ID, Hindi/Arabic, PMJAY/DHA instantly.</p>
+        </div>
+    </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section">
+    <div class="section-label">Patient Journey</div>
+    <div class="section-title">From WhatsApp message to follow-up — fully automated</div>
+
+    <div class="step-list">
+        <div class="step-item">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h3>Patient Messages on WhatsApp</h3>
+                <p>"Hi, mujhe bukhar hai" — Bot detects Hindi, asks for details, finds the right doctor, shows available slots with wait times. Appointment confirmed in under 2 minutes.</p>
+            </div>
+        </div>
+        <div class="step-item">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h3>Arrives at Hospital → Kiosk Check-in</h3>
+                <p>Enters phone number or ABHA at the kiosk tablet. System recognizes them, shows token and directions. No receptionist interaction needed.</p>
+            </div>
+        </div>
+        <div class="step-item">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h3>Waits with Real-time Updates</h3>
+                <p>TV screen outside doctor's room shows queue. Voice announces next patient in 5 languages. WhatsApp sends position updates.</p>
+            </div>
+        </div>
+        <div class="step-item">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h3>Doctor Consultation — AI-Assisted</h3>
+                <p>Doctor sees AI-generated briefing: complaint, history, allergies, medications. One-tap to prescribe, order tests, refer. Complete in half the time.</p>
+            </div>
+        </div>
+        <div class="step-item">
+            <div class="step-number">5</div>
+            <div class="step-content">
+                <h3>Auto Bill → Insurance → Follow-up</h3>
+                <p>Bill generated automatically. Insurance claim submitted. Medication reminders sent. Follow-up scheduled. Feedback collected after 2 hours.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPARISON -->
+<div class="section">
+    <div class="section-label">Why MedOS</div>
+    <div class="section-title">How we compare</div>
+
+    <table class="compare-table">
+        <thead>
+            <tr>
+                <th style="width:40%">Feature</th>
+                <th>Traditional HMS</th>
+                <th>Other SaaS</th>
+                <th style="color:var(--primary)">MedOS</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>WhatsApp booking</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td></tr>
+            <tr><td>AI receptionist</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td></tr>
+            <tr><td>Self-service kiosk</td><td class="cross">✗</td><td class="check">✓</td><td class="check">✓</td></tr>
+            <tr><td>Real-time queue with voice</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td></tr>
+            <tr><td>Multilingual (5+ languages)</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td></tr>
+            <tr><td>One-tap prescriptions</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td></tr>
+            <tr><td>Smart referrals with calendar</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td></tr>
+            <tr><td>ABHA / ABDM integrated</td><td class="cross">✗</td><td class="check">✓</td><td class="check">✓</td></tr>
+            <tr><td>India + UAE dual mode</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td></tr>
+            <tr><td>No app download needed</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td></tr>
+            <tr><td>Setup time</td><td>3-6 months</td><td>2-4 weeks</td><td style="color:var(--primary);font-weight:700">1 week</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- PRICING -->
+<div class="section">
+    <div class="section-label">Investment</div>
+    <div class="section-title">Plans for every hospital size</div>
+    <div class="section-subtitle">All plans include WhatsApp bot, kiosk, queue display, doctor dashboard, and full support. Custom pricing available.</div>
+
+    <div class="pricing-grid">
+        <div class="price-card">
+            <h3>Starter</h3>
+            <p class="target">1–3 Doctors · Small Clinics</p>
+            <div class="price">₹15,000<span>/month</span></div>
+            <div class="setup">+ ₹25,000 one-time setup</div>
+            <ul>
+                <li>WhatsApp AI bot</li>
+                <li>Patient registration</li>
+                <li>Digital queue</li>
+                <li>Doctor dashboard</li>
+                <li>500 patients/month</li>
+            </ul>
+        </div>
+        <div class="price-card featured">
+            <h3>Professional</h3>
+            <p class="target">4–15 Doctors · Mid Hospitals</p>
+            <div class="price">₹45,000<span>/month</span></div>
+            <div class="setup">+ ₹75,000 one-time setup</div>
+            <ul>
+                <li>Everything in Starter</li>
+                <li>Multi-doctor referrals</li>
+                <li>Insurance integration</li>
+                <li>Room displays + voice</li>
+                <li>Analytics dashboard</li>
+                <li>ABHA integration</li>
+                <li>2,000 patients/month</li>
+            </ul>
+        </div>
+        <div class="price-card">
+            <h3>Enterprise</h3>
+            <p class="target">15+ Doctors · Large Hospitals</p>
+            <div class="price">₹1,20,000+<span>/month</span></div>
+            <div class="setup">+ ₹2,00,000 one-time setup</div>
+            <ul>
+                <li>Everything in Professional</li>
+                <li>Multi-branch support</li>
+                <li>Custom modules</li>
+                <li>Priority support</li>
+                <li>On-site training</li>
+                <li>Custom integrations</li>
+                <li>Unlimited patients</li>
+            </ul>
+        </div>
+    </div>
+
+    <div style="text-align:center;margin-top:32px;padding:24px;background:var(--light);border-radius:16px;border:1px solid var(--border)">
+        <p style="font-size:14px;color:var(--muted);margin-bottom:8px">UAE pricing available separately</p>
+        <p style="font-size:14px;color:var(--muted)"><strong style="color:var(--dark)">Custom builds welcome</strong> — need a specific module or integration? We build it for you.</p>
+        <p style="font-size:14px;color:var(--primary);font-weight:700;margin-top:8px">Pricing is on consultation basis — every hospital is different.</p>
+    </div>
+</div>
+
+<!-- CUSTOMISATION -->
+<div class="section">
+    <div class="section-label">Flexibility</div>
+    <div class="section-title">Fully customisable to your needs</div>
+
+    <div class="feature-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="feature-card">
+            <h3>🎨 White Label</h3>
+            <p>Your hospital name, logo, colors, domain. Patients see your brand, not ours. Fully branded WhatsApp bot, kiosk, and displays.</p>
+        </div>
+        <div class="feature-card">
+            <h3>🔧 Custom Modules</h3>
+            <p>Need pharmacy management? Lab integration? Bed management? We build custom modules that plug into MedOS seamlessly.</p>
+        </div>
+        <div class="feature-card">
+            <h3>🌐 Language Support</h3>
+            <p>Currently supports English, Hindi, Marathi, Konkani, Arabic. Need Tamil, Telugu, Kannada, or any other? We add it.</p>
+        </div>
+        <div class="feature-card">
+            <h3>🔗 Integrations</h3>
+            <p>Connect with your existing lab equipment, pharmacy system, billing software, or insurance portals. API-first architecture.</p>
+        </div>
+    </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+    <h2>Ready to transform your hospital?</h2>
+    <p>Book a free demo and see MedOS in action with your hospital's data</p>
+    <a href="mailto:hello@haztech.cloud" class="cta-btn">Schedule a Demo →</a>
+    <div style="margin-top:24px;color:rgba(255,255,255,0.4);font-size:13px">
+        hello@haztech.cloud · haztech.cloud · Live demo: medos.haztech.cloud
+    </div>
+</div>
+
+<div class="footer">
+    <p><strong>Haztech</strong> — Digital Innovation Agency</p>
+    <p>Building next-generation systems that automate businesses</p>
+    <p style="margin-top:12px;font-size:11px;color:#94a3b8">© 2026 Haztech. All rights reserved. This document is confidential.</p>
+</div>
+
+</div>
+</body>
+</html>
