@@ -1,72 +1,114 @@
 <?php
 /**
- * MedOS Deployment Script
- * Access via: https://medos.haztech.cloud/deploy.php?key=haztech2026
- * Run ONCE after git deploy, then DELETE this file.
+ * MedOS Deployment Script for Shared Hosting
+ * Access: https://medos.haztech.cloud/deploy.php?key=haztech2026
+ * DELETE this file after successful deployment!
  */
 
 if (($_GET['key'] ?? '') !== 'haztech2026') { die('Unauthorized'); }
 
-echo "<pre>\n";
-echo "=== MedOS Deployment ===\n\n";
+// Boot Laravel
+require __DIR__ . '/../vendor/autoload.php';
+$app = require_once __DIR__ . '/../bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
 
-// 1. Copy .env
+echo "<html><head><title>MedOS Deploy</title>
+<style>body{font-family:monospace;padding:40px;background:#0f172a;color:#e2e8f0;max-width:800px;margin:0 auto;}
+h1{color:#60a5fa;}pre{background:#1e293b;padding:20px;border-radius:8px;overflow:auto;margin:16px 0;}
+.ok{color:#4ade80;}.err{color:#f87171;}.info{color:#fbbf24;}</style></head><body>";
+echo "<h1>MedOS Deployment</h1><pre>";
+
 $root = dirname(__DIR__);
-if (!file_exists($root . '/.env')) {
-    if (copy($root . '/.env.production', $root . '/.env')) {
-        echo "✓ .env created from .env.production\n";
-        // Fix the DB path
-        $env = file_get_contents($root . '/.env');
-        $env = str_replace('/home/YOUR_HOSTINGER_USER/public_html/medos', $root, $env);
-        file_put_contents($root . '/.env', $env);
-        echo "✓ .env DB path updated\n";
-    } else {
-        echo "✗ Failed to create .env\n";
-    }
+
+// 1. Check .env
+echo "<span class='info'>1. Checking .env...</span>\n";
+if (file_exists($root . '/.env')) {
+    echo "<span class='ok'>✓ .env exists</span>\n";
 } else {
-    echo "⊘ .env already exists\n";
+    echo "<span class='err'>✗ .env missing! Create it via File Manager.</span>\n";
+    echo "</pre></body></html>";
+    exit;
 }
 
-// 2. Generate app key
-echo "\n--- Generating App Key ---\n";
-$output = shell_exec("cd {$root} && php artisan key:generate --force 2>&1");
-echo $output ?? "✗ Failed\n";
-
-// 3. Create database
-$dbPath = $root . '/database/database.sqlite';
+// 2. Check database file
+echo "\n<span class='info'>2. Checking database...</span>\n";
+$dbPath = env('DB_DATABASE', $root . '/database/database.sqlite');
+echo "DB path: {$dbPath}\n";
 if (!file_exists($dbPath)) {
-    touch($dbPath);
-    chmod($dbPath, 0664);
-    echo "✓ database.sqlite created\n";
+    @touch($dbPath);
+    @chmod($dbPath, 0664);
+    echo "<span class='ok'>✓ database.sqlite created</span>\n";
 } else {
-    echo "⊘ database.sqlite already exists\n";
+    $size = filesize($dbPath);
+    echo "<span class='ok'>✓ database.sqlite exists ({$size} bytes)</span>\n";
 }
 
-// 4. Run migrations
-echo "\n--- Running Migrations ---\n";
-$output = shell_exec("cd {$root} && php artisan migrate --force 2>&1");
-echo $output ?? "✗ Failed\n";
+// 3. Run migrations
+echo "\n<span class='info'>3. Running migrations...</span>\n";
+try {
+    $exitCode = Artisan::call('migrate', ['--force' => true]);
+    echo Artisan::output();
+    if ($exitCode === 0) {
+        echo "<span class='ok'>✓ Migrations complete</span>\n";
+    } else {
+        echo "<span class='err'>✗ Migration failed (exit code: {$exitCode})</span>\n";
+    }
+} catch (Exception $e) {
+    echo "<span class='err'>✗ Migration error: " . htmlspecialchars($e->getMessage()) . "</span>\n";
+}
 
-// 5. Run seeders
-echo "\n--- Seeding Database ---\n";
-$output = shell_exec("cd {$root} && php artisan db:seed --force 2>&1");
-echo $output ?? "✗ Failed\n";
+// 4. Run seeders
+echo "\n<span class='info'>4. Seeding database...</span>\n";
+try {
+    $exitCode = Artisan::call('db:seed', ['--force' => true]);
+    echo Artisan::output();
+    if ($exitCode === 0) {
+        echo "<span class='ok'>✓ Seeding complete</span>\n";
+    } else {
+        echo "<span class='err'>✗ Seeding failed (exit code: {$exitCode})</span>\n";
+    }
+} catch (Exception $e) {
+    echo "<span class='err'>✗ Seeding error: " . htmlspecialchars($e->getMessage()) . "</span>\n";
+}
 
-// 6. Cache config
-echo "\n--- Caching ---\n";
-$output = shell_exec("cd {$root} && php artisan config:cache 2>&1");
-echo $output ?? "";
-$output = shell_exec("cd {$root} && php artisan route:cache 2>&1");
-echo $output ?? "";
-$output = shell_exec("cd {$root} && php artisan view:cache 2>&1");
-echo $output ?? "";
+// 5. Create storage link
+echo "\n<span class='info'>5. Storage link...</span>\n";
+try {
+    Artisan::call('storage:link', ['--force' => true]);
+    echo Artisan::output();
+    echo "<span class='ok'>✓ Storage linked</span>\n";
+} catch (Exception $e) {
+    echo "<span class='info'>⊘ " . htmlspecialchars($e->getMessage()) . "</span>\n";
+}
 
-// 7. Storage link
-echo "\n--- Storage Link ---\n";
-$output = shell_exec("cd {$root} && php artisan storage:link 2>&1");
-echo $output ?? "";
+// 6. Verify tables
+echo "\n<span class='info'>6. Verifying tables...</span>\n";
+try {
+    $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
+    echo "Tables found: " . count($tables) . "\n";
+    foreach ($tables as $t) {
+        echo "  ✓ {$t->name}\n";
+    }
+} catch (Exception $e) {
+    echo "<span class='err'>✗ Cannot read tables: " . htmlspecialchars($e->getMessage()) . "</span>\n";
+}
 
-echo "\n\n=== DONE ===\n";
-echo "Now DELETE this file from File Manager!\n";
-echo "Login at: https://medos.haztech.cloud/login\n";
-echo "</pre>";
+// 7. Verify users
+echo "\n<span class='info'>7. Checking users...</span>\n";
+try {
+    $users = DB::table('users')->get(['email', 'role']);
+    echo "Users found: " . $users->count() . "\n";
+    foreach ($users as $u) {
+        echo "  ✓ {$u->email} ({$u->role})\n";
+    }
+} catch (Exception $e) {
+    echo "<span class='err'>✗ Cannot read users: " . htmlspecialchars($e->getMessage()) . "</span>\n";
+}
+
+echo "\n\n<span class='ok'>=============================</span>\n";
+echo "<span class='ok'>  DEPLOYMENT COMPLETE!</span>\n";
+echo "<span class='ok'>=============================</span>\n\n";
+echo "Login: <a href='https://medos.haztech.cloud/login' style='color:#60a5fa'>https://medos.haztech.cloud/login</a>\n";
+echo "\n<span class='err'>⚠ DELETE this file (deploy.php) from File Manager now!</span>\n";
+echo "</pre></body></html>";
