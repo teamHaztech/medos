@@ -98,7 +98,7 @@
                 <h3 class="text-lg font-semibold text-slate-800">Add Staff Member</h3>
                 <button @click="showAddModal = false" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
             </div>
-            <form method="POST" action="#" class="space-y-4">
+            <form method="POST" action="{{ route('web.admin.staff.store') }}" class="space-y-4">
                 @csrf
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
@@ -130,9 +130,19 @@
                         <input type="text" name="department" class="input-field" placeholder="e.g. Cardiology">
                     </div>
                 </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Specialization</label>
+                        <input type="text" name="specialization" class="input-field" placeholder="e.g. Cardiology">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Qualification</label>
+                        <input type="text" name="qualification" class="input-field" placeholder="e.g. MBBS, MD">
+                    </div>
+                </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">License Number</label>
-                    <input type="text" name="license_number" class="input-field">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Consultation Duration (minutes)</label>
+                    <input type="number" name="consultation_duration_default" class="input-field" value="15" min="5" max="120">
                 </div>
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" @click="showAddModal = false" class="btn-secondary">Cancel</button>

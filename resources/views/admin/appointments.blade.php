@@ -127,26 +127,37 @@ function appointmentsPage() {
         },
 
         async checkIn(id) {
-            // TODO: fetch from API
             if (confirm('Check in this patient?')) {
                 try {
-                    const res = await fetch(`/api/appointments/${id}/check-in`, {
+                    const res = await fetch(`/admin/appointments/${id}/check-in`, {
                         method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
                     });
                     if (res.ok) window.location.reload();
+                    else alert('Failed to check in patient.');
                 } catch(e) { console.error(e); }
             }
         },
 
         async cancelAppointment(id) {
             if (confirm('Cancel this appointment?')) {
+                const reason = prompt('Cancellation reason (optional):') || 'Cancelled by admin';
                 try {
-                    const res = await fetch(`/api/appointments/${id}/cancel`, {
+                    const res = await fetch(`/admin/appointments/${id}/cancel`, {
                         method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ cancellation_reason: reason }),
                     });
                     if (res.ok) window.location.reload();
+                    else alert('Failed to cancel appointment.');
                 } catch(e) { console.error(e); }
             }
         }

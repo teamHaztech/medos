@@ -72,17 +72,11 @@
                 <h3 class="text-lg font-semibold text-slate-800">Add New Patient</h3>
                 <button @click="showAddModal = false" class="text-slate-400 hover:text-slate-600">&times;</button>
             </div>
-            <form method="POST" action="{{ route('web.admin.patients') }}" class="space-y-4">
+            <form method="POST" action="{{ route('web.admin.patients.store') }}" class="space-y-4">
                 @csrf
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">First Name</label>
-                        <input type="text" name="first_name" required class="input-field">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
-                        <input type="text" name="last_name" required class="input-field">
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                    <input type="text" name="name" required class="input-field">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
@@ -106,13 +100,30 @@
                     <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
                     <input type="email" name="email" class="input-field">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Preferred Language</label>
-                    <select name="preferred_language" class="input-field">
-                        <option value="en">English</option>
-                        <option value="hi">Hindi</option>
-                        <option value="ar">Arabic</option>
-                    </select>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Language</label>
+                        <select name="language_preference" class="input-field">
+                            <option value="en">English</option>
+                            <option value="hi">Hindi</option>
+                            <option value="mr">Marathi</option>
+                            <option value="ar">Arabic</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Blood Group</label>
+                        <select name="blood_group" class="input-field">
+                            <option value="">-- Select --</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" @click="showAddModal = false" class="btn-secondary">Cancel</button>

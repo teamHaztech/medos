@@ -52,17 +52,48 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @foreach($medicines as $med)
-                <tr class="hover:bg-slate-50" x-show="!search || '{{ strtolower($med->name . ' ' . ($med->generic_name ?? '') . ' ' . ($med->category ?? '')) }}'.includes(search.toLowerCase())">
-                    <td class="table-cell font-medium">{{ $med->name }}</td>
-                    <td class="table-cell text-slate-500">{{ $med->generic_name }}</td>
-                    <td class="table-cell"><span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">{{ $med->category }}</span></td>
-                    <td class="table-cell">{{ $med->default_dosage }}</td>
-                    <td class="table-cell capitalize">{{ $med->form }}</td>
-                    <td class="table-cell">
-                        <form method="POST" action="{{ route('web.admin.medicines.delete', $med->id) }}" onsubmit="return confirm('Remove?')">
-                            @csrf @method('DELETE')
-                            <button class="text-red-400 hover:text-red-600 text-sm">Remove</button>
-                        </form>
+                <tr class="hover:bg-slate-50" x-data="{ editing: false }" x-show="!search || '{{ strtolower($med->name . ' ' . ($med->generic_name ?? '') . ' ' . ($med->category ?? '')) }}'.includes(search.toLowerCase())">
+                    <template x-if="!editing">
+                        <td class="table-cell font-medium" @dblclick="editing = true">{{ $med->name }}</td>
+                    </template>
+                    <template x-if="editing">
+                        <td class="table-cell" colspan="5">
+                            <form method="POST" action="{{ route('web.admin.medicines.update', $med->id) }}" class="flex items-center gap-2 flex-wrap">
+                                @csrf @method('PUT')
+                                <input type="text" name="name" value="{{ $med->name }}" required class="input-field w-36" placeholder="Name">
+                                <input type="text" name="generic_name" value="{{ $med->generic_name }}" class="input-field w-36" placeholder="Generic name">
+                                <input type="text" name="category" value="{{ $med->category }}" class="input-field w-28" placeholder="Category">
+                                <input type="text" name="default_dosage" value="{{ $med->default_dosage }}" class="input-field w-24" placeholder="Dosage">
+                                <select name="form" class="input-field w-28">
+                                    @foreach(['tablet','capsule','syrup','injection','cream','drops','inhaler','ointment','gel','sachet','spray'] as $f)
+                                        <option value="{{ $f }}" {{ $med->form === $f ? 'selected' : '' }}>{{ ucfirst($f) }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">Save</button>
+                                <button type="button" @click="editing = false" class="text-slate-400 hover:text-slate-600 text-sm">Cancel</button>
+                            </form>
+                        </td>
+                    </template>
+                    <template x-if="!editing">
+                        <td class="table-cell text-slate-500">{{ $med->generic_name }}</td>
+                    </template>
+                    <template x-if="!editing">
+                        <td class="table-cell"><span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">{{ $med->category }}</span></td>
+                    </template>
+                    <template x-if="!editing">
+                        <td class="table-cell">{{ $med->default_dosage }}</td>
+                    </template>
+                    <template x-if="!editing">
+                        <td class="table-cell capitalize">{{ $med->form }}</td>
+                    </template>
+                    <td class="table-cell" x-show="!editing">
+                        <div class="flex items-center gap-2">
+                            <button @click="editing = true" class="text-blue-400 hover:text-blue-600 text-sm">Edit</button>
+                            <form method="POST" action="{{ route('web.admin.medicines.delete', $med->id) }}" onsubmit="return confirm('Remove?')">
+                                @csrf @method('DELETE')
+                                <button class="text-red-400 hover:text-red-600 text-sm">Remove</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 @endforeach

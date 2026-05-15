@@ -12,6 +12,7 @@ use App\Modules\Patient\Models\Encounter;
 use App\Modules\Patient\Models\Patient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class AdminWebController extends Controller
 {
@@ -127,6 +128,89 @@ class AdminWebController extends Controller
 
         $patients = $query->latest()->paginate(20);
         return view('admin.patients', compact('patients'));
+    }
+
+    public function storePatient(Request $request)
+    {
+        $v = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'gender' => 'nullable|string|in:male,female,other',
+            'email' => 'nullable|email|max:255',
+            'date_of_birth' => 'nullable|date',
+            'language_preference' => 'nullable|string|max:10',
+            'blood_group' => 'nullable|string|max:10',
+        ]);
+
+        // Normalize phone: add +91 if 10 digits
+        $phone = preg_replace('/\s+/', '', $v['phone']);
+        if (preg_match('/^\d{10}$/', $phone)) {
+            $phone = '+91' . $phone;
+        }
+
+        $hospitalId = Auth::user()->hospital_id;
+
+        // Check duplicate by phone in same hospital
+        $exists = Patient::where('hospital_id', $hospitalId)->where('phone', $phone)->exists();
+        if ($exists) {
+            return redirect()->back()->withInput()->with('error', 'A patient with this phone number already exists.');
+        }
+
+        Patient::create([
+            'id' => Str::uuid()->toString(),
+            'hospital_id' => $hospitalId,
+            'name' => $v['name'],
+            'phone' => $phone,
+            'gender' => $v['gender'] ?? null,
+            'email' => $v['email'] ?? null,
+            'date_of_birth' => $v['date_of_birth'] ?? null,
+            'language_preference' => $v['language_preference'] ?? 'en',
+            'blood_group' => $v['blood_group'] ?? null,
+            'created_via' => 'admin',
+        ]);
+
+        return redirect()->route('web.admin.patients')->with('success', 'Patient added successfully.');
+    }
+
+    public function updatePatient(Request $request, string $id)
+    {
+        $patient = Patient::where('hospital_id', Auth::user()->hospital_id)->findOrFail($id);
+
+        $v = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'gender' => 'nullable|string|in:male,female,other',
+            'email' => 'nullable|email|max:255',
+            'date_of_birth' => 'nullable|date',
+            'language_preference' => 'nullable|string|max:10',
+            'blood_group' => 'nullable|string|max:10',
+        ]);
+
+        // Normalize phone
+        $phone = preg_replace('/\s+/', '', $v['phone']);
+        if (preg_match('/^\d{10}$/', $phone)) {
+            $phone = '+91' . $phone;
+        }
+
+        $patient->update([
+            'name' => $v['name'],
+            'phone' => $phone,
+            'gender' => $v['gender'] ?? $patient->gender,
+            'email' => $v['email'] ?? $patient->email,
+            'date_of_birth' => $v['date_of_birth'] ?? $patient->date_of_birth,
+            'language_preference' => $v['language_preference'] ?? $patient->language_preference,
+            'blood_group' => $v['blood_group'] ?? $patient->blood_group,
+        ]);
+
+        return redirect()->back()->with('success', 'Patient updated successfully.');
+    }
+
+    public function deletePatient(string $id)
+    {
+        $patient = Patient::where('hospital_id', Auth::user()->hospital_id)->findOrFail($id);
+        $patient->delete();
+
+        return redirect()->route('web.admin.patients')->with('success', 'Patient deleted successfully.');
     }
 
     public function patientDetail($id)
@@ -370,12 +454,298 @@ class AdminWebController extends Controller
         return response()->json(['success' => true, 'message' => 'Schedule updated.']);
     }
 
-    public function analytics()
+    public function analytics(Request $request)
     {
-        return view('admin.dashboard', [
-            'patientsToday' => 0, 'avgWaitTime' => 0, 'aiRate' => 0,
-            'revenueToday' => 0, 'queues' => collect(), 'recentActivity' => collect(),
-            'quickStats' => ['pendingAppointments' => 0, 'insurancePending' => 0, 'billsUnpaid' => 0, 'consultationsDone' => 0, 'noShows' => 0],
+        $hospitalId = Auth::user()->hospital_id;
+        $period = $request->get('period', 'this_month');
+
+        // Determine date ranges based on period
+        switch ($period) {
+            case 'last_month':
+                $startDate = now()->subMonth()->startOfMonth();
+                $endDate = now()->subMonth()->endOfMonth();
+                $prevStart = now()->subMonths(2)->startOfMonth();
+                $prevEnd = now()->subMonths(2)->endOfMonth();
+                $periodLabel = 'Last Month';
+                break;
+            case 'last_3_months':
+                $startDate = now()->subMonths(3)->startOfMonth();
+                $endDate = now()->endOfDay();
+                $prevStart = now()->subMonths(6)->startOfMonth();
+                $prevEnd = now()->subMonths(3)->startOfMonth();
+                $periodLabel = 'Last 3 Months';
+                break;
+            case 'this_year':
+                $startDate = now()->startOfYear();
+                $endDate = now()->endOfDay();
+                $prevStart = now()->subYear()->startOfYear();
+                $prevEnd = now()->subYear()->endOfYear();
+                $periodLabel = 'This Year';
+                break;
+            default: // this_month
+                $startDate = now()->startOfMonth();
+                $endDate = now()->endOfDay();
+                $prevStart = now()->subMonth()->startOfMonth();
+                $prevEnd = now()->subMonth()->endOfMonth();
+                $periodLabel = 'This Month';
+                break;
+        }
+
+        // Patient counts
+        $patientsThisPeriod = Patient::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->count();
+        $patientsPrevPeriod = Patient::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$prevStart, $prevEnd])
+            ->count();
+
+        // Revenue
+        $revenueThisPeriod = Bill::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->sum('total_amount') ?? 0;
+        $revenuePrevPeriod = Bill::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$prevStart, $prevEnd])
+            ->sum('total_amount') ?? 0;
+
+        // Appointments
+        $appointmentsThisPeriod = Appointment::where('hospital_id', $hospitalId)
+            ->whereBetween('slot_start', [$startDate, $endDate])
+            ->count();
+        $appointmentsPrevPeriod = Appointment::where('hospital_id', $hospitalId)
+            ->whereBetween('slot_start', [$prevStart, $prevEnd])
+            ->count();
+
+        // Avg wait time (SQLite-compatible)
+        $avgWaitTime = 0;
+        $waitEntries = QueueEntry::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereNotNull('called_at')
+            ->get(['created_at', 'called_at']);
+        if ($waitEntries->count() > 0) {
+            $totalMinutes = $waitEntries->sum(fn ($e) => $e->called_at->diffInMinutes($e->created_at));
+            $avgWaitTime = round($totalMinutes / $waitEntries->count());
+        }
+
+        // Top 5 doctors by patient count
+        $topDoctors = Appointment::where('appointments.hospital_id', $hospitalId)
+            ->whereBetween('slot_start', [$startDate, $endDate])
+            ->join('staff', 'appointments.doctor_id', '=', 'staff.id')
+            ->selectRaw('staff.name, staff.department, staff.specialization, count(distinct appointments.patient_id) as patient_count, count(*) as appointment_count')
+            ->groupBy('staff.id', 'staff.name', 'staff.department', 'staff.specialization')
+            ->orderByDesc('patient_count')
+            ->limit(5)
+            ->get();
+
+        // Department-wise patient distribution
+        $departmentStats = Appointment::where('appointments.hospital_id', $hospitalId)
+            ->whereBetween('slot_start', [$startDate, $endDate])
+            ->join('staff', 'appointments.doctor_id', '=', 'staff.id')
+            ->selectRaw("coalesce(staff.department, 'General') as department, count(distinct appointments.patient_id) as patient_count")
+            ->groupBy('staff.department')
+            ->orderByDesc('patient_count')
+            ->get();
+
+        // Recent 20 encounters
+        $recentEncounters = Encounter::where('encounters.hospital_id', $hospitalId)
+            ->with(['patient', 'doctor'])
+            ->latest()
+            ->limit(20)
+            ->get();
+
+        return view('admin.analytics', compact(
+            'period', 'periodLabel',
+            'patientsThisPeriod', 'patientsPrevPeriod',
+            'revenueThisPeriod', 'revenuePrevPeriod',
+            'appointmentsThisPeriod', 'appointmentsPrevPeriod',
+            'avgWaitTime',
+            'topDoctors', 'departmentStats', 'recentEncounters',
+        ));
+    }
+
+    public function updateTest(Request $request, string $id)
+    {
+        $v = $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'nullable|numeric|min:0',
+            'turnaround_time' => 'nullable|string|max:100',
+            'instructions' => 'nullable|string|max:500',
         ]);
+
+        \DB::table('available_tests')->where('id', $id)->update([
+            'name' => $v['name'],
+            'price' => $v['price'] ?? 0,
+            'turnaround_time' => $v['turnaround_time'] ?? null,
+            'instructions' => $v['instructions'] ?? null,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('web.admin.tests')->with('success', 'Test updated successfully.');
+    }
+
+    public function updateMedicine(Request $request, string $id)
+    {
+        $v = $request->validate([
+            'name' => 'required|string|max:255',
+            'generic_name' => 'nullable|string|max:255',
+            'category' => 'nullable|string|max:100',
+            'default_dosage' => 'nullable|string|max:50',
+            'form' => 'nullable|string|max:50',
+        ]);
+
+        \DB::table('medicines')->where('id', $id)->update([
+            'name' => $v['name'],
+            'generic_name' => $v['generic_name'] ?? $v['name'],
+            'category' => $v['category'] ?? 'Other',
+            'default_dosage' => $v['default_dosage'] ?? null,
+            'form' => $v['form'] ?? 'tablet',
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('web.admin.medicines')->with('success', 'Medicine updated successfully.');
+    }
+
+    // ---------------------------------------------------------------
+    // Staff CRUD
+    // ---------------------------------------------------------------
+
+    public function storeStaff(Request $request)
+    {
+        $v = $request->validate([
+            'name'                          => 'required|string|max:255',
+            'email'                         => 'required|email|max:255|unique:staff,email',
+            'phone'                         => 'nullable|string|max:20',
+            'role'                          => 'required|in:doctor,nurse,receptionist,pharmacist,lab_tech,billing_staff,hospital_admin',
+            'department'                    => 'nullable|string|max:100',
+            'specialization'                => 'nullable|string|max:100',
+            'qualification'                 => 'nullable|string|max:255',
+            'consultation_duration_default' => 'nullable|integer|min:5|max:120',
+        ]);
+
+        $hospitalId = Auth::user()->hospital_id;
+        $staffId = Str::uuid()->toString();
+        $userId = Str::uuid()->toString();
+
+        \DB::table('staff')->insert([
+            'id'                            => $staffId,
+            'hospital_id'                   => $hospitalId,
+            'name'                          => $v['name'],
+            'email'                         => $v['email'],
+            'phone'                         => $v['phone'] ?? null,
+            'role'                          => $v['role'],
+            'department'                    => $v['department'] ?? null,
+            'specialization'                => $v['specialization'] ?? null,
+            'qualification'                 => $v['qualification'] ?? null,
+            'consultation_duration_default' => $v['consultation_duration_default'] ?? 15,
+            'is_active'                     => true,
+            'created_at'                    => now(),
+            'updated_at'                    => now(),
+        ]);
+
+        \DB::table('users')->insert([
+            'id'          => $userId,
+            'name'        => $v['name'],
+            'email'       => $v['email'],
+            'password'    => \Illuminate\Support\Facades\Hash::make('password123'),
+            'phone'       => $v['phone'] ?? null,
+            'role'        => $v['role'],
+            'hospital_id' => $hospitalId,
+            'staff_id'    => $staffId,
+            'is_active'   => true,
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+
+        // Link user_id back to staff
+        \DB::table('staff')->where('id', $staffId)->update(['user_id' => $userId]);
+
+        return redirect()->route('web.admin.staff')->with('success', 'Staff member added successfully.');
+    }
+
+    public function updateStaff(Request $request, string $id)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        $staff = \DB::table('staff')->where('id', $id)->where('hospital_id', $hospitalId)->first();
+
+        if (!$staff) {
+            abort(404);
+        }
+
+        $v = $request->validate([
+            'name'                          => 'required|string|max:255',
+            'email'                         => 'required|email|max:255|unique:staff,email,' . $id,
+            'phone'                         => 'nullable|string|max:20',
+            'role'                          => 'required|in:doctor,nurse,receptionist,pharmacist,lab_tech,billing_staff,hospital_admin',
+            'department'                    => 'nullable|string|max:100',
+            'specialization'                => 'nullable|string|max:100',
+            'qualification'                 => 'nullable|string|max:255',
+            'consultation_duration_default' => 'nullable|integer|min:5|max:120',
+        ]);
+
+        \DB::table('staff')->where('id', $id)->update([
+            'name'                          => $v['name'],
+            'email'                         => $v['email'],
+            'phone'                         => $v['phone'] ?? null,
+            'role'                          => $v['role'],
+            'department'                    => $v['department'] ?? null,
+            'specialization'                => $v['specialization'] ?? null,
+            'qualification'                 => $v['qualification'] ?? null,
+            'consultation_duration_default' => $v['consultation_duration_default'] ?? 15,
+            'updated_at'                    => now(),
+        ]);
+
+        return redirect()->route('web.admin.staff')->with('success', 'Staff member updated.');
+    }
+
+    public function deleteStaff(string $id)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        \DB::table('staff')->where('id', $id)->where('hospital_id', $hospitalId)->update([
+            'is_active'  => false,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('web.admin.staff')->with('success', 'Staff member deactivated.');
+    }
+
+    // ---------------------------------------------------------------
+    // Appointment Check-In & Cancel
+    // ---------------------------------------------------------------
+
+    public function checkInAppointment(string $id)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        $updated = \DB::table('appointments')
+            ->where('id', $id)
+            ->where('hospital_id', $hospitalId)
+            ->update([
+                'status'        => 'checked_in',
+                'check_in_time' => now(),
+                'updated_at'    => now(),
+            ]);
+
+        if (!$updated) {
+            return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    public function cancelAppointment(Request $request, string $id)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        $updated = \DB::table('appointments')
+            ->where('id', $id)
+            ->where('hospital_id', $hospitalId)
+            ->update([
+                'status'              => 'cancelled',
+                'cancellation_reason' => $request->input('cancellation_reason', 'Cancelled by admin'),
+                'updated_at'          => now(),
+            ]);
+
+        if (!$updated) {
+            return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        }
+
+        return response()->json(['success' => true]);
     }
 }

@@ -47,17 +47,43 @@
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @foreach($typeTests as $test)
-                        <tr class="hover:bg-slate-50">
-                            <td class="table-cell font-medium">{{ $test->name }}</td>
-                            <td class="table-cell">{{ $test->category }}</td>
-                            <td class="table-cell">₹{{ number_format($test->price, 0) }}</td>
-                            <td class="table-cell">{{ $test->turnaround_time ?? '-' }}</td>
-                            <td class="table-cell text-xs text-slate-500">{{ $test->instructions ?? '-' }}</td>
-                            <td class="table-cell">
-                                <form method="POST" action="{{ route('web.admin.tests.delete', $test->id) }}" onsubmit="return confirm('Remove this test?')">
-                                    @csrf @method('DELETE')
-                                    <button class="text-red-400 hover:text-red-600 text-sm">Remove</button>
-                                </form>
+                        <tr class="hover:bg-slate-50" x-data="{ editing: false }">
+                            <template x-if="!editing">
+                                <td class="table-cell font-medium" @dblclick="editing = true">{{ $test->name }}</td>
+                            </template>
+                            <template x-if="editing">
+                                <td class="table-cell" colspan="5">
+                                    <form method="POST" action="{{ route('web.admin.tests.update', $test->id) }}" class="flex items-center gap-2 flex-wrap">
+                                        @csrf @method('PUT')
+                                        <input type="text" name="name" value="{{ $test->name }}" required class="input-field w-40" placeholder="Name">
+                                        <input type="number" name="price" value="{{ $test->price }}" step="0.01" class="input-field w-24" placeholder="Price">
+                                        <input type="text" name="turnaround_time" value="{{ $test->turnaround_time }}" class="input-field w-32" placeholder="Turnaround">
+                                        <input type="text" name="instructions" value="{{ $test->instructions }}" class="input-field w-48" placeholder="Instructions">
+                                        <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">Save</button>
+                                        <button type="button" @click="editing = false" class="text-slate-400 hover:text-slate-600 text-sm">Cancel</button>
+                                    </form>
+                                </td>
+                            </template>
+                            <template x-if="!editing">
+                                <td class="table-cell">{{ $test->category }}</td>
+                            </template>
+                            <template x-if="!editing">
+                                <td class="table-cell">{{ \App\Modules\Core\Services\RegionService::currency() }}{{ number_format($test->price, 0) }}</td>
+                            </template>
+                            <template x-if="!editing">
+                                <td class="table-cell">{{ $test->turnaround_time ?? '-' }}</td>
+                            </template>
+                            <template x-if="!editing">
+                                <td class="table-cell text-xs text-slate-500">{{ $test->instructions ?? '-' }}</td>
+                            </template>
+                            <td class="table-cell" x-show="!editing">
+                                <div class="flex items-center gap-2">
+                                    <button @click="editing = true" class="text-blue-400 hover:text-blue-600 text-sm">Edit</button>
+                                    <form method="POST" action="{{ route('web.admin.tests.delete', $test->id) }}" onsubmit="return confirm('Remove this test?')">
+                                        @csrf @method('DELETE')
+                                        <button class="text-red-400 hover:text-red-600 text-sm">Remove</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @endforeach

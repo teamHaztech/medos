@@ -22,9 +22,17 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
     // Viewable by all staff
     Route::get('/', [AdminWebController::class, 'dashboard'])->name('dashboard');
     Route::get('patients', [AdminWebController::class, 'patients'])->name('patients');
+    Route::post('patients', [AdminWebController::class, 'storePatient'])->name('patients.store');
     Route::get('patients/{id}', [AdminWebController::class, 'patientDetail'])->name('patients.show');
+    Route::put('patients/{id}', [AdminWebController::class, 'updatePatient'])->name('patients.update');
+    Route::delete('patients/{id}', [AdminWebController::class, 'deletePatient'])->name('patients.delete');
     Route::get('appointments', [AdminWebController::class, 'appointments'])->name('appointments');
     Route::get('staff', [AdminWebController::class, 'staff'])->name('staff');
+    Route::post('staff', [AdminWebController::class, 'storeStaff'])->name('staff.store');
+    Route::put('staff/{id}', [AdminWebController::class, 'updateStaff'])->name('staff.update');
+    Route::delete('staff/{id}', [AdminWebController::class, 'deleteStaff'])->name('staff.delete');
+    Route::post('appointments/{id}/check-in', [AdminWebController::class, 'checkInAppointment'])->name('appointments.checkin');
+    Route::post('appointments/{id}/cancel', [AdminWebController::class, 'cancelAppointment'])->name('appointments.cancel');
     Route::get('analytics', [AdminWebController::class, 'analytics'])->name('analytics');
 
     // Admin-only: manage slots, tests, medicines, settings
@@ -35,9 +43,11 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::post('slots/{staffId}', [AdminWebController::class, 'updateSlots'])->name('slots.update');
         Route::get('tests', [AdminWebController::class, 'tests'])->name('tests');
         Route::post('tests', [AdminWebController::class, 'storeTest'])->name('tests.store');
+        Route::put('tests/{id}', [AdminWebController::class, 'updateTest'])->name('tests.update');
         Route::delete('tests/{id}', [AdminWebController::class, 'deleteTest'])->name('tests.delete');
         Route::get('medicines', [AdminWebController::class, 'medicines'])->name('medicines');
         Route::post('medicines', [AdminWebController::class, 'storeMedicine'])->name('medicines.store');
+        Route::put('medicines/{id}', [AdminWebController::class, 'updateMedicine'])->name('medicines.update');
         Route::delete('medicines/{id}', [AdminWebController::class, 'deleteMedicine'])->name('medicines.delete');
     });
 });
