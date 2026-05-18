@@ -396,6 +396,39 @@ class DoctorWebController extends Controller
             ]);
         }
 
+        // Save prescriptions as pharmacy order
+        if ($request->has('prescriptions') && count($request->input('prescriptions', [])) > 0) {
+            \App\Modules\Core\Models\Order::create([
+                'id' => \Str::uuid()->toString(),
+                'hospital_id' => $user->hospital_id,
+                'encounter_id' => $encounter?->id,
+                'patient_id' => $apt->patient_id,
+                'ordered_by' => $this->doctorId(),
+                'type' => 'pharmacy',
+                'status' => 'ordered',
+                'items' => $request->input('prescriptions'),
+                'priority' => 'routine',
+            ]);
+        }
+
+        // Save test/imaging orders
+        if ($request->has('orders') && count($request->input('orders', [])) > 0) {
+            $grouped = collect($request->input('orders'))->groupBy('type');
+            foreach ($grouped as $type => $items) {
+                \App\Modules\Core\Models\Order::create([
+                    'id' => \Str::uuid()->toString(),
+                    'hospital_id' => $user->hospital_id,
+                    'encounter_id' => $encounter?->id,
+                    'patient_id' => $apt->patient_id,
+                    'ordered_by' => $this->doctorId(),
+                    'type' => $type,
+                    'status' => 'ordered',
+                    'items' => $items->values()->toArray(),
+                    'priority' => 'routine',
+                ]);
+            }
+        }
+
         return response()->json(['success' => true, 'message' => 'Consultation completed.']);
     }
 

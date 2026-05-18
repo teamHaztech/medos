@@ -27,7 +27,8 @@ class Bill extends Model
         'subtotal',
         'tax_amount',
         'discount_amount',
-        'insurance_covered_amount',
+        'insurance_covered',
+        'patient_payable',
         'total_amount',
         'amount_paid',
         'balance_due',
@@ -45,7 +46,8 @@ class Bill extends Model
         'subtotal'                 => 'decimal:2',
         'tax_amount'               => 'decimal:2',
         'discount_amount'          => 'decimal:2',
-        'insurance_covered_amount' => 'decimal:2',
+        'insurance_covered'        => 'decimal:2',
+        'patient_payable'          => 'decimal:2',
         'total_amount'             => 'decimal:2',
         'amount_paid'              => 'decimal:2',
         'balance_due'              => 'decimal:2',
@@ -122,7 +124,7 @@ class Bill extends Model
         $this->total_amount = $subtotal
             + ($this->tax_amount ?? 0)
             - ($this->discount_amount ?? 0)
-            - ($this->insurance_covered_amount ?? 0);
+            - ($this->insurance_covered ?? 0);
         $this->balance_due = $this->total_amount - ($this->amount_paid ?? 0);
 
         $this->save();

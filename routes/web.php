@@ -72,6 +72,49 @@ Route::middleware('auth')->prefix('doctor')->name('web.doctor.')->group(function
 });
 
 // ---------------------------------------------------------------
+// Lab Module
+// ---------------------------------------------------------------
+
+Route::middleware('auth')->prefix('lab')->name('web.lab.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\LabController::class, 'dashboard'])->name('dashboard');
+    Route::post('{id}/collect', [\App\Http\Controllers\Web\LabController::class, 'collectSample'])->name('collect');
+    Route::get('{id}/results', [\App\Http\Controllers\Web\LabController::class, 'showResults'])->name('results');
+    Route::post('{id}/results', [\App\Http\Controllers\Web\LabController::class, 'saveResults'])->name('results.save');
+    Route::post('{id}/verify', [\App\Http\Controllers\Web\LabController::class, 'verify'])->name('verify');
+});
+
+// ---------------------------------------------------------------
+// Pharmacy Module
+// ---------------------------------------------------------------
+
+Route::middleware('auth')->prefix('pharmacy')->name('web.pharmacy.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\PharmacyController::class, 'dashboard'])->name('dashboard');
+    Route::post('{id}/dispense', [\App\Http\Controllers\Web\PharmacyController::class, 'dispense'])->name('dispense');
+    Route::get('stock', [\App\Http\Controllers\Web\PharmacyController::class, 'stock'])->name('stock');
+    Route::post('stock', [\App\Http\Controllers\Web\PharmacyController::class, 'addStock'])->name('stock.store');
+    Route::put('stock/{id}', [\App\Http\Controllers\Web\PharmacyController::class, 'updateStock'])->name('stock.update');
+});
+
+// ---------------------------------------------------------------
+// Billing Module
+// ---------------------------------------------------------------
+
+Route::middleware('auth')->prefix('billing')->name('web.billing.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\BillingWebController::class, 'index'])->name('index');
+    Route::get('create/{encounterId}', [\App\Http\Controllers\Web\BillingWebController::class, 'create'])->name('create');
+    Route::post('/', [\App\Http\Controllers\Web\BillingWebController::class, 'store'])->name('store');
+    Route::get('{id}', [\App\Http\Controllers\Web\BillingWebController::class, 'show'])->name('show');
+    Route::post('{id}/pay', [\App\Http\Controllers\Web\BillingWebController::class, 'recordPayment'])->name('pay');
+    Route::get('{id}/print', [\App\Http\Controllers\Web\BillingWebController::class, 'printReceipt'])->name('print');
+});
+
+// Print views
+Route::middleware('auth')->group(function () {
+    Route::get('prescriptions/{encounterId}/print', [\App\Http\Controllers\Web\BillingWebController::class, 'printPrescription'])->name('prescription.print');
+    Route::get('encounters/{encounterId}/discharge', [\App\Http\Controllers\Web\BillingWebController::class, 'dischargeSummary'])->name('discharge.summary');
+});
+
+// ---------------------------------------------------------------
 // Kiosk (no auth required)
 // ---------------------------------------------------------------
 

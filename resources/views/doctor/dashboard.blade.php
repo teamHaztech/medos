@@ -373,6 +373,8 @@ function doctorDashboard() {
                     const days = {'3 days':3,'1 week':7,'2 weeks':14,'1 month':30,'3 months':90}[this.followUp] || 7;
                     body.follow_up_date = new Date(Date.now() + days*86400000).toISOString().split('T')[0];
                 }
+                body.prescriptions = this.prescriptions;
+                body.orders = this.orders;
                 if (this.referral) {
                     body.referral = {
                         doctor_id: this.referral.id,
