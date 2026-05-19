@@ -28,8 +28,7 @@ class ChatController extends Controller
             return response()->json(['replies' => [['text' => 'Please type a message.']]]);
         }
 
-        // Get or create session state from cache
-        $state = cache()->get("chat_session_{$sessionId}", [
+        $defaultState = [
             'step' => 'greeting',
             'phone' => $phone,
             'language' => 'en',
@@ -40,7 +39,19 @@ class ChatController extends Controller
             'specialty' => null,
             'doctor_id' => null,
             'doctor_name' => null,
-        ]);
+        ];
+
+        // Try phone-based session first (persistent across conversations)
+        $state = null;
+        if ($phone) {
+            $phoneKey = 'chat_phone_' . preg_replace('/[^0-9]/', '', $phone);
+            $state = cache()->get($phoneKey);
+        }
+
+        // Fall back to session-based
+        if (!$state) {
+            $state = cache()->get("chat_session_{$sessionId}", $defaultState);
+        }
 
         $hospital = Hospital::where('is_active', true)->first();
         $replies = [];
@@ -123,7 +134,15 @@ class ChatController extends Controller
                 $state['step'] = $state['patient_id'] ? 'main_menu' : 'greeting';
         }
 
+        // Save by session ID
         cache()->put("chat_session_{$sessionId}", $state, 3600);
+
+        // Also save by phone for session persistence across conversations
+        if (!empty($state['phone'])) {
+            $phoneKey = 'chat_phone_' . preg_replace('/[^0-9]/', '', $state['phone']);
+            cache()->put($phoneKey, $state, 86400); // 24 hours
+        }
+
         return response()->json(['replies' => $this->wrap($replies), 'state' => $state]);
     }
 
@@ -133,6 +152,13 @@ class ChatController extends Controller
 
     private function handleGreeting(string $msg, array &$state, string $lang, $hospital): array
     {
+        // If user sends phone number directly at greeting, process it
+        $digits = preg_replace('/[^0-9]/', '', $msg);
+        if (strlen($digits) >= 10) {
+            $state['step'] = 'ask_phone';
+            return $this->handlePhone($msg, $state, $lang, $hospital);
+        }
+
         $state['step'] = 'ask_phone';
         $hospitalName = $hospital?->name ?? 'MedOS Hospital';
         return [
@@ -216,6 +242,10 @@ class ChatController extends Controller
                 $state['step'] = 'ask_complaint';
                 return [$this->t('ask_complaint', $lang)];
 
+            case 'book_direct':
+                // User typed a symptom/complaint directly — skip asking, go to doctor matching
+                return $this->handleComplaint($msg, $state, $lang, $hospital);
+
             case 'reschedule':
                 return $this->startReschedule($state, $lang);
 
@@ -226,36 +256,52 @@ class ChatController extends Controller
                 return $this->showStatus($state, $lang);
 
             default:
-                // Show the menu options
                 return [$this->t('main_menu', $lang)];
         }
     }
 
     private function detectIntent(string $lower): string
     {
+        $trimmed = trim($lower);
+
+        // Exact number match only (not partial)
+        if ($trimmed === '1') return 'book';
+        if ($trimmed === '2') return 'reschedule';
+        if ($trimmed === '3') return 'cancel';
+        if ($trimmed === '4') return 'status';
+
         // Book keywords
-        $bookWords = ['1', 'book', 'new', 'appointment', 'appoint', 'schedule', 'doctor', 'नया', 'बुक', 'अपॉइंटमेंट', 'حجز', 'جديد'];
+        $bookWords = ['book', 'new appointment', 'appointment', 'schedule', 'see doctor', 'visit', 'consult', 'checkup', 'check up', 'need doctor', 'want doctor', 'meet doctor', 'नया', 'बुक', 'अपॉइंटमेंट', 'दिखाना', 'दिखाओ', 'जाना', 'حجز', 'جديد'];
         foreach ($bookWords as $w) {
             if (str_contains($lower, $w)) return 'book';
         }
 
         // Reschedule keywords
-        $rescheduleWords = ['2', 'reschedule', 'change date', 'change time', 'move', 'postpone', 'prepone', 'shift', 'different date', 'different time', 'another date', 'another time', 'kal', 'parso', 'बदलें', 'तारीख बदलो', 'समय बदलो', 'إعادة جدولة', 'تغيير'];
+        $rescheduleWords = ['reschedule', 'change date', 'change time', 'move', 'postpone', 'prepone', 'shift', 'different date', 'different time', 'another date', 'another time', 'kal', 'parso', 'बदलें', 'तारीख बदलो', 'समय बदलो', 'إعادة جدولة', 'تغيير'];
         foreach ($rescheduleWords as $w) {
             if (str_contains($lower, $w)) return 'reschedule';
         }
 
         // Cancel keywords
-        $cancelWords = ['3', 'cancel', 'delete', 'remove', 'रद्द', 'कैंसल', 'إلغاء'];
+        $cancelWords = ['cancel', 'delete', 'remove', 'रद्द', 'कैंसल', 'إلغاء'];
         foreach ($cancelWords as $w) {
             if (str_contains($lower, $w)) return 'cancel';
         }
 
         // Status keywords
-        $statusWords = ['4', 'status', 'check', 'my appointment', 'upcoming', 'when', 'कब', 'स्टेटस', 'حالة', 'موعدي'];
+        $statusWords = ['status', 'check', 'my appointment', 'upcoming', 'when is', 'कब', 'स्टेटस', 'حالة', 'موعدي'];
         foreach ($statusWords as $w) {
             if (str_contains($lower, $w)) return 'status';
         }
+
+        // Symptom detection — treat as booking intent
+        $symptoms = ['fever', 'pain', 'headache', 'cough', 'cold', 'stomach', 'vomit', 'diarrhea', 'skin', 'rash', 'eye', 'ear', 'tooth', 'chest', 'breathing', 'diabetes', 'sugar', 'bp', 'blood pressure', 'bukhar', 'dard', 'sir dard', 'pet', 'khasi', 'zukam', 'ulti', 'sardi', 'حمى', 'ألم', 'صداع'];
+        foreach ($symptoms as $s) {
+            if (str_contains($lower, $s)) return 'book_direct';
+        }
+
+        // If message is long enough (likely a complaint), treat as booking
+        if (strlen($trimmed) > 10) return 'book_direct';
 
         return 'unknown';
     }
@@ -655,14 +701,33 @@ class ChatController extends Controller
 
     private function handleDoctorSelection(string $msg, array &$state, string $lang, $hospital): array
     {
-        $choice = intval(trim($msg));
+        $trimmed = trim($msg);
         $doctors = $state['available_doctors'] ?? [];
+        $doc = null;
 
-        if ($choice < 1 || $choice > count($doctors)) {
-            return [$this->t('invalid_choice', $lang, ['max' => count($doctors)])];
+        // Try number selection first
+        if (is_numeric($trimmed)) {
+            $choice = intval($trimmed);
+            if ($choice >= 1 && $choice <= count($doctors)) {
+                $doc = $doctors[$choice - 1];
+            }
         }
 
-        $doc = $doctors[$choice - 1];
+        // Try name match if number didn't work
+        if (!$doc) {
+            $search = strtolower($trimmed);
+            foreach ($doctors as $d) {
+                if (str_contains(strtolower($d['name']), $search) || str_contains(strtolower($d['dept']), $search)) {
+                    $doc = $d;
+                    break;
+                }
+            }
+        }
+
+        if (!$doc) {
+            $names = implode(', ', array_map(fn($d) => $d['name'], $doctors));
+            return ["Please reply with a number (1-" . count($doctors) . ") or type the doctor's name.\n\nAvailable: {$names}"];
+        }
         $state['doctor_id'] = $doc['id'];
         $state['doctor_name'] = $doc['name'];
 
