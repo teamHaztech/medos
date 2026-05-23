@@ -24,6 +24,11 @@ class ChatController extends Controller
         $phone = $request->input('phone', '');
         $sessionId = $request->input('session_id', '');
 
+        // Input sanitization
+        $message = mb_substr(strip_tags($message), 0, 500);
+        $phone = preg_replace('/[^0-9+\-]/', '', mb_substr($phone, 0, 20));
+        $sessionId = preg_replace('/[^a-zA-Z0-9_\-]/', '', mb_substr($sessionId, 0, 50));
+
         if (!$message) {
             return response()->json(['replies' => [['text' => 'Please type a message.']]]);
         }
@@ -67,71 +72,80 @@ class ChatController extends Controller
 
         $lang = $state['language'];
 
-        // Emergency detection
-        $emergencyDetector = new EmergencyDetector();
-        $emergency = $emergencyDetector->detect($message, $lang);
-        if ($emergency['is_emergency']) {
-            $state['step'] = 'emergency';
-            $replies[] = $this->t('emergency_alert', $lang);
-            $replies[] = $this->t('emergency_instructions', $lang);
-            cache()->put("chat_session_{$sessionId}", $state, 3600);
-            return response()->json(['replies' => $this->wrap($replies), 'state' => $state]);
-        }
+        // Wrap entire state machine in try-catch — NEVER leak errors to client
+        try {
+            // Emergency detection
+            $emergencyDetector = new EmergencyDetector();
+            $emergency = $emergencyDetector->detect($message, $lang);
+            if ($emergency['is_emergency']) {
+                $state['step'] = 'emergency';
+                $replies[] = $this->t('emergency_alert', $lang);
+                $replies[] = $this->t('emergency_instructions', $lang);
+                cache()->put("chat_session_{$sessionId}", $state, 3600);
+                return response()->json(['replies' => $this->wrap($replies), 'state' => $state]);
+            }
 
-        // Allow "menu", "hi", "hello", "start" to go back to main menu at any point (after phone is known)
-        $lower = strtolower(trim($message));
-        $menuWords = ['menu', 'hi', 'hello', 'start', 'main menu', 'back', 'reset', 'शुरू', 'मेनू', 'القائمة'];
-        if (in_array($lower, $menuWords) && $state['patient_id'] && !in_array($state['step'], ['greeting', 'ask_phone', 'ask_name'])) {
-            $state['step'] = 'main_menu';
-        }
-
-        switch ($state['step']) {
-            case 'greeting':
-                $replies = $this->handleGreeting($message, $state, $lang, $hospital);
-                break;
-            case 'ask_phone':
-                $replies = $this->handlePhone($message, $state, $lang, $hospital);
-                break;
-            case 'ask_name':
-                $replies = $this->handleName($message, $state, $lang);
-                break;
-            case 'main_menu':
-                $replies = $this->handleMainMenu($message, $state, $lang, $hospital);
-                break;
-            case 'ask_complaint':
-                $replies = $this->handleComplaint($message, $state, $lang, $hospital);
-                break;
-            case 'show_doctors':
-                $replies = $this->handleDoctorSelection($message, $state, $lang, $hospital);
-                break;
-            case 'confirm_booking':
-                $replies = $this->handleConfirmation($message, $state, $lang, $hospital);
-                break;
-            case 'completed':
-                // After booking, show main menu again
+            // Allow "menu", "hi", "hello", "start" to go back to main menu
+            $lower = strtolower(trim($message));
+            $menuWords = ['menu', 'hi', 'hello', 'start', 'main menu', 'back', 'reset', 'शुरू', 'मेनू', 'القائمة'];
+            if (in_array($lower, $menuWords) && $state['patient_id'] && !in_array($state['step'], ['greeting', 'ask_phone', 'ask_name'])) {
                 $state['step'] = 'main_menu';
-                $replies = $this->handleMainMenu($message, $state, $lang, $hospital);
-                break;
-            // --- Reschedule flow ---
-            case 'reschedule_pick':
-                $replies = $this->handleReschedulePick($message, $state, $lang, $hospital);
-                break;
-            case 'reschedule_date':
-                $replies = $this->handleRescheduleDate($message, $state, $lang, $hospital);
-                break;
-            case 'reschedule_confirm':
-                $replies = $this->handleRescheduleConfirm($message, $state, $lang, $hospital);
-                break;
-            // --- Cancel flow ---
-            case 'cancel_pick':
-                $replies = $this->handleCancelPick($message, $state, $lang, $hospital);
-                break;
-            case 'cancel_confirm':
-                $replies = $this->handleCancelConfirm($message, $state, $lang, $hospital);
-                break;
-            default:
-                $replies[] = $this->t('confused', $lang);
-                $state['step'] = $state['patient_id'] ? 'main_menu' : 'greeting';
+            }
+
+            switch ($state['step']) {
+                case 'greeting':
+                    $replies = $this->handleGreeting($message, $state, $lang, $hospital);
+                    break;
+                case 'ask_phone':
+                    $replies = $this->handlePhone($message, $state, $lang, $hospital);
+                    break;
+                case 'ask_name':
+                    $replies = $this->handleName($message, $state, $lang);
+                    break;
+                case 'main_menu':
+                    $replies = $this->handleMainMenu($message, $state, $lang, $hospital);
+                    break;
+                case 'ask_complaint':
+                    $replies = $this->handleComplaint($message, $state, $lang, $hospital);
+                    break;
+                case 'show_doctors':
+                    $replies = $this->handleDoctorSelection($message, $state, $lang, $hospital);
+                    break;
+                case 'confirm_booking':
+                    $replies = $this->handleConfirmation($message, $state, $lang, $hospital);
+                    break;
+                case 'completed':
+                    $state['step'] = 'main_menu';
+                    $replies = $this->handleMainMenu($message, $state, $lang, $hospital);
+                    break;
+                case 'reschedule_pick':
+                    $replies = $this->handleReschedulePick($message, $state, $lang, $hospital);
+                    break;
+                case 'reschedule_date':
+                    $replies = $this->handleRescheduleDate($message, $state, $lang, $hospital);
+                    break;
+                case 'reschedule_confirm':
+                    $replies = $this->handleRescheduleConfirm($message, $state, $lang, $hospital);
+                    break;
+                case 'cancel_pick':
+                    $replies = $this->handleCancelPick($message, $state, $lang, $hospital);
+                    break;
+                case 'cancel_confirm':
+                    $replies = $this->handleCancelConfirm($message, $state, $lang, $hospital);
+                    break;
+                default:
+                    $replies[] = $this->t('confused', $lang);
+                    $state['step'] = $state['patient_id'] ? 'main_menu' : 'greeting';
+            }
+        } catch (\Throwable $e) {
+            // Log error server-side, never expose to client
+            \Log::error('[ChatBot] Error: ' . $e->getMessage(), [
+                'step' => $state['step'] ?? 'unknown',
+                'message' => $message,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $replies = ['Sorry, something went wrong. Please try again or type "hi" to start over.'];
+            $state['step'] = $state['patient_id'] ? 'main_menu' : 'greeting';
         }
 
         // Save by session ID
@@ -873,8 +887,10 @@ class ChatController extends Controller
     // Helpers
     // ---------------------------------------------------------------
 
-    private function getUpcomingAppointments(string $patientId)
+    private function getUpcomingAppointments(?string $patientId)
     {
+        if (!$patientId) return collect();
+
         return Appointment::where('patient_id', $patientId)
             ->where('slot_start', '>=', now())
             ->whereNotIn('status', ['cancelled', 'no_show', 'completed'])

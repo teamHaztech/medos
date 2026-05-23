@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MedOS — Transform Your Hospital</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+    @page { size: A4; margin: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; color: #1e293b; width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; }
+
+    /* PAGE 1 — Hero */
+    .page1 {
+        height: 297mm;
+        background: linear-gradient(160deg, #0f172a 0%, #1e293b 40%, #0f172a 100%);
+        padding: 40px 50px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+        page-break-after: always;
+    }
+    .page1::before {
+        content: '';
+        position: absolute;
+        top: -30%; right: -20%;
+        width: 80%; height: 80%;
+        background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+    }
+    .page1::after {
+        content: '';
+        position: absolute;
+        bottom: -20%; left: -10%;
+        width: 60%; height: 60%;
+        background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%);
+    }
+    .page1 * { position: relative; z-index: 1; }
+
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 60px; }
+    .logo { font-size: 20px; font-weight: 900; color: #fff; letter-spacing: -0.5px; }
+    .logo span { color: #60a5fa; }
+    .topbar-right { font-size: 10px; color: rgba(255,255,255,0.4); text-align: right; }
+
+    .hero-content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: 40px; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); border-radius: 30px; color: #93c5fd; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 28px; width: fit-content; }
+    .hero-badge .dot { width: 6px; height: 6px; background: #3b82f6; border-radius: 50%; }
+
+    .hero-title { font-size: 32px; font-weight: 900; color: #fff; line-height: 1.3; letter-spacing: -0.5px; margin-bottom: 16px; }
+    .hero-title .gradient { background: linear-gradient(135deg, #60a5fa, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero-subtitle { font-size: 18px; color: rgba(255,255,255,0.5); line-height: 1.6; max-width: 500px; margin-bottom: 40px; }
+
+    .hero-stats { display: flex; gap: 32px; margin-bottom: 50px; }
+    .hero-stat { text-align: center; }
+    .hero-stat .num { font-size: 36px; font-weight: 900; color: #fff; }
+    .hero-stat .num span { color: #60a5fa; }
+    .hero-stat .label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+    .hero-features { display: flex; gap: 12px; flex-wrap: wrap; }
+    .hero-tag { padding: 8px 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 600; }
+
+    .hero-bottom { display: flex; justify-content: space-between; align-items: flex-end; }
+    .hero-cta { padding: 14px 32px; background: #3b82f6; color: #fff; border-radius: 12px; font-size: 14px; font-weight: 700; text-decoration: none; display: inline-block; }
+    .hero-contact { text-align: right; color: rgba(255,255,255,0.3); font-size: 11px; line-height: 1.8; }
+    .hero-contact strong { color: rgba(255,255,255,0.6); }
+
+    /* PAGE 2 — Features + How it Works */
+    .page2 {
+        height: 297mm;
+        padding: 30px 50px 20px;
+        display: flex;
+        flex-direction: column;
+        page-break-after: always;
+        overflow: hidden;
+    }
+
+    .section-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #3b82f6; margin-bottom: 6px; }
+    .section-title { font-size: 24px; font-weight: 900; color: #0f172a; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .section-sub { font-size: 12px; color: #64748b; margin-bottom: 20px; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .feat-card { padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; }
+    .feat-icon { font-size: 22px; margin-bottom: 8px; }
+    .feat-card h4 { font-size: 12px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+    .feat-card p { font-size: 10px; color: #64748b; line-height: 1.5; }
+
+    .flow-section { flex: 1; }
+    .flow-steps { display: flex; gap: 8px; align-items: flex-start; }
+    .flow-step { flex: 1; text-align: center; padding: 10px 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
+    .flow-num { width: 28px; height: 28px; background: #3b82f6; color: #fff; border-radius: 8px; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+    .flow-step h4 { font-size: 10px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+    .flow-step p { font-size: 9px; color: #64748b; line-height: 1.4; }
+    .flow-arrow { display: flex; align-items: center; color: #cbd5e1; font-size: 16px; padding-top: 20px; }
+
+    .comparison { margin-top: 10px; }
+    .comp-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    .comp-table th { padding: 8px 10px; background: #0f172a; color: #fff; text-align: left; font-weight: 700; }
+    .comp-table td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; }
+    .comp-table tr:nth-child(even) { background: #f8fafc; }
+    .comp-check { color: #10b981; font-weight: 700; }
+    .comp-cross { color: #e2e8f0; }
+    .comp-medos { color: #3b82f6; font-weight: 800; }
+
+    /* PAGE 3 — Pricing + CTA */
+    .page3 {
+        height: 297mm;
+        padding: 30px 50px 20px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .price-card { padding: 16px; border-radius: 14px; border: 1px solid #e2e8f0; text-align: center; position: relative; }
+    .price-card.pop { border-color: #3b82f6; background: linear-gradient(180deg, #eff6ff, #fff); box-shadow: 0 4px 20px rgba(59,130,246,0.1); }
+    .price-card.pop::before { content: 'RECOMMENDED'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #3b82f6; color: #fff; padding: 3px 14px; border-radius: 20px; font-size: 8px; font-weight: 700; letter-spacing: 1px; }
+    .price-card h3 { font-size: 16px; font-weight: 800; color: #0f172a; }
+    .price-card .target { font-size: 10px; color: #94a3b8; margin: 2px 0 12px; }
+    .price-card .amount { font-size: 26px; font-weight: 900; color: #3b82f6; }
+    .price-card .amount span { font-size: 11px; font-weight: 500; color: #94a3b8; }
+    .price-card .setup { font-size: 9px; color: #94a3b8; }
+    .price-card ul { list-style: none; text-align: left; margin: 14px 0 0; padding: 0; }
+    .price-card li { font-size: 10px; padding: 4px 0; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .price-card li::before { content: '✓ '; color: #10b981; font-weight: 700; }
+
+    .modules-section { margin-bottom: 12px; }
+    .modules-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .mod-card { padding: 10px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; text-align: center; }
+    .mod-card .icon { font-size: 20px; margin-bottom: 6px; }
+    .mod-card h4 { font-size: 10px; font-weight: 700; color: #0f172a; }
+    .mod-card p { font-size: 8px; color: #94a3b8; margin-top: 2px; }
+
+    .cta-box { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 16px; padding: 28px; text-align: center; }
+    .cta-box h2 { font-size: 24px; font-weight: 900; color: #fff; margin-bottom: 8px; }
+    .cta-box p { font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 24px; max-width: 400px; }
+    .cta-btn { display: inline-block; padding: 14px 36px; background: #3b82f6; color: #fff; border-radius: 12px; font-size: 15px; font-weight: 700; text-decoration: none; }
+    .cta-details { margin-top: 20px; color: rgba(255,255,255,0.3); font-size: 11px; line-height: 1.8; }
+    .cta-details strong { color: rgba(255,255,255,0.6); }
+
+    @media print { body { width: auto; } .page1, .page2, .page3 { height: auto; min-height: 297mm; } }
+</style>
+</head>
+<body>
+
+<!-- ==================== PAGE 1 — HERO ==================== -->
+<div class="page1">
+    <div class="topbar">
+        <div class="logo">Med<span>OS</span></div>
+        <div class="topbar-right"><strong>Haztech</strong> — AI Agency<br>Margao, Goa, India</div>
+    </div>
+
+    <div class="hero-content">
+        <div class="hero-badge"><span class="dot"></span> AI-Powered Hospital Automation</div>
+
+        <h1 class="hero-title">
+            Your Hospital, <span class="gradient">10x Smarter.</span>
+        </h1>
+
+        <p class="hero-subtitle">
+            MedOS automates patient booking, queue management, doctor consultation,
+            billing, pharmacy, and lab — so your hospital runs faster with fewer staff.
+        </p>
+
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="num">80<span>%</span></div>
+                <div class="label">Reception Automated</div>
+            </div>
+            <div class="hero-stat">
+                <div class="num">60<span>%</span></div>
+                <div class="label">Less Wait Time</div>
+            </div>
+            <div class="hero-stat">
+                <div class="num">3<span>x</span></div>
+                <div class="label">More Patients/Day</div>
+            </div>
+            <div class="hero-stat">
+                <div class="num">1<span>wk</span></div>
+                <div class="label">Setup Time</div>
+            </div>
+        </div>
+
+        <div class="hero-features">
+            <div class="hero-tag">📱 WhatsApp Booking</div>
+            <div class="hero-tag">🖥️ Self-Service Kiosk</div>
+            <div class="hero-tag">🔊 Voice Queue (5 Languages)</div>
+            <div class="hero-tag">💊 Pharmacy + Lab</div>
+            <div class="hero-tag">🧾 Auto Billing</div>
+            <div class="hero-tag">🏥 ABHA Integrated</div>
+            <div class="hero-tag">🇮🇳🇦🇪 India + UAE</div>
+        </div>
+    </div>
+
+    <div class="hero-bottom">
+        <a href="https://medos.haztech.cloud" class="hero-cta">See Live Demo →</a>
+        <div class="hero-contact">
+            <strong>info@haztech.in</strong><br>
+            +91 7020712368<br>
+            medos.haztech.cloud<br>
+            Margao, Goa, India
+        </div>
+    </div>
+</div>
+
+<!-- ==================== PAGE 2 — FEATURES ==================== -->
+<div class="page2">
+    <div class="section-label">What You Get</div>
+    <div class="section-title">Every module a hospital needs</div>
+    <div class="section-sub">Each feature works independently or together as one integrated system.</div>
+
+    <div class="features-grid">
+        <div class="feat-card">
+            <div class="feat-icon">📱</div>
+            <h4>WhatsApp AI Bot</h4>
+            <p>Patients book appointments by messaging your hospital number. Bot handles language detection, doctor matching, and confirmation.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">🖥️</div>
+            <h4>Self-Service Kiosk</h4>
+            <p>Tablet at entrance. Patients check in with phone, ABHA, or token. Zero receptionist needed.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">🔊</div>
+            <h4>Smart Queue + Voice</h4>
+            <p>TV display per room. Calls patients by name in English, Hindi, Marathi, Konkani, Arabic with beep sound.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">🩺</div>
+            <h4>Doctor Dashboard</h4>
+            <p>Live queue, AI briefings, one-tap prescriptions (120+ medicines), test ordering (74 tests), smart referrals.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">🧪</div>
+            <h4>Lab Management</h4>
+            <p>Sample collection → result entry → verification. Auto-links to patient record. Doctor gets results instantly.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">💊</div>
+            <h4>Pharmacy</h4>
+            <p>Prescription queue, dispense tracking, stock management with batch/expiry alerts. No manual handoffs.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">🧾</div>
+            <h4>Billing & Receipts</h4>
+            <p>Auto-generate bills from consultation. Record payments. Print receipts. GST/VAT calculated. Insurance covered.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">📄</div>
+            <h4>Print: Rx + Discharge</h4>
+            <p>Professional prescription slips and discharge summaries. One-click print. Branded with your hospital name.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">🏥</div>
+            <h4>ABHA + Insurance</h4>
+            <p>National health ID integrated. Consent-based records. PMJAY (India) and DHA (UAE) insurance ready.</p>
+        </div>
+    </div>
+
+    <div class="flow-section">
+        <div class="section-label">Patient Journey</div>
+        <div class="section-title" style="font-size:20px;margin-bottom:14px;">WhatsApp → Check-in → Consultation → Billing → Follow-up</div>
+        <div class="flow-steps">
+            <div class="flow-step">
+                <div class="flow-num">1</div>
+                <h4>WhatsApp Booking</h4>
+                <p>Patient messages hospital. AI bot books appointment in 2 min.</p>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-num">2</div>
+                <h4>Kiosk Check-in</h4>
+                <p>Arrives, enters phone at kiosk. Gets token instantly.</p>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-num">3</div>
+                <h4>Smart Queue</h4>
+                <p>TV calls name in 5 languages. WhatsApp updates position.</p>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-num">4</div>
+                <h4>Consultation</h4>
+                <p>Doctor sees AI briefing. One-tap Rx, tests, referral.</p>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-num">5</div>
+                <h4>Billing + Follow-up</h4>
+                <p>Auto bill. Lab + pharmacy queued. Reminders sent.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="comparison" style="margin-top:16px;">
+        <table class="comp-table">
+            <tr>
+                <th style="width:36%">Feature</th>
+                <th>Traditional HMS</th>
+                <th>Other SaaS</th>
+                <th class="comp-medos">MedOS</th>
+            </tr>
+            <tr><td>WhatsApp AI booking</td><td class="comp-cross">✗</td><td class="comp-cross">✗</td><td class="comp-check">✓</td></tr>
+            <tr><td>Voice queue (5 languages)</td><td class="comp-cross">✗</td><td class="comp-cross">✗</td><td class="comp-check">✓</td></tr>
+            <tr><td>One-tap prescriptions (120+ DB)</td><td class="comp-cross">✗</td><td class="comp-cross">✗</td><td class="comp-check">✓</td></tr>
+            <tr><td>Lab + Pharmacy integrated</td><td class="comp-check">✓</td><td class="comp-cross">✗</td><td class="comp-check">✓</td></tr>
+            <tr><td>ABHA / ABDM compliant</td><td class="comp-cross">✗</td><td class="comp-check">✓</td><td class="comp-check">✓</td></tr>
+            <tr><td>India + UAE dual mode</td><td class="comp-cross">✗</td><td class="comp-cross">✗</td><td class="comp-check">✓</td></tr>
+            <tr><td>Setup time</td><td>3-6 months</td><td>2-4 weeks</td><td class="comp-medos">1 week</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- ==================== PAGE 3 — PRICING + CTA ==================== -->
+<div class="page3">
+    <div class="section-label">Investment</div>
+    <div class="section-title">Plans for every hospital size</div>
+    <div class="section-sub">All plans include full platform access. Custom pricing available on consultation.</div>
+
+    <div class="pricing-grid">
+        <div class="price-card">
+            <h3>Starter</h3>
+            <p class="target">1–3 Doctors · Clinics</p>
+            <div class="amount">₹15K<span>/mo</span></div>
+            <div class="setup">+ ₹25K setup</div>
+            <ul>
+                <li>WhatsApp AI bot</li>
+                <li>Digital queue</li>
+                <li>Doctor dashboard</li>
+                <li>Basic billing</li>
+                <li>500 patients/mo</li>
+            </ul>
+        </div>
+        <div class="price-card pop">
+            <h3>Professional</h3>
+            <p class="target">4–15 Doctors · Hospitals</p>
+            <div class="amount">₹45K<span>/mo</span></div>
+            <div class="setup">+ ₹75K setup</div>
+            <ul>
+                <li>Everything in Starter</li>
+                <li>Lab + Pharmacy module</li>
+                <li>Room displays + voice</li>
+                <li>Insurance integration</li>
+                <li>ABHA / ABDM</li>
+                <li>Analytics dashboard</li>
+                <li>Referral system</li>
+                <li>Print: Rx + discharge</li>
+                <li>2,000 patients/mo</li>
+            </ul>
+        </div>
+        <div class="price-card">
+            <h3>Enterprise</h3>
+            <p class="target">15+ Doctors · Chains</p>
+            <div class="amount">₹1.2L+<span>/mo</span></div>
+            <div class="setup">+ ₹2L setup</div>
+            <ul>
+                <li>Everything in Professional</li>
+                <li>Multi-branch dashboard</li>
+                <li>Custom modules</li>
+                <li>On-site training</li>
+                <li>Priority support</li>
+                <li>Custom integrations</li>
+                <li>Unlimited patients</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="modules-section">
+        <div class="section-label">Full Module List</div>
+        <div class="modules-grid">
+            <div class="mod-card"><div class="icon">📱</div><h4>WhatsApp Bot</h4><p>Multilingual AI</p></div>
+            <div class="mod-card"><div class="icon">🖥️</div><h4>Kiosk</h4><p>Self check-in</p></div>
+            <div class="mod-card"><div class="icon">⚡</div><h4>Queue</h4><p>Real-time + voice</p></div>
+            <div class="mod-card"><div class="icon">🩺</div><h4>OPD</h4><p>Doctor dashboard</p></div>
+            <div class="mod-card"><div class="icon">🧪</div><h4>Lab</h4><p>Sample to report</p></div>
+            <div class="mod-card"><div class="icon">💊</div><h4>Pharmacy</h4><p>Stock + dispense</p></div>
+            <div class="mod-card"><div class="icon">🧾</div><h4>Billing</h4><p>Auto bills + print</p></div>
+            <div class="mod-card"><div class="icon">📄</div><h4>Rx Print</h4><p>Prescription slips</p></div>
+            <div class="mod-card"><div class="icon">📋</div><h4>Discharge</h4><p>Summary + print</p></div>
+            <div class="mod-card"><div class="icon">🔄</div><h4>Referrals</h4><p>Calendar booking</p></div>
+            <div class="mod-card"><div class="icon">🏥</div><h4>ABHA</h4><p>National health ID</p></div>
+            <div class="mod-card"><div class="icon">📊</div><h4>Analytics</h4><p>Revenue + stats</p></div>
+        </div>
+    </div>
+
+    <div class="cta-box">
+        <h2>Ready to upgrade your hospital?</h2>
+        <p>Book a free 15-minute demo. We'll show you MedOS running with your hospital's data.</p>
+        <a href="mailto:info@haztech.in" class="cta-btn">Book Free Demo →</a>
+        <div class="cta-details">
+            <strong>info@haztech.in</strong> · <strong>+91 7020712368</strong><br>
+            Live demo: <strong>medos.haztech.cloud</strong><br><br>
+            <strong>Haztech</strong> — AI Agency<br>
+            Margao, Goa, India<br>
+            🇮🇳 India + 🇦🇪 UAE Ready · ABHA Compliant · ABDM Certified
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

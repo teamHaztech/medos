@@ -12,6 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         $middleware->alias([
             'resolve.hospital' => \App\Modules\Admin\Middleware\ResolveHospital::class,
             'role'             => \App\Modules\Admin\Middleware\CheckRole::class,
