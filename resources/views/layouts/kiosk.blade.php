@@ -20,7 +20,11 @@
                 </svg>
             </div>
             <div class="text-center">
-                @php $kioskHospital = \App\Modules\Core\Models\Hospital::where('is_active', true)->first(); @endphp
+                @php
+                    $kioskHospital = session('kiosk_hospital_id')
+                        ? \App\Modules\Core\Models\Hospital::find(session('kiosk_hospital_id'))
+                        : \App\Modules\Core\Models\Hospital::where('is_active', true)->first();
+                @endphp
                 <h1 class="text-2xl font-bold text-slate-800">{{ $kioskHospital?->name ?? 'MedOS Hospital' }}</h1>
                 <p class="text-sm text-slate-500">@yield('subtitle', 'Welcome')</p>
             </div>

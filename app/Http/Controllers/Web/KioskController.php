@@ -15,9 +15,59 @@ use Illuminate\Support\Str;
 
 class KioskController extends Controller
 {
-    public function index()
+    /**
+     * Resolve the current kiosk hospital from session, query param, or fallback.
+     */
+    private function resolveHospital(?Request $request = null): ?Hospital
     {
-        return view('kiosk.index');
+        // 1. Query param ?hospital=slug sets session
+        if ($request && $request->has('hospital')) {
+            $hospital = Hospital::where('slug', $request->get('hospital'))
+                ->where('is_active', true)->first();
+            if ($hospital) {
+                session(['kiosk_hospital_id' => $hospital->id]);
+                return $hospital;
+            }
+        }
+
+        // 2. Session
+        if (session('kiosk_hospital_id')) {
+            $hospital = Hospital::where('id', session('kiosk_hospital_id'))
+                ->where('is_active', true)->first();
+            if ($hospital) return $hospital;
+        }
+
+        // 3. Fallback: if only one active hospital, use it
+        $active = Hospital::where('is_active', true)->get();
+        if ($active->count() === 1) {
+            session(['kiosk_hospital_id' => $active->first()->id]);
+            return $active->first();
+        }
+
+        // Multiple hospitals and none selected — return null (show selector)
+        return null;
+    }
+
+    public function index(Request $request)
+    {
+        // Allow resetting hospital selection
+        if ($request->has('reset_hospital')) {
+            session()->forget('kiosk_hospital_id');
+            return redirect()->route('kiosk.index');
+        }
+
+        $hospital = $this->resolveHospital($request);
+        $hospitals = Hospital::where('is_active', true)->orderBy('name')->get();
+        $showSelector = !$hospital && $hospitals->count() > 1;
+
+        return view('kiosk.index', compact('hospital', 'hospitals', 'showSelector'));
+    }
+
+    public function selectHospital(Request $request)
+    {
+        $request->validate(['hospital_id' => 'required|exists:hospitals,id']);
+        session(['kiosk_hospital_id' => $request->hospital_id]);
+        return redirect()->route('kiosk.index');
     }
 
     public function checkin()
@@ -111,9 +161,9 @@ class KioskController extends Controller
         return view('kiosk.register');
     }
 
-    public function doctors()
+    public function doctors(Request $request)
     {
-        $hospital = Hospital::where('is_active', true)->first();
+        $hospital = $this->resolveHospital($request);
         if (!$hospital) {
             return response()->json([]);
         }
@@ -142,7 +192,7 @@ class KioskController extends Controller
     public function matchDoctors(Request $request)
     {
         $complaint = $request->get('complaint', 'general');
-        $hospital = Hospital::where('is_active', true)->first();
+        $hospital = $this->resolveHospital($request);
         if (!$hospital) return response()->json([]);
 
         // Map complaint to specialty
@@ -291,10 +341,10 @@ class KioskController extends Controller
             'abha_number'  => 'nullable|string|size:14',
         ]);
 
-        // Get first hospital (kiosk is per-hospital in production, defaulting for now)
-        $hospital = Hospital::where('is_active', true)->first();
+        // Use the kiosk's selected hospital
+        $hospital = $this->resolveHospital($request);
         if (!$hospital) {
-            return response()->json(['success' => false, 'message' => 'Hospital not configured.'], 500);
+            return response()->json(['success' => false, 'message' => 'Hospital not selected. Please go back and select a hospital.'], 500);
         }
 
         // Normalize phone

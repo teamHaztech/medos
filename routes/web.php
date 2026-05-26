@@ -120,6 +120,7 @@ Route::middleware('auth')->group(function () {
 
 Route::prefix('kiosk')->name('kiosk.')->group(function () {
     Route::get('/', [KioskController::class, 'index'])->name('index');
+    Route::post('select-hospital', [KioskController::class, 'selectHospital'])->name('select-hospital');
     Route::get('checkin', [KioskController::class, 'checkin'])->name('checkin');
     Route::post('checkin', [KioskController::class, 'processCheckin'])->name('checkin.process');
     Route::get('register', [KioskController::class, 'register'])->name('register');
@@ -263,9 +264,13 @@ Route::middleware(['auth'])->prefix('super-admin')->name('web.superadmin.')->gro
     Route::get('/', [\App\Http\Controllers\Web\SuperAdminController::class, 'index'])->name('index');
     Route::get('hospitals/create', [\App\Http\Controllers\Web\SuperAdminController::class, 'createHospital'])->name('hospitals.create');
     Route::post('hospitals', [\App\Http\Controllers\Web\SuperAdminController::class, 'storeHospital'])->name('hospitals.store');
+    Route::get('hospitals/{id}', [\App\Http\Controllers\Web\SuperAdminController::class, 'hospitalDetail'])->name('hospitals.show');
     Route::get('hospitals/{id}/edit', [\App\Http\Controllers\Web\SuperAdminController::class, 'editHospital'])->name('hospitals.edit');
     Route::put('hospitals/{id}', [\App\Http\Controllers\Web\SuperAdminController::class, 'updateHospital'])->name('hospitals.update');
     Route::delete('hospitals/{id}', [\App\Http\Controllers\Web\SuperAdminController::class, 'deleteHospital'])->name('hospitals.delete');
+    Route::post('hospitals/{id}/staff', [\App\Http\Controllers\Web\SuperAdminController::class, 'addStaffToHospital'])->name('hospitals.staff.add');
+    Route::delete('hospitals/{hospitalId}/staff/{staffId}', [\App\Http\Controllers\Web\SuperAdminController::class, 'removeStaffFromHospital'])->name('hospitals.staff.remove');
+    Route::post('hospitals/{id}/admin', [\App\Http\Controllers\Web\SuperAdminController::class, 'addAdminToHospital'])->name('hospitals.admin.add');
 });
 
 // Hospital switcher

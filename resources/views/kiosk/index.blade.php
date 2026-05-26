@@ -6,6 +6,27 @@
 @section('content')
 <div x-data="kioskHome()" class="w-full max-w-2xl text-center">
 
+    {{-- Hospital selector (shown when multiple hospitals, none selected) --}}
+    @if(!empty($showSelector) && $showSelector)
+    <div class="mb-10">
+        <h2 class="text-2xl font-bold text-slate-800 mb-6">Select Hospital</h2>
+        <form method="POST" action="{{ route('kiosk.select-hospital') }}" class="space-y-4">
+            @csrf
+            <div class="grid grid-cols-1 gap-4">
+                @foreach($hospitals as $h)
+                <button type="submit" name="hospital_id" value="{{ $h->id }}" class="flex items-center gap-4 p-6 bg-white border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50 rounded-2xl shadow-sm transition-all text-left">
+                    <span class="text-3xl">{{ $h->country === 'AE' ? '🇦🇪' : '🇮🇳' }}</span>
+                    <div>
+                        <p class="text-xl font-bold text-slate-800">{{ $h->name }}</p>
+                        <p class="text-sm text-slate-500">{{ $h->city }}{{ $h->state ? ', ' . $h->state : '' }}</p>
+                    </div>
+                </button>
+                @endforeach
+            </div>
+        </form>
+    </div>
+    @else
+
     {{-- Current date/time --}}
     <div class="mb-10">
         <p class="text-3xl font-bold text-slate-800" x-text="currentTime"></p>
@@ -38,6 +59,17 @@
         <button @click="setLang('kok')" :class="lang === 'kok' ? 'bg-blue-100 text-blue-800 ring-2 ring-blue-300' : 'bg-slate-100 text-slate-600'" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors">कोंकणी</button>
         <button @click="setLang('ar')" :class="lang === 'ar' ? 'bg-blue-100 text-blue-800 ring-2 ring-blue-300' : 'bg-slate-100 text-slate-600'" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors">العربية</button>
     </div>
+
+    {{-- Change hospital link (if multiple hospitals) --}}
+    @if(isset($hospitals) && $hospitals->count() > 1 && isset($hospital))
+    <div class="mt-6">
+        <a href="{{ route('kiosk.index', ['reset_hospital' => 1]) }}" class="text-sm text-slate-400 hover:text-slate-600 underline">
+            Change Hospital ({{ $hospital->name }})
+        </a>
+    </div>
+    @endif
+
+    @endif
 </div>
 @endsection
 
