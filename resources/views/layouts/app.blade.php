@@ -90,7 +90,6 @@
             </div>
             @endif
         </div>
-        @endif
 
         {{-- Sidebar footer --}}
         <div class="px-4 py-3 border-t border-slate-700">
