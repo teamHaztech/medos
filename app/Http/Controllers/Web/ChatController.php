@@ -326,33 +326,56 @@ class ChatController extends Controller
 
     private function showStatus(array &$state, string $lang): array
     {
-        $appointments = $this->getUpcomingAppointments($state['patient_id']);
+        $upcoming = $this->getUpcomingAppointments($state['patient_id']);
+        $missed = $this->getMissedAppointments($state['patient_id']);
+        $replies = [];
 
-        if ($appointments->isEmpty()) {
-            $state['step'] = 'main_menu';
-            return [
-                $this->t('no_appointments', $lang),
-                $this->t('main_menu', $lang),
-            ];
+        // Show missed appointments warning
+        if ($missed->isNotEmpty()) {
+            $missedList = "";
+            foreach ($missed as $apt) {
+                $doctor = Staff::find($apt->doctor_id);
+                $date = Carbon::parse($apt->slot_start)->format('l, M d');
+                $time = Carbon::parse($apt->slot_start)->format('g:i A');
+                $missedList .= "\n  ⚠️ {$doctor?->name ?? 'Doctor'} — {$date} at {$time}";
+            }
+            $missedMsg = $lang === 'hi'
+                ? "⚠️ *छूटी हुई अपॉइंटमेंट:*{$missedList}\n\nकृपया नई अपॉइंटमेंट बुक करें।"
+                : "⚠️ *Missed appointments:*{$missedList}\n\nPlease book a new appointment if needed.";
+            $replies[] = $missedMsg;
         }
 
-        $list = "";
-        foreach ($appointments as $i => $apt) {
-            $num = $i + 1;
-            $doctor = Staff::find($apt->doctor_id);
-            $doctorName = $doctor?->name ?? 'Doctor';
-            $date = Carbon::parse($apt->slot_start)->format('l, M d');
-            $time = Carbon::parse($apt->slot_start)->format('g:i A');
-            $token = $apt->notes ?? '-';
-            $status = ucfirst(str_replace('_', ' ', $apt->status instanceof \BackedEnum ? $apt->status->value : $apt->status));
-            $list .= "\n*{$num}.* {$doctorName}\n   📅 {$date} at {$time}\n   🎫 Token: {$token} | Status: {$status}\n";
+        // Show upcoming
+        if ($upcoming->isNotEmpty()) {
+            $list = "";
+            foreach ($upcoming as $i => $apt) {
+                $num = $i + 1;
+                $doctor = Staff::find($apt->doctor_id);
+                $date = Carbon::parse($apt->slot_start)->format('l, M d');
+                $time = Carbon::parse($apt->slot_start)->format('g:i A');
+                $token = $apt->notes ?? '-';
+                $status = ucfirst(str_replace('_', ' ', $apt->status instanceof \BackedEnum ? $apt->status->value : $apt->status));
+
+                // Time until appointment
+                $minutesUntil = now()->diffInMinutes(Carbon::parse($apt->slot_start), false);
+                $timeUntil = '';
+                if ($minutesUntil > 0 && $minutesUntil <= 60) {
+                    $timeUntil = " ⏰ *{$minutesUntil} min away!*";
+                } elseif ($minutesUntil > 60) {
+                    $hours = intdiv($minutesUntil, 60);
+                    $timeUntil = " ⏰ in {$hours}h";
+                }
+
+                $list .= "\n*{$num}.* {$doctor?->name ?? 'Doctor'}\n   📅 {$date} at {$time}{$timeUntil}\n   🎫 Token: {$token} | Status: {$status}\n";
+            }
+            $replies[] = $this->t('your_appointments', $lang) . $list;
+        } elseif ($missed->isEmpty()) {
+            $replies[] = $this->t('no_appointments', $lang);
         }
 
+        $replies[] = $this->t('main_menu', $lang);
         $state['step'] = 'main_menu';
-        return [
-            $this->t('your_appointments', $lang) . $list,
-            $this->t('main_menu', $lang),
-        ];
+        return $replies;
     }
 
     // ---------------------------------------------------------------
@@ -526,6 +549,16 @@ class ChatController extends Controller
 
         $newSlot = $slots[$choice - 1];
         $newStart = Carbon::parse($newSlot['time']);
+
+        // Validate slot is still in the future
+        if ($newStart->isPast()) {
+            $state['step'] = 'main_menu';
+            return [
+                "⚠️ This time slot has already passed. Please try again with a future time.",
+                $this->t('main_menu', $lang),
+            ];
+        }
+
         $doctor = Staff::find($state['reschedule_doctor_id']);
         $duration = $doctor->consultation_duration_default ?? 15;
 
@@ -891,10 +924,28 @@ class ChatController extends Controller
     {
         if (!$patientId) return collect();
 
+        // Auto-mark past appointments as no-show
+        Appointment::where('patient_id', $patientId)
+            ->where('slot_start', '<', now())
+            ->whereIn('status', ['scheduled', 'confirmed', 'booked'])
+            ->update(['status' => 'no_show']);
+
         return Appointment::where('patient_id', $patientId)
             ->where('slot_start', '>=', now())
             ->whereNotIn('status', ['cancelled', 'no_show', 'completed'])
             ->orderBy('slot_start')
+            ->get();
+    }
+
+    private function getMissedAppointments(?string $patientId)
+    {
+        if (!$patientId) return collect();
+
+        return Appointment::where('patient_id', $patientId)
+            ->where('slot_start', '<', now())
+            ->where('status', 'no_show')
+            ->where('slot_start', '>=', now()->subHours(24))
+            ->orderByDesc('slot_start')
             ->get();
     }
 
