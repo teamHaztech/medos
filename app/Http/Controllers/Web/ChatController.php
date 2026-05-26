@@ -337,7 +337,8 @@ class ChatController extends Controller
                 $doctor = Staff::find($apt->doctor_id);
                 $date = Carbon::parse($apt->slot_start)->format('l, M d');
                 $time = Carbon::parse($apt->slot_start)->format('g:i A');
-                $missedList .= "\n  ⚠️ {$doctor?->name ?? 'Doctor'} — {$date} at {$time}";
+                $docName = $doctor?->name ?? 'Doctor';
+                $missedList .= "\n  ⚠️ {$docName} — {$date} at {$time}";
             }
             $missedMsg = $lang === 'hi'
                 ? "⚠️ *छूटी हुई अपॉइंटमेंट:*{$missedList}\n\nकृपया नई अपॉइंटमेंट बुक करें।"
@@ -366,7 +367,8 @@ class ChatController extends Controller
                     $timeUntil = " ⏰ in {$hours}h";
                 }
 
-                $list .= "\n*{$num}.* {$doctor?->name ?? 'Doctor'}\n   📅 {$date} at {$time}{$timeUntil}\n   🎫 Token: {$token} | Status: {$status}\n";
+                $docName = $doctor?->name ?? 'Doctor';
+                $list .= "\n*{$num}.* {$docName}\n   📅 {$date} at {$time}{$timeUntil}\n   🎫 Token: {$token} | Status: {$status}\n";
             }
             $replies[] = $this->t('your_appointments', $lang) . $list;
         } elseif ($missed->isEmpty()) {
