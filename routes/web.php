@@ -285,4 +285,12 @@ Route::post('switch-hospital', function (\Illuminate\Http\Request $request) {
     return redirect()->back()->with('success', 'Switched to ' . $hospital->name);
 })->middleware(['auth', 'super_admin'])->name('switch-hospital');
 
-Route::get('/', fn () => redirect()->route('web.admin.dashboard'));
+Route::get('/', function () {
+    $role = auth()->user()?->role;
+    $roleValue = is_object($role) ? $role->value : ($role ?? '');
+    return match ($roleValue) {
+        'super_admin' => redirect()->route('web.superadmin.index'),
+        'doctor' => redirect()->route('web.doctor.dashboard'),
+        default => redirect()->route('web.admin.dashboard'),
+    };
+})->middleware('auth');
