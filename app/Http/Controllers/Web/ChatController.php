@@ -880,10 +880,73 @@ class ChatController extends Controller
             ],
         ]);
 
-        // Create appointment
+        // Create appointment — with race condition guard
         $slotStart = Carbon::parse($state['slot_start']);
-        $duration = Staff::find($state['doctor_id'])?->consultation_duration_default ?? 15;
-        $deptPrefix = strtoupper(substr(str_replace(' ', '', Staff::find($state['doctor_id'])?->department ?? 'GEN'), 0, 3));
+        $doctor = Staff::find($state['doctor_id']);
+        $duration = $doctor?->consultation_duration_default ?? 15;
+
+        // Double-check slot is still free (another patient may have booked it)
+        $slotTaken = Appointment::where('doctor_id', $state['doctor_id'])
+            ->where('slot_start', $slotStart)
+            ->whereNotIn('status', ['cancelled', 'no_show'])
+            ->exists();
+
+        if ($slotTaken) {
+            // Find next available slot automatically
+            $schedule = is_array($doctor->schedule) ? $doctor->schedule : json_decode($doctor->schedule ?? '{}', true);
+            $newSlot = null;
+
+            for ($d = 0; $d < 7; $d++) {
+                $date = now()->addDays($d);
+                $dayName = strtolower($date->format('l'));
+                $blocks = $schedule[$dayName] ?? [];
+                if (empty($blocks)) continue;
+
+                $booked = \DB::table('appointments')
+                    ->where('doctor_id', $state['doctor_id'])
+                    ->whereDate('slot_start', $date->toDateString())
+                    ->whereNotIn('status', ['cancelled', 'no_show'])
+                    ->pluck('slot_start')
+                    ->map(fn ($s) => Carbon::parse($s)->format('H:i'))
+                    ->toArray();
+
+                foreach ($blocks as $block) {
+                    $start = Carbon::parse($date->toDateString() . ' ' . $block['start']);
+                    $end = Carbon::parse($date->toDateString() . ' ' . $block['end']);
+                    while ($start->copy()->addMinutes($duration)->lte($end)) {
+                        $isPast = $d === 0 && $start->lt(now());
+                        if (!$isPast && !in_array($start->format('H:i'), $booked)) {
+                            $newSlot = $start;
+                            break 3;
+                        }
+                        $start->addMinutes($duration);
+                    }
+                }
+            }
+
+            if (!$newSlot) {
+                $state['step'] = 'main_menu';
+                return [
+                    "⚠️ Sorry, that slot was just taken by another patient and no other slots are available this week. Please try again later.",
+                    $this->t('main_menu', $lang),
+                ];
+            }
+
+            $slotStart = $newSlot;
+            $state['slot_start'] = $newSlot->toDateTimeString();
+            $state['slot_display'] = $newSlot->format('l, M d') . ' at ' . $newSlot->format('g:i A');
+        }
+
+        // Also validate slot is in the future
+        if ($slotStart->isPast()) {
+            $state['step'] = 'show_doctors';
+            return [
+                "⚠️ This time has already passed. Let me find a new slot for you.",
+                $this->t('main_menu', $lang),
+            ];
+        }
+
+        $deptPrefix = strtoupper(substr(str_replace(' ', '', $doctor?->department ?? 'GEN'), 0, 3));
         $todayCount = Appointment::where('doctor_id', $state['doctor_id'])->whereDate('slot_start', $slotStart->toDateString())->count();
         $token = $deptPrefix . '-' . str_pad($todayCount + 1, 3, '0', STR_PAD_LEFT);
 
