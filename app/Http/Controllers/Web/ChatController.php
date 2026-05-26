@@ -880,16 +880,20 @@ class ChatController extends Controller
             ],
         ]);
 
-        // Create appointment — with race condition guard
+        // Create appointment — with database-level lock to prevent double booking
         $slotStart = Carbon::parse($state['slot_start']);
         $doctor = Staff::find($state['doctor_id']);
         $duration = $doctor?->consultation_duration_default ?? 15;
 
-        // Double-check slot is still free (another patient may have booked it)
-        $slotTaken = Appointment::where('doctor_id', $state['doctor_id'])
-            ->where('slot_start', $slotStart)
-            ->whereNotIn('status', ['cancelled', 'no_show'])
-            ->exists();
+        // Use DB transaction to ensure atomicity — check + create in one lock
+        $slotTaken = false;
+        \DB::beginTransaction();
+        try {
+            // Lock check: is slot still free?
+            $slotTaken = Appointment::where('doctor_id', $state['doctor_id'])
+                ->where('slot_start', $slotStart)
+                ->whereNotIn('status', ['cancelled', 'no_show'])
+                ->exists();
 
         if ($slotTaken) {
             // Find next available slot automatically
@@ -925,6 +929,7 @@ class ChatController extends Controller
             }
 
             if (!$newSlot) {
+                \DB::rollBack();
                 $state['step'] = 'main_menu';
                 return [
                     "⚠️ Sorry, that slot was just taken by another patient and no other slots are available this week. Please try again later.",
@@ -939,6 +944,7 @@ class ChatController extends Controller
 
         // Also validate slot is in the future
         if ($slotStart->isPast()) {
+            \DB::rollBack();
             $state['step'] = 'show_doctors';
             return [
                 "⚠️ This time has already passed. Let me find a new slot for you.",
@@ -963,6 +969,17 @@ class ChatController extends Controller
             'booking_source' => 'whatsapp',
             'notes' => $token,
         ]);
+
+        \DB::commit();
+        } catch (\Throwable $e) {
+            \DB::rollBack();
+            \Log::error('[ChatBot] Booking failed: ' . $e->getMessage());
+            $state['step'] = 'main_menu';
+            return [
+                "⚠️ Booking failed. The slot may have just been taken. Please try again.",
+                $this->t('main_menu', $lang),
+            ];
+        }
 
         $state['step'] = 'completed';
         $state['token'] = $token;
