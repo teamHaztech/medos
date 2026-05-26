@@ -260,7 +260,7 @@ Route::post('chat/send', [\App\Http\Controllers\Web\ChatController::class, 'send
 // ---------------------------------------------------------------
 // Super Admin (manage hospitals, system-wide config)
 // ---------------------------------------------------------------
-Route::middleware(['auth'])->prefix('super-admin')->name('web.superadmin.')->group(function () {
+Route::middleware(['auth', 'super_admin'])->prefix('super-admin')->name('web.superadmin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\SuperAdminController::class, 'index'])->name('index');
     Route::get('hospitals/create', [\App\Http\Controllers\Web\SuperAdminController::class, 'createHospital'])->name('hospitals.create');
     Route::post('hospitals', [\App\Http\Controllers\Web\SuperAdminController::class, 'storeHospital'])->name('hospitals.store');
@@ -273,7 +273,7 @@ Route::middleware(['auth'])->prefix('super-admin')->name('web.superadmin.')->gro
     Route::post('hospitals/{id}/admin', [\App\Http\Controllers\Web\SuperAdminController::class, 'addAdminToHospital'])->name('hospitals.admin.add');
 });
 
-// Hospital switcher
+// Hospital switcher (super admin only)
 Route::post('switch-hospital', function (\Illuminate\Http\Request $request) {
     $hospitalId = $request->input('hospital_id');
     $hospital = \App\Modules\Core\Models\Hospital::findOrFail($hospitalId);
@@ -283,6 +283,6 @@ Route::post('switch-hospital', function (\Illuminate\Http\Request $request) {
         \App\Modules\Core\Services\RegionService::reset();
     }
     return redirect()->back()->with('success', 'Switched to ' . $hospital->name);
-})->middleware('auth')->name('switch-hospital');
+})->middleware(['auth', 'super_admin'])->name('switch-hospital');
 
 Route::get('/', fn () => redirect()->route('web.admin.dashboard'));
