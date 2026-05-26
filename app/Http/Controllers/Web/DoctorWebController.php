@@ -335,9 +335,6 @@ class DoctorWebController extends Controller
             $encounter->update(['status' => 'in_progress']);
         }
 
-        // Notify patient — doctor is ready
-        \App\Modules\Core\Services\WhatsAppNotifier::doctorReady($apt);
-
         return response()->json(['success' => true]);
     }
 

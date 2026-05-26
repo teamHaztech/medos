@@ -130,6 +130,7 @@ Route::prefix('kiosk')->name('kiosk.')->group(function () {
     Route::post('register', [KioskController::class, 'processRegister'])->name('register.process');
     Route::get('queue-display', [KioskController::class, 'queueDisplay'])->name('queue-display');
     Route::get('room/{doctorId}', [KioskController::class, 'roomDisplay'])->name('room-display');
+    Route::get('q/{doctorId}', [KioskController::class, 'patientQueueView'])->name('queue-live');
 });
 
 // ---------------------------------------------------------------

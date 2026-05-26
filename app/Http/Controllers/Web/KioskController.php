@@ -444,6 +444,38 @@ class KioskController extends Controller
         ]);
     }
 
+    public function patientQueueView(string $doctorId)
+    {
+        $doctor = Staff::find($doctorId);
+        if (!$doctor) {
+            $doctor = Staff::whereRaw("LOWER(name) LIKE ?", ['%' . strtolower($doctorId) . '%'])
+                ->whereIn('role', ['doctor', 'hospital_admin'])->first();
+        }
+        if (!$doctor) abort(404, 'Doctor not found');
+
+        $appointments = Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('slot_start', today())
+            ->whereIn('status', ['checked_in', 'in_progress'])
+            ->orderBy('slot_start')
+            ->with('patient')
+            ->get()
+            ->map(function ($apt, $idx) {
+                $status = is_object($apt->status) ? $apt->status->value : ($apt->status ?? '');
+                return [
+                    'position' => $idx + 1,
+                    'token'    => $apt->notes ?? '',
+                    'name'     => $apt->patient?->name ?? 'Patient',
+                    'status'   => $status === 'in_progress' ? 'In Consultation' : 'Waiting',
+                    'active'   => $status === 'in_progress',
+                ];
+            });
+
+        return view('kiosk.queue-live', [
+            'doctor'       => $doctor,
+            'appointments' => $appointments,
+        ]);
+    }
+
     public function roomDisplay(string $doctorId)
     {
         // Accept UUID or name (first name, lowercase)

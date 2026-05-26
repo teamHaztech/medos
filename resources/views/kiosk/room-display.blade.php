@@ -150,12 +150,16 @@
         </div>
     </main>
 
-    {{-- Footer --}}
+    {{-- Footer with QR Code --}}
     <footer class="fixed bottom-0 inset-x-0 bg-white/5 border-t border-white/10 px-6 py-2">
         <div class="flex items-center justify-between text-xs text-slate-500">
             <span class="flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                 Live · Refreshes every 10s
+            </span>
+            <span class="flex items-center gap-3">
+                <span>Scan to view queue on your phone →</span>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data={{ urlencode(url('/kiosk/q/' . $doctor->id)) }}&bgcolor=1e293b&color=94a3b8" alt="QR" class="w-10 h-10 rounded">
             </span>
             <span>Last updated: <span x-text="lastUpdated"></span></span>
         </div>
