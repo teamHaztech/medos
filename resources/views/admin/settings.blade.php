@@ -16,31 +16,18 @@
         <form method="POST" action="{{ route('web.admin.settings.save') }}" class="space-y-5" @submit="saving = true">
             @csrf
 
-            {{-- Region Selector --}}
+            {{-- Region (read-only — only Super Admin can change) --}}
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Region</label>
-                <div class="grid grid-cols-2 gap-3">
-                    <label class="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all"
-                        :class="document.querySelector('input[name=country]:checked')?.value === 'IN' || '{{ $hospital->country ?? 'IN' }}' === 'IN' ? 'ring-2 ring-blue-400 bg-blue-50 border-blue-300' : 'bg-white border-slate-200 hover:bg-slate-50'">
-                        <input type="radio" name="country" value="IN" {{ ($hospital->country ?? 'IN') === 'IN' ? 'checked' : '' }}
-                            class="text-blue-500" onchange="this.closest('form').querySelectorAll('label.flex').forEach(l => l.className = l.className.replace(/ring-2.*border-blue-300/,'bg-white border-slate-200')); this.closest('label').classList.add('ring-2','ring-blue-400','bg-blue-50','border-blue-300')">
-                        <span class="text-3xl">🇮🇳</span>
-                        <div>
-                            <p class="font-bold text-slate-900">India</p>
-                            <p class="text-xs text-slate-500">₹ · ABHA · Hindi + Regional Languages</p>
-                        </div>
-                    </label>
-                    <label class="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all"
-                        :class="'{{ $hospital->country ?? 'IN' }}' === 'AE' ? 'ring-2 ring-blue-400 bg-blue-50 border-blue-300' : 'bg-white border-slate-200 hover:bg-slate-50'">
-                        <input type="radio" name="country" value="AE" {{ ($hospital->country ?? '') === 'AE' ? 'checked' : '' }}
-                            class="text-blue-500" onchange="this.closest('form').querySelectorAll('label.flex').forEach(l => l.className = l.className.replace(/ring-2.*border-blue-300/,'bg-white border-slate-200')); this.closest('label').classList.add('ring-2','ring-blue-400','bg-blue-50','border-blue-300')">
-                        <span class="text-3xl">🇦🇪</span>
-                        <div>
-                            <p class="font-bold text-slate-900">UAE</p>
-                            <p class="text-xs text-slate-500">AED · Emirates ID · English + Arabic</p>
-                        </div>
-                    </label>
+                <div class="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50">
+                    <span class="text-3xl">{{ ($hospital->country ?? 'IN') === 'AE' ? '🇦🇪' : '🇮🇳' }}</span>
+                    <div>
+                        <p class="font-bold text-slate-900">{{ ($hospital->country ?? 'IN') === 'AE' ? 'UAE' : 'India' }}</p>
+                        <p class="text-xs text-slate-500">{{ $region['currency'] }} · {{ $region['health_id']['system'] }} · {{ implode(', ', array_keys($region['languages'])) }}</p>
+                    </div>
+                    <span class="ml-auto text-xs text-slate-400">Contact Super Admin to change</span>
                 </div>
+                <input type="hidden" name="country" value="{{ $hospital->country ?? 'IN' }}">
             </div>
 
             {{-- Hospital Name --}}
