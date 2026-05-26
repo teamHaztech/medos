@@ -33,18 +33,25 @@
         </div>
 
         {{-- Navigation --}}
-        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto"
+             x-data
+             x-init="$el.scrollTop = parseInt(localStorage.getItem('sidebar_scroll') || 0)"
+             @click="setTimeout(() => localStorage.setItem('sidebar_scroll', $el.scrollTop), 50)"
+        >
             @include('layouts._sidebar_nav')
         </nav>
 
-        {{-- Hospital Switcher --}}
+        {{-- Hospital Info (all users) / Switcher (super admin only) --}}
         @php
-            $allHospitals = \App\Modules\Core\Models\Hospital::where('is_active', true)->get(['id', 'name', 'country', 'city']);
             $currentHospital = auth()->user()?->hospital;
             $region = \App\Modules\Core\Services\RegionService::get($currentHospital?->country);
+            $userRole = is_object(auth()->user()?->role) ? auth()->user()->role->value : (auth()->user()?->role ?? '');
+            $isSuperAdmin = $userRole === 'super_admin';
         @endphp
-        @if($allHospitals->count() > 1)
         <div class="px-3 py-2 border-t border-slate-700" x-data="{ open: false }">
+            @if($isSuperAdmin)
+            {{-- Super admin can switch hospitals --}}
+            @php $allHospitals = \App\Modules\Core\Models\Hospital::where('is_active', true)->get(['id', 'name', 'country', 'city']); @endphp
             <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-700 transition-colors">
                 <div class="flex items-center gap-2 min-w-0">
                     <span class="text-lg">{{ $currentHospital?->country === 'AE' ? '🇦🇪' : '🇮🇳' }}</span>
@@ -72,6 +79,16 @@
                     @endif
                 @endforeach
             </div>
+            @else
+            {{-- Non-super admins see their hospital (read only, no switcher) --}}
+            <div class="flex items-center gap-2 px-3 py-2">
+                <span class="text-lg">{{ $currentHospital?->country === 'AE' ? '🇦🇪' : '🇮🇳' }}</span>
+                <div class="min-w-0">
+                    <p class="text-xs font-medium text-white truncate">{{ $currentHospital?->name ?? 'Hospital' }}</p>
+                    <p class="text-[10px] text-slate-400">{{ $currentHospital?->city }}</p>
+                </div>
+            </div>
+            @endif
         </div>
         @endif
 
