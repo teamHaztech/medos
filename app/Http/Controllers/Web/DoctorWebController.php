@@ -335,6 +335,9 @@ class DoctorWebController extends Controller
             $encounter->update(['status' => 'in_progress']);
         }
 
+        // Notify patient — doctor is ready
+        \App\Modules\Core\Services\WhatsAppNotifier::doctorReady($apt);
+
         return response()->json(['success' => true]);
     }
 
@@ -428,6 +431,10 @@ class DoctorWebController extends Controller
                 ]);
             }
         }
+
+        // Notify patient — consultation complete
+        $followUp = $request->has('follow_up_date') ? $request->input('follow_up_date') : null;
+        \App\Modules\Core\Services\WhatsAppNotifier::consultationComplete($apt, $followUp);
 
         return response()->json(['success' => true, 'message' => 'Consultation completed.']);
     }
@@ -537,6 +544,9 @@ class DoctorWebController extends Controller
             'appointment_id' => $apt->id,
             'updated_at' => now(),
         ]);
+
+        // Notify patient about the referral appointment
+        \App\Modules\Core\Services\WhatsAppNotifier::appointmentBooked($apt);
 
         $msg = $isToday
             ? "Accepted! Patient added to your queue as $token"

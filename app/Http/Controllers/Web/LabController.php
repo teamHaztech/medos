@@ -68,6 +68,10 @@ class LabController extends Controller
             'completed_at' => now(),
         ]);
 
+        // Notify patient — lab results ready
+        $testNames = collect($order->items ?? [])->pluck('name')->implode(', ');
+        \App\Modules\Core\Services\WhatsAppNotifier::labResultsReady($order->patient_id, $testNames ?: 'Lab tests');
+
         return response()->json(['success' => true]);
     }
 }

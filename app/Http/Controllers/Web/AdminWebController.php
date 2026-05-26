@@ -733,18 +733,20 @@ class AdminWebController extends Controller
     public function cancelAppointment(Request $request, string $id)
     {
         $hospitalId = Auth::user()->hospital_id;
-        $updated = \DB::table('appointments')
-            ->where('id', $id)
-            ->where('hospital_id', $hospitalId)
-            ->update([
-                'status'              => 'cancelled',
-                'cancellation_reason' => $request->input('cancellation_reason', 'Cancelled by admin'),
-                'updated_at'          => now(),
-            ]);
+        $apt = Appointment::where('id', $id)->where('hospital_id', $hospitalId)->first();
 
-        if (!$updated) {
+        if (!$apt) {
             return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
         }
+
+        $reason = $request->input('cancellation_reason', 'Cancelled by hospital');
+        $apt->update([
+            'status'              => 'cancelled',
+            'cancellation_reason' => $reason,
+        ]);
+
+        // Notify patient via WhatsApp
+        \App\Modules\Core\Services\WhatsAppNotifier::appointmentCancelled($apt, 'Hospital', $reason);
 
         return response()->json(['success' => true]);
     }
