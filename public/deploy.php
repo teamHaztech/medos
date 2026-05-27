@@ -74,8 +74,50 @@ try {
     echo "<span class='err'>✗ Seeding error: " . htmlspecialchars($e->getMessage()) . "</span>\n";
 }
 
-// 5. Clear caches
-echo "\n<span class='info'>5. Clearing caches...</span>\n";
+// 5. Ensure lab & pharmacy users exist
+echo "\n<span class='info'>5. Checking lab/pharmacy users...</span>\n";
+try {
+    $hospitalId = DB::table('hospitals')->where('is_active', true)->value('id')
+        ?? DB::table('hospitals')->value('id');
+    if ($hospitalId) {
+        $password = \Illuminate\Support\Facades\Hash::make('password123');
+        $now = now();
+        $usersToCreate = [
+            ['email' => 'lab@haztech.in', 'name' => 'Lab Technician', 'role' => 'lab_tech', 'dept' => 'Pathology', 'spec' => 'Clinical Pathology'],
+            ['email' => 'pharmacy@haztech.in', 'name' => 'Pharmacist', 'role' => 'pharmacist', 'dept' => 'Pharmacy', 'spec' => 'Pharmacy'],
+        ];
+        foreach ($usersToCreate as $u) {
+            if (!DB::table('users')->where('email', $u['email'])->exists()) {
+                $userId = \Illuminate\Support\Str::uuid()->toString();
+                $staffId = \Illuminate\Support\Str::uuid()->toString();
+                DB::table('users')->insert([
+                    'id' => $userId, 'name' => $u['name'], 'email' => $u['email'],
+                    'email_verified_at' => $now, 'password' => $password,
+                    'hospital_id' => $hospitalId, 'role' => $u['role'],
+                    'staff_id' => $staffId, 'is_active' => true,
+                    'created_at' => $now, 'updated_at' => $now,
+                ]);
+                DB::table('staff')->insert([
+                    'id' => $staffId, 'hospital_id' => $hospitalId, 'user_id' => $userId,
+                    'name' => $u['name'], 'email' => $u['email'], 'role' => $u['role'],
+                    'department' => $u['dept'], 'specialization' => $u['spec'],
+                    'is_active' => true, 'consultation_duration_default' => 0,
+                    'created_at' => $now, 'updated_at' => $now,
+                ]);
+                echo "<span class='ok'>✓ Created {$u['name']} ({$u['email']})</span>\n";
+            } else {
+                echo "<span class='ok'>✓ {$u['name']} already exists</span>\n";
+            }
+        }
+    } else {
+        echo "<span class='err'>✗ No hospital found — cannot create users</span>\n";
+    }
+} catch (Exception $e) {
+    echo "<span class='err'>✗ User creation error: " . htmlspecialchars($e->getMessage()) . "</span>\n";
+}
+
+// 6. Clear caches
+echo "\n<span class='info'>6. Clearing caches...</span>\n";
 try {
     Artisan::call('config:clear');
     Artisan::call('route:clear');
@@ -85,8 +127,8 @@ try {
     echo "<span class='err'>✗ Cache clear error: " . htmlspecialchars($e->getMessage()) . "</span>\n";
 }
 
-// 6. Create storage link
-echo "\n<span class='info'>6. Storage link...</span>\n";
+// 7. Create storage link
+echo "\n<span class='info'>7. Storage link...</span>\n";
 try {
     Artisan::call('storage:link', ['--force' => true]);
     echo Artisan::output();
@@ -95,8 +137,8 @@ try {
     echo "<span class='info'>⊘ " . htmlspecialchars($e->getMessage()) . "</span>\n";
 }
 
-// 7. Verify tables
-echo "\n<span class='info'>7. Verifying tables...</span>\n";
+// 8. Verify tables
+echo "\n<span class='info'>8. Verifying tables...</span>\n";
 try {
     $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
     echo "Tables found: " . count($tables) . "\n";
@@ -108,7 +150,7 @@ try {
 }
 
 // 7. Verify users
-echo "\n<span class='info'>8. Checking users...</span>\n";
+echo "\n<span class='info'>9. Checking users...</span>\n";
 try {
     $users = DB::table('users')->get(['email', 'role']);
     echo "Users found: " . $users->count() . "\n";
