@@ -11,6 +11,7 @@ use App\Modules\Core\Services\RegionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class SuperAdminController extends Controller
@@ -52,25 +53,33 @@ class SuperAdminController extends Controller
             ->orderBy('department')->orderBy('name')
             ->get();
 
-        // Also get staff assigned via pivot table
-        $pivotStaffIds = DB::table('staff_hospital')
-            ->where('hospital_id', $hospital->id)
-            ->where('is_active', true)
-            ->pluck('staff_id')
-            ->toArray();
+        // Also get staff assigned via pivot table (safe check)
+        $hasPivotTables = Schema::hasTable('staff_hospital');
+        $hasUserPivot   = Schema::hasTable('user_hospital');
 
-        $pivotStaff = Staff::withoutGlobalScopes()
-            ->whereIn('id', $pivotStaffIds)
-            ->where('hospital_id', '!=', $hospital->id)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $pivotStaffIds = [];
+        $pivotStaff    = collect();
+        $pivotData     = collect();
 
-        // Pivot data keyed by staff_id
-        $pivotData = DB::table('staff_hospital')
-            ->where('hospital_id', $hospital->id)
-            ->get()
-            ->keyBy('staff_id');
+        if ($hasPivotTables) {
+            $pivotStaffIds = DB::table('staff_hospital')
+                ->where('hospital_id', $hospital->id)
+                ->where('is_active', true)
+                ->pluck('staff_id')
+                ->toArray();
+
+            $pivotStaff = Staff::withoutGlobalScopes()
+                ->whereIn('id', $pivotStaffIds)
+                ->where('hospital_id', '!=', $hospital->id)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get();
+
+            $pivotData = DB::table('staff_hospital')
+                ->where('hospital_id', $hospital->id)
+                ->get()
+                ->keyBy('staff_id');
+        }
 
         // Admins for this hospital
         $admins = User::where('hospital_id', $hospital->id)
@@ -80,17 +89,21 @@ class SuperAdminController extends Controller
             ->get();
 
         // Also from user_hospital pivot
-        $pivotAdminUserIds = DB::table('user_hospital')
-            ->where('hospital_id', $hospital->id)
-            ->where('role', 'hospital_admin')
-            ->where('is_active', true)
-            ->pluck('user_id')
-            ->toArray();
+        $pivotAdmins = collect();
 
-        $pivotAdmins = User::whereIn('id', $pivotAdminUserIds)
-            ->where('hospital_id', '!=', $hospital->id)
-            ->where('is_active', true)
-            ->get();
+        if ($hasUserPivot) {
+            $pivotAdminUserIds = DB::table('user_hospital')
+                ->where('hospital_id', $hospital->id)
+                ->where('role', 'hospital_admin')
+                ->where('is_active', true)
+                ->pluck('user_id')
+                ->toArray();
+
+            $pivotAdmins = User::whereIn('id', $pivotAdminUserIds)
+                ->where('hospital_id', '!=', $hospital->id)
+                ->where('is_active', true)
+                ->get();
+        }
 
         // Stats
         $patientCount   = DB::table('patients')->where('hospital_id', $hospital->id)->count();
@@ -129,17 +142,19 @@ class SuperAdminController extends Controller
 
             $existingStaff = Staff::withoutGlobalScopes()->findOrFail($request->staff_id);
 
-            DB::table('staff_hospital')->updateOrInsert(
-                ['staff_id' => $existingStaff->id, 'hospital_id' => $hospital->id],
-                [
-                    'id'         => Str::uuid()->toString(),
-                    'role'       => $request->input('role', is_object($existingStaff->role) ? $existingStaff->role->value : ($existingStaff->role ?? 'doctor')),
-                    'department' => $request->input('department', $existingStaff->department),
-                    'is_active'  => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]
-            );
+            if (Schema::hasTable('staff_hospital')) {
+                DB::table('staff_hospital')->updateOrInsert(
+                    ['staff_id' => $existingStaff->id, 'hospital_id' => $hospital->id],
+                    [
+                        'id'         => Str::uuid()->toString(),
+                        'role'       => $request->input('role', is_object($existingStaff->role) ? $existingStaff->role->value : ($existingStaff->role ?? 'doctor')),
+                        'department' => $request->input('department', $existingStaff->department),
+                        'is_active'  => true,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                );
+            }
 
             return redirect()->route('web.superadmin.hospitals.show', $hospital->id)
                 ->with('success', $existingStaff->name . ' assigned to ' . $hospital->name);
@@ -182,16 +197,18 @@ class SuperAdminController extends Controller
         ]);
 
         // Also create pivot entry
-        DB::table('staff_hospital')->insert([
-            'id'          => Str::uuid()->toString(),
-            'staff_id'    => $staffId,
-            'hospital_id' => $hospital->id,
-            'role'        => $v['role'],
-            'department'  => $v['department'] ?? null,
-            'is_active'   => true,
-            'created_at'  => now(),
-            'updated_at'  => now(),
-        ]);
+        if (Schema::hasTable('staff_hospital')) {
+            DB::table('staff_hospital')->insert([
+                'id'          => Str::uuid()->toString(),
+                'staff_id'    => $staffId,
+                'hospital_id' => $hospital->id,
+                'role'        => $v['role'],
+                'department'  => $v['department'] ?? null,
+                'is_active'   => true,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
 
         return redirect()->route('web.superadmin.hospitals.show', $hospital->id)
             ->with('success', 'Staff member "' . $v['name'] . '" created and assigned.');
@@ -220,15 +237,17 @@ class SuperAdminController extends Controller
         ]);
 
         // Also create user_hospital pivot entry
-        DB::table('user_hospital')->insert([
-            'id'          => Str::uuid()->toString(),
-            'user_id'     => $userId,
-            'hospital_id' => $hospital->id,
-            'role'        => 'hospital_admin',
-            'is_active'   => true,
-            'created_at'  => now(),
-            'updated_at'  => now(),
-        ]);
+        if (Schema::hasTable('user_hospital')) {
+            DB::table('user_hospital')->insert([
+                'id'          => Str::uuid()->toString(),
+                'user_id'     => $userId,
+                'hospital_id' => $hospital->id,
+                'role'        => 'hospital_admin',
+                'is_active'   => true,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
 
         return redirect()->route('web.superadmin.hospitals.show', $hospital->id)
             ->with('success', 'Admin "' . $v['name'] . '" added to ' . $hospital->name);
@@ -240,10 +259,12 @@ class SuperAdminController extends Controller
         $staff = Staff::withoutGlobalScopes()->findOrFail($staffId);
 
         // Remove from pivot table
-        DB::table('staff_hospital')
-            ->where('staff_id', $staffId)
-            ->where('hospital_id', $hospitalId)
-            ->delete();
+        if (Schema::hasTable('staff_hospital')) {
+            DB::table('staff_hospital')
+                ->where('staff_id', $staffId)
+                ->where('hospital_id', $hospitalId)
+                ->delete();
+        }
 
         // If the staff's primary hospital_id matches, we just deactivate the pivot — don't delete the staff record
         return redirect()->route('web.superadmin.hospitals.show', $hospital->id)
