@@ -440,14 +440,14 @@ class ChatController extends Controller
 
     private function handleReschedulePick(string $msg, array &$state, string $lang, $hospital): array
     {
-        $choice = intval(trim($msg));
+        $trimmed = trim($msg);
         $appointments = $state['upcoming_appointments'] ?? [];
+        $apt = $this->smartPickAppointment($trimmed, $appointments);
 
-        if ($choice < 1 || $choice > count($appointments)) {
-            return [$this->t('invalid_choice', $lang, ['max' => count($appointments)])];
+        if (!$apt) {
+            $list = implode(', ', array_map(fn($a) => $a['doctor_name'] . ' (' . $a['token'] . ')', $appointments));
+            return ["I couldn't find that appointment. Reply with a *number* (1-" . count($appointments) . "), *doctor name*, or *token number*.\n\nYour appointments: {$list}"];
         }
-
-        $apt = $appointments[$choice - 1];
         $state['reschedule_appointment_id'] = $apt['id'];
         $state['reschedule_doctor_id'] = $apt['doctor_id'];
         $state['reschedule_doctor_name'] = $apt['doctor_name'];
@@ -495,14 +495,14 @@ class ChatController extends Controller
 
     private function handleRescheduleDate(string $msg, array &$state, string $lang, $hospital): array
     {
-        $choice = intval(trim($msg));
+        $trimmed = trim($msg);
         $days = $state['reschedule_available_days'] ?? [];
+        $chosenDay = $this->smartPickDay($trimmed, $days);
 
-        if ($choice < 1 || $choice > count($days)) {
-            return [$this->t('invalid_choice', $lang, ['max' => count($days)])];
+        if (!$chosenDay) {
+            $list = implode(', ', array_map(fn($d, $i) => ($i+1) . '. ' . $d['display'], $days, array_keys($days)));
+            return ["I couldn't understand that date. Reply with a *number* (1-" . count($days) . ") or type a day name like *Monday*, *tomorrow*, etc.\n\nAvailable: {$list}"];
         }
-
-        $chosenDay = $days[$choice - 1];
         $doctorId = $state['reschedule_doctor_id'];
         $doctor = Staff::find($doctorId);
         $schedule = is_array($doctor->schedule) ? $doctor->schedule : json_decode($doctor->schedule ?? '{}', true);
@@ -562,14 +562,13 @@ class ChatController extends Controller
 
     private function handleRescheduleConfirm(string $msg, array &$state, string $lang, $hospital): array
     {
-        $choice = intval(trim($msg));
+        $trimmed = trim($msg);
         $slots = $state['reschedule_slots'] ?? [];
+        $newSlot = $this->smartPickSlot($trimmed, $slots);
 
-        if ($choice < 1 || $choice > count($slots)) {
-            return [$this->t('invalid_choice', $lang, ['max' => count($slots)])];
+        if (!$newSlot) {
+            return ["I couldn't understand that time. Reply with a *number* (1-" . count($slots) . ") or type a time like *3pm*, *10:30 AM*, or *earliest*."];
         }
-
-        $newSlot = $slots[$choice - 1];
         $newStart = Carbon::parse($newSlot['time']);
 
         // Validate slot is still in the future
@@ -649,14 +648,14 @@ class ChatController extends Controller
 
     private function handleCancelPick(string $msg, array &$state, string $lang, $hospital): array
     {
-        $choice = intval(trim($msg));
+        $trimmed = trim($msg);
         $appointments = $state['cancel_appointments'] ?? [];
+        $apt = $this->smartPickAppointment($trimmed, $appointments);
 
-        if ($choice < 1 || $choice > count($appointments)) {
-            return [$this->t('invalid_choice', $lang, ['max' => count($appointments)])];
+        if (!$apt) {
+            $list = implode(', ', array_map(fn($a) => $a['doctor_name'] . ' (' . $a['token'] . ')', $appointments));
+            return ["I couldn't find that appointment. Reply with a *number* (1-" . count($appointments) . "), *doctor name*, or *token number*.\n\nYour appointments: {$list}"];
         }
-
-        $apt = $appointments[$choice - 1];
         $state['cancel_appointment_id'] = $apt['id'];
         $state['cancel_display'] = "{$apt['doctor_name']} — {$apt['slot_display']}";
         $state['step'] = 'cancel_confirm';
@@ -1215,6 +1214,198 @@ class ChatController extends Controller
             ->where('slot_start', '>=', now()->subHours(24))
             ->orderByDesc('slot_start')
             ->get();
+    }
+
+    // ---------------------------------------------------------------
+    // Smart input helpers — fuzzy matching for appointments, days, times
+    // ---------------------------------------------------------------
+
+    /**
+     * Smart pick appointment by number, doctor name (fuzzy), or token.
+     */
+    private function smartPickAppointment(string $input, array $appointments): ?array
+    {
+        if (empty($appointments)) return null;
+
+        // 1. Number selection
+        if (is_numeric($input)) {
+            $choice = intval($input);
+            if ($choice >= 1 && $choice <= count($appointments)) {
+                return $appointments[$choice - 1];
+            }
+        }
+
+        $lower = strtolower($input);
+        $lower = preg_replace('/^(dr\.?\s*|doctor\s*)/i', '', $lower);
+        $lower = trim($lower);
+
+        // 2. Token match (e.g. "PED-001", "ped001")
+        $inputClean = preg_replace('/[^a-z0-9]/i', '', $lower);
+        foreach ($appointments as $apt) {
+            $tokenClean = preg_replace('/[^a-z0-9]/i', '', strtolower($apt['token'] ?? ''));
+            if ($inputClean && $tokenClean && ($inputClean === $tokenClean || str_contains($tokenClean, $inputClean))) {
+                return $apt;
+            }
+        }
+
+        // 3. Exact/partial doctor name match
+        foreach ($appointments as $apt) {
+            $dName = strtolower(preg_replace('/^(dr\.?\s*)/i', '', $apt['doctor_name']));
+            if (str_contains($dName, $lower) || str_contains(strtolower($apt['doctor_name']), $lower)) {
+                return $apt;
+            }
+        }
+
+        // 4. Fuzzy name match (levenshtein)
+        $bestScore = PHP_INT_MAX;
+        $bestApt = null;
+        foreach ($appointments as $apt) {
+            $dName = strtolower(preg_replace('/^(dr\.?\s*)/i', '', $apt['doctor_name']));
+            foreach (explode(' ', $dName) as $word) {
+                $dist = levenshtein($lower, $word);
+                if ($dist < $bestScore && $dist <= 2) {
+                    $bestScore = $dist;
+                    $bestApt = $apt;
+                }
+            }
+            if (soundex($lower) === soundex($dName) && strlen($lower) >= 3 && 3 < $bestScore) {
+                $bestScore = 3;
+                $bestApt = $apt;
+            }
+        }
+
+        // 5. If only one appointment, accept anything vaguely affirmative
+        if (!$bestApt && count($appointments) === 1) {
+            $affirmative = ['yes', 'y', '1', 'ok', 'first', 'that', 'this', 'haan', 'ha', 'ji', 'woh', 'wahi'];
+            if (in_array($lower, $affirmative)) {
+                return $appointments[0];
+            }
+        }
+
+        return $bestApt;
+    }
+
+    /**
+     * Smart pick day by number, day name, or relative words (today/tomorrow/kal).
+     */
+    private function smartPickDay(string $input, array $days): ?array
+    {
+        if (empty($days)) return null;
+
+        // 1. Number
+        if (is_numeric(trim($input))) {
+            $choice = intval($input);
+            if ($choice >= 1 && $choice <= count($days)) {
+                return $days[$choice - 1];
+            }
+        }
+
+        $lower = strtolower(trim($input));
+
+        // 2. Relative words
+        $todayWords = ['today', 'aaj', 'abhi', 'now', 'आज'];
+        $tomorrowWords = ['tomorrow', 'kal', 'कल', 'tmrw', 'tmr'];
+
+        if (in_array($lower, $todayWords)) {
+            $todayStr = now()->toDateString();
+            foreach ($days as $day) {
+                if ($day['date'] === $todayStr) return $day;
+            }
+        }
+        if (in_array($lower, $tomorrowWords)) {
+            $tomorrowStr = now()->addDay()->toDateString();
+            foreach ($days as $day) {
+                if ($day['date'] === $tomorrowStr) return $day;
+            }
+        }
+
+        // 3. Day name match (monday, mon, tue, wednesday, etc.)
+        $dayMap = [
+            'mon' => 'monday', 'tue' => 'tuesday', 'wed' => 'wednesday',
+            'thu' => 'thursday', 'fri' => 'friday', 'sat' => 'saturday', 'sun' => 'sunday',
+            'somvar' => 'monday', 'mangal' => 'tuesday', 'budh' => 'wednesday',
+            'guru' => 'thursday', 'shukra' => 'friday', 'shani' => 'saturday', 'ravi' => 'sunday',
+        ];
+
+        foreach ($dayMap as $short => $full) {
+            if (str_starts_with($lower, $short) || str_contains($lower, $full)) {
+                foreach ($days as $day) {
+                    if ($day['day_name'] === $full) return $day;
+                }
+            }
+        }
+
+        // 4. Date match (e.g. "28", "May 28", "28 may")
+        if (preg_match('/(\d{1,2})/', $lower, $m)) {
+            $dayNum = intval($m[1]);
+            foreach ($days as $day) {
+                if (Carbon::parse($day['date'])->day === $dayNum) return $day;
+            }
+        }
+
+        // 5. "earliest" / "first"
+        if (in_array($lower, ['earliest', 'first', 'pehla', 'jaldi', 'any', 'koi bhi', '1st'])) {
+            return $days[0];
+        }
+
+        return null;
+    }
+
+    /**
+     * Smart pick time slot by number, time text, or keywords.
+     */
+    private function smartPickSlot(string $input, array $slots): ?array
+    {
+        if (empty($slots)) return null;
+
+        // 1. Number
+        if (is_numeric(trim($input))) {
+            $choice = intval($input);
+            if ($choice >= 1 && $choice <= count($slots)) {
+                return $slots[$choice - 1];
+            }
+        }
+
+        $lower = strtolower(trim($input));
+
+        // 2. "earliest" / "first"
+        if (in_array($lower, ['earliest', 'first', 'pehla', 'jaldi', 'any', 'asap', 'koi bhi', '1st'])) {
+            return $slots[0];
+        }
+
+        // 3. "last" / "latest"
+        if (in_array($lower, ['last', 'latest', 'aakhri'])) {
+            return end($slots);
+        }
+
+        // 4. Parse time from text
+        if (preg_match('/(\d{1,2})[:\.]?(\d{2})?\s*(am|pm|AM|PM)?/', $input, $m)) {
+            $hour = intval($m[1]);
+            $min = intval($m[2] ?? 0);
+            $ampm = strtolower($m[3] ?? '');
+
+            if ($ampm === 'pm' && $hour < 12) $hour += 12;
+            if ($ampm === 'am' && $hour === 12) $hour = 0;
+            if (!$ampm && $hour >= 1 && $hour <= 7) $hour += 12;
+
+            $reqMinutes = $hour * 60 + $min;
+            $bestSlot = null;
+            $bestDiff = PHP_INT_MAX;
+
+            foreach ($slots as $slot) {
+                $t = Carbon::parse($slot['time'] ?? $slot['display'] ?? '');
+                $slotMinutes = $t->hour * 60 + $t->minute;
+                $diff = abs($reqMinutes - $slotMinutes);
+                if ($diff < $bestDiff) {
+                    $bestDiff = $diff;
+                    $bestSlot = $slot;
+                }
+            }
+
+            if ($bestSlot && $bestDiff <= 30) return $bestSlot;
+        }
+
+        return null;
     }
 
     // ---------------------------------------------------------------
