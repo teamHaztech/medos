@@ -78,9 +78,11 @@ Route::middleware('auth')->prefix('doctor')->name('web.doctor.')->group(function
 Route::middleware('auth')->prefix('lab')->name('web.lab.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\LabController::class, 'dashboard'])->name('dashboard');
     Route::post('{id}/collect', [\App\Http\Controllers\Web\LabController::class, 'collectSample'])->name('collect');
+    Route::post('{id}/status', [\App\Http\Controllers\Web\LabController::class, 'updateLabStatus'])->name('status');
     Route::get('{id}/results', [\App\Http\Controllers\Web\LabController::class, 'showResults'])->name('results');
     Route::post('{id}/results', [\App\Http\Controllers\Web\LabController::class, 'saveResults'])->name('results.save');
     Route::post('{id}/verify', [\App\Http\Controllers\Web\LabController::class, 'verify'])->name('verify');
+    Route::post('{id}/acknowledge-critical', [\App\Http\Controllers\Web\LabController::class, 'acknowledgeCritical'])->name('acknowledge-critical');
 });
 
 // ---------------------------------------------------------------

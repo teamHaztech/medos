@@ -1,166 +1,177 @@
 @extends('layouts.app')
-@section('title', 'Lab Dashboard')
+@section('title', 'Pathology Lab')
 @section('page-title', 'Pathology Lab')
 
 @section('content')
-<div x-data="labDashboard()" x-init="startAutoRefresh()">
+<div x-data="labDashboard()" x-init="init()">
 
-    {{-- Stats Cards --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-xl border border-slate-200 p-4">
-            <p class="text-xs font-semibold text-slate-500 uppercase">Pending</p>
-            <p class="text-2xl font-bold text-yellow-600" x-text="stats.pending">{{ $stats['pending'] }}</p>
-            <p class="text-xs text-slate-400 mt-1">Awaiting collection</p>
+    {{-- Stats Row --}}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+        <div class="bg-white rounded-xl border border-slate-200 p-3.5">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Today</p>
+            <p class="text-xl font-bold text-slate-800 mt-0.5" x-text="stats.total">{{ $stats['total'] }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-slate-200 p-4">
-            <p class="text-xs font-semibold text-slate-500 uppercase">In Progress</p>
-            <p class="text-2xl font-bold text-blue-600" x-text="stats.in_progress">{{ $stats['in_progress'] }}</p>
-            <p class="text-xs text-slate-400 mt-1">Samples collected</p>
+        <div class="bg-yellow-50 rounded-xl border border-yellow-200 p-3.5">
+            <p class="text-[10px] font-bold text-yellow-600 uppercase tracking-wider">Pending</p>
+            <p class="text-xl font-bold text-yellow-700 mt-0.5" x-text="stats.pending">{{ $stats['pending'] }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-slate-200 p-4">
-            <p class="text-xs font-semibold text-slate-500 uppercase">Completed</p>
-            <p class="text-2xl font-bold text-green-600" x-text="stats.completed">{{ $stats['completed'] }}</p>
-            <p class="text-xs text-slate-400 mt-1">Results verified</p>
+        <div class="bg-blue-50 rounded-xl border border-blue-200 p-3.5">
+            <p class="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Processing</p>
+            <p class="text-xl font-bold text-blue-700 mt-0.5" x-text="stats.in_progress">{{ $stats['in_progress'] }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-slate-200 p-4" :class="stats.stat_urgent > 0 ? 'ring-2 ring-red-300 bg-red-50' : ''">
-            <p class="text-xs font-semibold text-slate-500 uppercase">STAT / Urgent</p>
-            <p class="text-2xl font-bold text-red-600" x-text="stats.stat_urgent">{{ $stats['stat_urgent'] }}</p>
-            <p class="text-xs text-slate-400 mt-1">Priority pending</p>
+        <div class="bg-green-50 rounded-xl border border-green-200 p-3.5">
+            <p class="text-[10px] font-bold text-green-600 uppercase tracking-wider">Completed</p>
+            <p class="text-xl font-bold text-green-700 mt-0.5" x-text="stats.completed">{{ $stats['completed'] }}</p>
+        </div>
+        <div class="rounded-xl border p-3.5" :class="stats.critical > 0 ? 'bg-red-50 border-red-300 ring-2 ring-red-200 animate-pulse' : 'bg-white border-slate-200'">
+            <p class="text-[10px] font-bold uppercase tracking-wider" :class="stats.critical > 0 ? 'text-red-600' : 'text-slate-400'">Critical</p>
+            <p class="text-xl font-bold mt-0.5" :class="stats.critical > 0 ? 'text-red-700' : 'text-slate-800'" x-text="stats.critical">{{ $stats['critical'] }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-3.5">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avg TAT</p>
+            <p class="text-xl font-bold text-slate-800 mt-0.5" x-text="stats.avg_tat">{{ $stats['avg_tat'] }}</p>
         </div>
     </div>
 
-    {{-- Filters Row --}}
+    {{-- Filters --}}
     <div class="flex flex-wrap items-center gap-3 mb-4">
-        {{-- Status Tabs --}}
         <div class="flex items-center gap-1.5">
-            <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 transition-colors">
-                All <span class="text-xs opacity-75" x-text="'(' + orders.length + ')'"></span>
-            </button>
-            <button @click="filter = 'pending'" :class="filter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-white text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 transition-colors">
-                Pending
-            </button>
-            <button @click="filter = 'in_progress'" :class="filter === 'in_progress' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 transition-colors">
-                In Progress
-            </button>
-            <button @click="filter = 'completed'" :class="filter === 'completed' ? 'bg-green-600 text-white' : 'bg-white text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 transition-colors">
-                Completed
-            </button>
+            <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 transition-colors">All</button>
+            <button @click="filter = 'pending'" :class="filter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 transition-colors">Pending</button>
+            <button @click="filter = 'in_progress'" :class="filter === 'in_progress' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 transition-colors">Processing</button>
+            <button @click="filter = 'completed'" :class="filter === 'completed' ? 'bg-green-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 transition-colors">Completed</button>
         </div>
-
-        {{-- Date Filter --}}
         <div class="flex items-center gap-1.5 ml-auto">
-            <a href="?date=today" class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors {{ $dateFilter === 'today' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">Today</a>
-            <a href="?date=week" class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors {{ $dateFilter === 'week' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">This Week</a>
-            <a href="?date=all" class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors {{ $dateFilter === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">All</a>
+            <a href="?date=today" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors {{ $dateFilter === 'today' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">Today</a>
+            <a href="?date=week" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors {{ $dateFilter === 'week' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">Week</a>
+            <a href="?date=all" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors {{ $dateFilter === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">All</a>
         </div>
-
-        {{-- Search --}}
-        <div class="w-full sm:w-auto">
-            <input type="text" x-model="search" placeholder="Search patient, test, doctor..." class="input-field w-full sm:w-64 text-sm">
-        </div>
+        <input type="text" x-model="search" placeholder="Search patient, test, doctor..." class="input-field w-full sm:w-56 text-sm">
     </div>
 
-    {{-- Orders Table --}}
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                        <th class="table-header">Patient</th>
-                        <th class="table-header">Tests</th>
-                        <th class="table-header">Ordered By</th>
-                        <th class="table-header">Priority</th>
-                        <th class="table-header">Status</th>
-                        <th class="table-header">Time</th>
-                        <th class="table-header">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    <template x-for="order in filteredOrders" :key="order.id">
-                        <tr class="hover:bg-slate-50" :class="(order.priority === 'stat' && order.status !== 'completed') ? 'bg-red-50/50' : ''">
-                            {{-- Patient --}}
-                            <td class="table-cell">
-                                <p class="font-semibold text-slate-900 text-sm" x-text="order.patient?.name ?? 'Unknown'"></p>
-                                <p class="text-xs text-slate-400" x-text="(order.patient?.gender ? (order.patient.gender.charAt(0).toUpperCase()) : '') + (order.patient?.age_approximate ? ', ' + order.patient.age_approximate + 'y' : '') + (order.patient?.phone ? ' · ' + order.patient.phone : '')"></p>
-                            </td>
-                            {{-- Tests --}}
-                            <td class="table-cell">
-                                <div class="flex flex-wrap gap-1">
-                                    <template x-for="item in (order.items || [])" :key="item.name">
-                                        <span class="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded font-medium" x-text="item.name"></span>
-                                    </template>
-                                </div>
-                                <p class="text-xs text-slate-400 mt-0.5" x-show="(order.items || []).length > 1" x-text="(order.items || []).length + ' tests'"></p>
-                            </td>
-                            {{-- Ordered By --}}
-                            <td class="table-cell">
-                                <p class="text-sm text-slate-700" x-text="order.ordered_by?.name ?? '-'"></p>
-                            </td>
-                            {{-- Priority --}}
-                            <td class="table-cell">
+    {{-- Orders as Cards --}}
+    <div class="space-y-3">
+        <template x-for="order in filteredOrders" :key="order.id">
+            <div class="bg-white rounded-xl border shadow-sm overflow-hidden transition-all"
+                 :class="{
+                     'border-red-300 bg-red-50/30': order.priority === 'stat' && order.status !== 'completed',
+                     'border-amber-300 bg-amber-50/20': order.priority === 'urgent' && order.status !== 'completed',
+                     'border-slate-200': order.priority === 'routine' || !order.priority || order.status === 'completed',
+                     'ring-2 ring-red-400': order.has_critical && !order.critical_acknowledged
+                 }">
+                <div class="flex flex-col sm:flex-row">
+                    {{-- Patient Info --}}
+                    <div class="p-4 sm:w-56 sm:border-r border-b sm:border-b-0 border-slate-100 flex-shrink-0">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                                 :class="order.patient?.gender === 'male' ? 'bg-blue-500' : (order.patient?.gender === 'female' ? 'bg-pink-500' : 'bg-slate-400')"
+                                 x-text="(order.patient?.name ?? 'U').charAt(0).toUpperCase()"></div>
+                            <div class="min-w-0">
+                                <p class="font-semibold text-slate-900 text-sm truncate" x-text="order.patient?.name ?? 'Unknown'"></p>
+                                <p class="text-xs text-slate-400" x-text="[order.patient?.gender ? order.patient.gender.charAt(0).toUpperCase() : '', order.patient?.age_approximate ? order.patient.age_approximate + 'y' : ''].filter(Boolean).join(', ')"></p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400" x-show="order.patient?.phone" x-text="order.patient?.phone"></p>
+                        <p class="text-xs text-slate-500 mt-1" x-show="order.sample_id">
+                            <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[10px]" x-text="order.sample_id"></span>
+                        </p>
+                    </div>
+
+                    {{-- Tests + Details --}}
+                    <div class="p-4 flex-1 min-w-0">
+                        <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+                            <div class="flex flex-wrap gap-1.5">
+                                <template x-for="item in (order.items || [])" :key="item.name">
+                                    <span class="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium" x-text="item.name"></span>
+                                </template>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                {{-- Priority --}}
                                 <span :class="{
                                     'bg-red-100 text-red-700 ring-1 ring-red-300': order.priority === 'stat',
                                     'bg-amber-100 text-amber-700': order.priority === 'urgent',
-                                    'bg-slate-100 text-slate-500': order.priority === 'routine' || !order.priority
-                                }" class="px-2 py-0.5 rounded-full text-xs font-bold uppercase" x-text="order.priority || 'routine'"></span>
-                            </td>
-                            {{-- Status --}}
-                            <td class="table-cell">
+                                    'bg-slate-100 text-slate-500': !order.priority || order.priority === 'routine'
+                                }" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase" x-text="order.priority || 'routine'"></span>
+                                {{-- Status --}}
                                 <span :class="{
                                     'bg-yellow-100 text-yellow-700': order.status === 'ordered' || order.status === 'accepted',
                                     'bg-blue-100 text-blue-700': order.status === 'in_progress',
                                     'bg-green-100 text-green-700': order.status === 'completed'
-                                }" class="px-2 py-0.5 rounded-full text-xs font-medium" x-text="statusLabel(order.status)"></span>
-                                <p class="text-xs text-slate-400 mt-0.5" x-show="order.sample_collected_at" x-text="'Collected: ' + formatTime(order.sample_collected_at)"></p>
-                            </td>
-                            {{-- Time --}}
-                            <td class="table-cell">
-                                <p class="text-sm text-slate-700" x-text="formatTime(order.created_at)"></p>
-                                <p class="text-xs text-slate-400" x-text="formatDate(order.created_at)"></p>
-                            </td>
-                            {{-- Actions --}}
-                            <td class="table-cell">
-                                <div class="flex items-center gap-1.5">
-                                    <template x-if="order.status === 'ordered' || order.status === 'accepted'">
-                                        <button @click="collectSample(order.id)" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                                            Collect Sample
-                                        </button>
-                                    </template>
-                                    <template x-if="order.status === 'in_progress'">
-                                        <div class="flex items-center gap-1.5">
-                                            <a :href="'/lab/' + order.id + '/results'" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors font-medium">
-                                                Enter Results
-                                            </a>
-                                            <button @click="verify(order.id)" class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition-colors font-medium">
-                                                Verify & Send
-                                            </button>
-                                        </div>
-                                    </template>
-                                    <template x-if="order.status === 'completed'">
-                                        <a :href="'/lab/' + order.id + '/results'" class="text-xs bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors font-medium">
-                                            View Results
-                                        </a>
-                                    </template>
-                                </div>
-                            </td>
-                        </tr>
-                    </template>
-                    <template x-if="filteredOrders.length === 0">
-                        <tr>
-                            <td colspan="7" class="text-center text-slate-400 py-12">
-                                <svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-                                <p class="text-sm font-medium">No lab orders found</p>
-                                <p class="text-xs mt-1">Orders from doctors will appear here automatically</p>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </div>
+                                }" class="px-2 py-0.5 rounded-full text-[10px] font-bold" x-text="statusLabel(order.status)"></span>
+                            </div>
+                        </div>
+
+                        {{-- Meta row --}}
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400 mb-3">
+                            <span x-text="'Dr. ' + (order.ordered_by?.name ?? '-')"></span>
+                            <span x-text="formatTime(order.created_at) + ' · ' + formatDate(order.created_at)"></span>
+                            <span :class="{'text-green-600': order.tat_color === 'green', 'text-yellow-600 font-semibold': order.tat_color === 'yellow', 'text-red-600 font-bold': order.tat_color === 'red'}"
+                                  x-text="'TAT: ' + order.tat_display"
+                                  x-show="order.status !== 'completed'"></span>
+                            <span x-show="order.lab_status" class="font-medium text-slate-500" x-text="labStatusLabel(order.lab_status)"></span>
+                        </div>
+
+                        {{-- Critical alert banner --}}
+                        <div x-show="order.has_critical && !order.critical_acknowledged" class="bg-red-100 border border-red-300 rounded-lg px-3 py-2 mb-3 flex items-center justify-between">
+                            <p class="text-xs font-bold text-red-700">CRITICAL VALUES DETECTED — requires doctor acknowledgment</p>
+                            <button @click="acknowledgeCritical(order.id)" class="text-xs bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 font-medium">Acknowledge</button>
+                        </div>
+
+                        {{-- Actions --}}
+                        <div class="flex flex-wrap items-center gap-2">
+                            <template x-if="order.status === 'ordered' || order.status === 'accepted'">
+                                <button @click="collectSample(order.id)" class="text-xs bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                                    Collect Sample
+                                </button>
+                            </template>
+                            <template x-if="order.status === 'in_progress' && (!order.lab_status || order.lab_status === 'collected')">
+                                <button @click="updateStatus(order.id, 'received')" class="text-xs bg-slate-600 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 font-medium">
+                                    Mark Received
+                                </button>
+                            </template>
+                            <template x-if="order.status === 'in_progress' && order.lab_status === 'received'">
+                                <button @click="updateStatus(order.id, 'processing')" class="text-xs bg-slate-600 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 font-medium">
+                                    Start Processing
+                                </button>
+                            </template>
+                            <template x-if="order.status === 'in_progress'">
+                                <a :href="'/lab/' + order.id + '/results'" class="text-xs bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold">
+                                    Enter Results
+                                </a>
+                            </template>
+                            <template x-if="order.status === 'in_progress' && order.result_entered_at">
+                                <button @click="verify(order.id, order.has_critical && !order.critical_acknowledged)" class="text-xs bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                                    Verify & Release
+                                </button>
+                            </template>
+                            <template x-if="order.status === 'completed'">
+                                <a :href="'/lab/' + order.id + '/results'" class="text-xs bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-200 font-medium">
+                                    View Results
+                                </a>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        {{-- Empty State --}}
+        <template x-if="filteredOrders.length === 0">
+            <div class="text-center py-16">
+                <svg class="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                <p class="text-sm font-semibold text-slate-500">No lab orders found</p>
+                <p class="text-xs text-slate-400 mt-1">Orders from doctors will appear here automatically</p>
+            </div>
+        </template>
     </div>
 
-    {{-- Auto-refresh indicator --}}
-    <p class="text-xs text-slate-400 text-center mt-3">Auto-refreshes every 10 seconds</p>
+    {{-- Refresh indicator --}}
+    <p class="text-[10px] text-slate-400 text-center mt-4">Auto-refreshes every 5 seconds</p>
+
+    {{-- Sound for new orders --}}
+    <audio id="alertSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZeXlZGMh4J+fH19gIWKjo+OjIqHhIKBgIB/gIGDhoeIiIeGhYSDgoGBgA==" type="audio/wav">
+    </audio>
 </div>
 
 @endsection
@@ -174,66 +185,97 @@ function labDashboard() {
         orders: @json($orders),
         stats: @json($stats),
         refreshInterval: null,
+        lastOrderCount: @json(count($orders)),
 
         get filteredOrders() {
             let result = this.orders;
+            if (this.filter === 'pending') result = result.filter(o => o.status === 'ordered' || o.status === 'accepted');
+            else if (this.filter !== 'all') result = result.filter(o => o.status === this.filter);
 
-            // Status filter
-            if (this.filter === 'pending') {
-                result = result.filter(o => o.status === 'ordered' || o.status === 'accepted');
-            } else if (this.filter !== 'all') {
-                result = result.filter(o => o.status === this.filter);
-            }
-
-            // Search filter
             if (this.search.trim()) {
                 const q = this.search.toLowerCase();
                 result = result.filter(o => {
-                    const patient = (o.patient?.name || '').toLowerCase();
-                    const phone = (o.patient?.phone || '').toLowerCase();
-                    const doctor = (o.ordered_by_staff?.name || '').toLowerCase();
-                    const tests = (o.items || []).map(i => i.name.toLowerCase()).join(' ');
-                    return patient.includes(q) || phone.includes(q) || doctor.includes(q) || tests.includes(q);
+                    return (o.patient?.name || '').toLowerCase().includes(q)
+                        || (o.patient?.phone || '').includes(q)
+                        || (o.ordered_by?.name || '').toLowerCase().includes(q)
+                        || (o.sample_id || '').toLowerCase().includes(q)
+                        || (o.items || []).some(i => i.name.toLowerCase().includes(q));
                 });
             }
-
             return result;
         },
 
-        formatDate(dateStr) {
-            if (!dateStr) return '-';
-            const d = new Date(dateStr);
+        init() {
+            this.refreshInterval = setInterval(() => this.refreshData(), 5000);
+        },
+
+        formatDate(d) {
+            if (!d) return '-';
+            const date = new Date(d);
             const today = new Date();
-            if (d.toDateString() === today.toDateString()) return 'Today';
-            const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-            if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-            return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+            if (date.toDateString() === today.toDateString()) return 'Today';
+            return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
         },
 
-        formatTime(dateStr) {
-            if (!dateStr) return '-';
-            return new Date(dateStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        formatTime(d) {
+            if (!d) return '-';
+            return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
         },
 
-        statusLabel(status) {
-            const labels = { ordered: 'Pending', accepted: 'Pending', in_progress: 'In Progress', completed: 'Completed' };
-            return labels[status] || status;
+        statusLabel(s) {
+            return { ordered: 'Pending', accepted: 'Pending', in_progress: 'Processing', completed: 'Completed' }[s] || s;
+        },
+
+        labStatusLabel(s) {
+            return { collected: 'Sample Collected', transported: 'In Transport', received: 'Received in Lab', processing: 'Processing', result_entry: 'Results Entered', verified: 'Verified', released: 'Released' }[s] || s;
         },
 
         async collectSample(id) {
-            if (!confirm('Mark sample as collected?')) return;
+            if (!confirm('Collect sample for this order?')) return;
             const res = await fetch('/lab/' + id + '/collect', {
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }
             });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.sample_id) alert('Sample ID: ' + data.sample_id);
+                this.refreshData();
+            }
+        },
+
+        async updateStatus(id, status) {
+            const res = await fetch('/lab/' + id + '/status', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ lab_status: status })
+            });
             if (res.ok) this.refreshData();
         },
 
-        async verify(id) {
-            if (!confirm('Verify results and notify patient via WhatsApp?')) return;
+        async verify(id, hasCriticalUnacknowledged) {
+            if (hasCriticalUnacknowledged) {
+                alert('Cannot verify — critical values must be acknowledged first.');
+                return;
+            }
+            if (!confirm('Verify results and send report to patient via WhatsApp?')) return;
             const res = await fetch('/lab/' + id + '/verify', {
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }
+            });
+            if (res.ok) this.refreshData();
+            else {
+                const data = await res.json().catch(() => ({}));
+                alert(data.message || 'Failed to verify');
+            }
+        },
+
+        async acknowledgeCritical(id) {
+            const action = prompt('Action taken for critical values:', 'Reviewed and noted');
+            if (action === null) return;
+            const res = await fetch('/lab/' + id + '/acknowledge-critical', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ action })
             });
             if (res.ok) this.refreshData();
         },
@@ -247,16 +289,15 @@ function labDashboard() {
                 });
                 if (res.ok) {
                     const data = await res.json();
+                    // New order alert
+                    if (data.orders.length > this.lastOrderCount) {
+                        try { document.getElementById('alertSound')?.play(); } catch(e) {}
+                    }
+                    this.lastOrderCount = data.orders.length;
                     this.orders = data.orders;
                     this.stats = data.stats;
                 }
-            } catch (e) {
-                // Silent fail on refresh
-            }
-        },
-
-        startAutoRefresh() {
-            this.refreshInterval = setInterval(() => this.refreshData(), 10000);
+            } catch (e) {}
         }
     }
 }
