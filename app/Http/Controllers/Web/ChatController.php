@@ -122,6 +122,9 @@ class ChatController extends Controller
                 case 'show_doctors':
                     $replies = $this->handleDoctorSelection($message, $state, $lang, $hospital);
                     break;
+                case 'pick_time':
+                    $replies = $this->handlePickTime($message, $state, $lang, $hospital);
+                    break;
                 case 'confirm_booking':
                     $replies = $this->handleConfirmation($message, $state, $lang, $hospital);
                     break;
@@ -771,7 +774,7 @@ class ChatController extends Controller
         $doctors = $state['available_doctors'] ?? [];
         $doc = null;
 
-        // Try number selection first
+        // 1. Try number selection
         if (is_numeric($trimmed)) {
             $choice = intval($trimmed);
             if ($choice >= 1 && $choice <= count($doctors)) {
@@ -779,32 +782,75 @@ class ChatController extends Controller
             }
         }
 
-        // Try name match if number didn't work
+        // 2. Try exact/partial name match
         if (!$doc) {
             $search = strtolower($trimmed);
+            // Remove common prefixes like "dr", "dr.", "doctor"
+            $search = preg_replace('/^(dr\.?\s*|doctor\s*)/i', '', $search);
+            $search = trim($search);
+
             foreach ($doctors as $d) {
-                if (str_contains(strtolower($d['name']), $search) || str_contains(strtolower($d['dept']), $search)) {
+                $dName = strtolower($d['name']);
+                $dNameClean = preg_replace('/^(dr\.?\s*)/i', '', $dName);
+                if (str_contains($dNameClean, $search) || str_contains($dName, $search) || str_contains(strtolower($d['dept']), $search)) {
                     $doc = $d;
                     break;
                 }
             }
         }
 
+        // 3. Fuzzy match — handle typos like "prya" → "Priya", "amit ptl" → "Amit Patel"
+        if (!$doc && strlen($trimmed) >= 3) {
+            $search = strtolower(preg_replace('/^(dr\.?\s*|doctor\s*)/i', '', $trimmed));
+            $bestScore = PHP_INT_MAX;
+            $bestDoc = null;
+
+            foreach ($doctors as $d) {
+                $dName = strtolower(preg_replace('/^(dr\.?\s*)/i', '', $d['name']));
+                // Check each word in the doctor's name
+                $nameWords = explode(' ', $dName);
+                foreach ($nameWords as $word) {
+                    $dist = levenshtein($search, $word);
+                    // Accept if edit distance <= 2 (allows 2 typos)
+                    if ($dist < $bestScore && $dist <= 2) {
+                        $bestScore = $dist;
+                        $bestDoc = $d;
+                    }
+                }
+                // Also check full name similarity
+                $fullDist = levenshtein($search, $dName);
+                if ($fullDist < $bestScore && $fullDist <= 3) {
+                    $bestScore = $fullDist;
+                    $bestDoc = $d;
+                }
+                // Soundex match for phonetic similarity
+                foreach ($nameWords as $word) {
+                    if (soundex($search) === soundex($word) && strlen($search) >= 3) {
+                        if (3 < $bestScore) {
+                            $bestScore = 3;
+                            $bestDoc = $d;
+                        }
+                    }
+                }
+            }
+            $doc = $bestDoc;
+        }
+
         if (!$doc) {
             $names = implode(', ', array_map(fn($d) => $d['name'], $doctors));
-            return ["Please reply with a number (1-" . count($doctors) . ") or type the doctor's name.\n\nAvailable: {$names}"];
+            return ["I couldn't find that doctor. Please reply with a number (1-" . count($doctors) . ") or type the doctor's name.\n\nAvailable: {$names}"];
         }
+
         $state['doctor_id'] = $doc['id'];
         $state['doctor_name'] = $doc['name'];
 
-        // Find next available slot
+        // Build available slots for next 3 days and show to user
         $doctor = Staff::find($doc['id']);
         $schedule = is_array($doctor->schedule) ? $doctor->schedule : json_decode($doctor->schedule ?? '{}', true);
         $duration = $doctor->consultation_duration_default ?? 15;
-        $slotTime = null;
-        $slotDate = null;
+        $availableSlots = [];
 
-        for ($d = 0; $d < 7; $d++) {
+        for ($d = 0; $d < 7 && count($availableSlots) < 12; $d++) {
             $date = now()->addDays($d);
             $dayName = strtolower($date->format('l'));
             $blocks = $schedule[$dayName] ?? [];
@@ -824,29 +870,152 @@ class ChatController extends Controller
                 while ($start->copy()->addMinutes($duration)->lte($end)) {
                     $isPast = $d === 0 && $start->lt(now());
                     if (!$isPast && !in_array($start->format('H:i'), $booked)) {
-                        $slotTime = $start->format('g:i A');
-                        $slotDate = $date->format('l, M d');
-                        $state['slot_start'] = $start->toDateTimeString();
-                        break 3;
+                        $availableSlots[] = [
+                            'start' => $start->toDateTimeString(),
+                            'label' => ($d === 0 ? 'Today' : ($d === 1 ? 'Tomorrow' : $date->format('D, M d'))) . ' at ' . $start->format('g:i A'),
+                        ];
+                        if (count($availableSlots) >= 12) break 3;
                     }
                     $start->addMinutes($duration);
                 }
             }
         }
 
-        if (!$slotTime) {
+        if (empty($availableSlots)) {
             return [$this->t('no_slots', $lang, ['doctor' => $doc['name']])];
         }
 
-        $state['slot_display'] = "$slotDate at $slotTime";
+        $state['available_slots'] = $availableSlots;
+        $state['step'] = 'pick_time';
+
+        $slotList = "";
+        foreach ($availableSlots as $i => $slot) {
+            $num = $i + 1;
+            $slotList .= "\n*{$num}.* {$slot['label']}";
+        }
+
+        return [
+            "Great! Dr. {$doc['name']} ({$doc['dept']}) is available at these times:" . $slotList,
+            "Reply with a *number* (1-" . count($availableSlots) . ") or type your preferred time (e.g. *3pm*, *tomorrow 10am*, *4:30 PM*).",
+        ];
+    }
+
+    private function handlePickTime(string $msg, array &$state, string $lang, $hospital): array
+    {
+        $trimmed = trim($msg);
+        $slots = $state['available_slots'] ?? [];
+        $chosen = null;
+
+        // 1. Try number selection
+        if (is_numeric($trimmed)) {
+            $choice = intval($trimmed);
+            if ($choice >= 1 && $choice <= count($slots)) {
+                $chosen = $slots[$choice - 1];
+            }
+        }
+
+        // 2. Try parsing time from free text like "3pm", "3:30 PM", "tomorrow 10am", "15:00"
+        if (!$chosen) {
+            $lower = strtolower($trimmed);
+            // Extract time pattern
+            $timeMatch = null;
+            if (preg_match('/(\d{1,2})[:\.]?(\d{2})?\s*(am|pm|AM|PM)?/', $trimmed, $m)) {
+                $hour = intval($m[1]);
+                $min = intval($m[2] ?? 0);
+                $ampm = strtolower($m[3] ?? '');
+
+                if ($ampm === 'pm' && $hour < 12) $hour += 12;
+                if ($ampm === 'am' && $hour === 12) $hour = 0;
+                // If no am/pm and hour <= 7, assume PM (clinic hours)
+                if (!$ampm && $hour >= 1 && $hour <= 7) $hour += 12;
+
+                $timeMatch = sprintf('%02d:%02d', $hour, $min);
+            }
+
+            // Detect day preference
+            $dayOffset = null;
+            if (str_contains($lower, 'today') || str_contains($lower, 'aaj') || str_contains($lower, 'now')) {
+                $dayOffset = 0;
+            } elseif (str_contains($lower, 'tomorrow') || str_contains($lower, 'kal')) {
+                $dayOffset = 1;
+            }
+
+            if ($timeMatch) {
+                // Find the closest matching slot
+                $bestSlot = null;
+                $bestDiff = PHP_INT_MAX;
+
+                foreach ($slots as $slot) {
+                    $slotTime = Carbon::parse($slot['start']);
+                    $slotHM = $slotTime->format('H:i');
+
+                    // If day preference given, filter by day
+                    if ($dayOffset !== null) {
+                        $targetDate = now()->addDays($dayOffset)->toDateString();
+                        if ($slotTime->toDateString() !== $targetDate) continue;
+                    }
+
+                    // Find closest time
+                    $reqMinutes = intval(substr($timeMatch, 0, 2)) * 60 + intval(substr($timeMatch, 3, 2));
+                    $slotMinutes = $slotTime->hour * 60 + $slotTime->minute;
+                    $diff = abs($reqMinutes - $slotMinutes);
+
+                    if ($diff < $bestDiff) {
+                        $bestDiff = $diff;
+                        $bestSlot = $slot;
+                    }
+                }
+
+                // Accept if within 30 minutes of requested time
+                if ($bestSlot && $bestDiff <= 30) {
+                    $chosen = $bestSlot;
+                }
+            }
+
+            // If only day mentioned without time, show slots for that day
+            if (!$chosen && $dayOffset !== null && !$timeMatch) {
+                $targetDate = now()->addDays($dayOffset)->toDateString();
+                $daySlots = array_filter($slots, fn($s) => Carbon::parse($s['start'])->toDateString() === $targetDate);
+                if (!empty($daySlots)) {
+                    $daySlots = array_values($daySlots);
+                    $slotList = "";
+                    foreach ($daySlots as $i => $slot) {
+                        $slotList .= "\n*" . ($i + 1) . ".* " . Carbon::parse($slot['start'])->format('g:i A');
+                    }
+                    $state['available_slots'] = $daySlots;
+                    return ["Here are the available times for " . ($dayOffset === 0 ? 'today' : 'tomorrow') . ":" . $slotList . "\n\nReply with a number or type the time."];
+                }
+            }
+        }
+
+        // 3. Try "earliest" / "first" / "jaldi"
+        if (!$chosen) {
+            $lower = strtolower($trimmed);
+            if (in_array($lower, ['earliest', 'first', 'asap', 'jaldi', 'pehla', 'any', 'koi bhi', '1st'])) {
+                $chosen = $slots[0] ?? null;
+            }
+        }
+
+        if (!$chosen) {
+            return ["I couldn't understand that time. Please reply with:\n• A *number* (1-" . count($slots) . ") from the list\n• A *time* like *3pm* or *tomorrow 10am*\n• Or type *earliest* for the first available slot."];
+        }
+
+        $slotStart = Carbon::parse($chosen['start']);
+        $state['slot_start'] = $chosen['start'];
+        $state['slot_display'] = $chosen['label'];
         $state['step'] = 'confirm_booking';
+
+        $doc = ['name' => $state['doctor_name'], 'dept' => '', 'wait' => 0];
+        foreach ($state['available_doctors'] ?? [] as $d) {
+            if ($d['id'] === $state['doctor_id']) { $doc = $d; break; }
+        }
 
         return [
             $this->t('booking_summary', $lang, [
                 'doctor' => $doc['name'],
                 'dept' => $doc['dept'],
-                'date' => $slotDate,
-                'time' => $slotTime,
+                'date' => $slotStart->format('l, M d'),
+                'time' => $slotStart->format('g:i A'),
                 'wait' => $doc['wait'],
                 'complaint' => $state['complaint'],
             ]),
