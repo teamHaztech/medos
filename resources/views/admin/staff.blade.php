@@ -74,7 +74,17 @@
                             @endif
                         </td>
                         <td class="table-cell">
-                            <button @click="editStaff(@json($member))" class="text-sm text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                            <button @click="editStaff({
+                                id: '{{ $member->id }}',
+                                name: @js($member->name ?? ''),
+                                email: @js($member->email ?? ''),
+                                phone: @js($member->phone ?? ''),
+                                role: @js(is_object($member->role) ? $member->role->value : ($member->role ?? 'doctor')),
+                                department: @js($member->department ?? ''),
+                                specialization: @js($member->specialization ?? ''),
+                                qualification: @js($member->qualification ?? ''),
+                                consultation_duration_default: {{ $member->consultation_duration_default ?? 15 }}
+                            })" class="text-sm text-blue-600 hover:text-blue-800 font-medium">Edit</button>
                             @if($member->is_active)
                             <form method="POST" action="{{ route('web.admin.staff.delete', $member->id) }}" class="inline" onsubmit="return confirm('Deactivate this staff member?')">
                                 @csrf @method('DELETE')

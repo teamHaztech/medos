@@ -6,47 +6,46 @@
 <div x-data="labDashboard()" x-init="init()">
 
     {{-- Stats Row --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-        <div class="bg-white rounded-xl border border-slate-200 p-3.5">
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Today</p>
-            <p class="text-xl font-bold text-slate-800 mt-0.5" x-text="stats.total">{{ $stats['total'] }}</p>
+    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5">
+        <div class="bg-white rounded-lg border border-slate-200 p-2.5 text-center">
+            <p class="text-[9px] font-bold text-slate-400 uppercase">Total</p>
+            <p class="text-lg font-bold text-slate-800" x-text="stats.total">{{ $stats['total'] }}</p>
         </div>
-        <div class="bg-yellow-50 rounded-xl border border-yellow-200 p-3.5">
-            <p class="text-[10px] font-bold text-yellow-600 uppercase tracking-wider">Pending</p>
-            <p class="text-xl font-bold text-yellow-700 mt-0.5" x-text="stats.pending">{{ $stats['pending'] }}</p>
+        <div class="bg-yellow-50 rounded-lg border border-yellow-200 p-2.5 text-center">
+            <p class="text-[9px] font-bold text-yellow-600 uppercase">Pending</p>
+            <p class="text-lg font-bold text-yellow-700" x-text="stats.pending">{{ $stats['pending'] }}</p>
         </div>
-        <div class="bg-blue-50 rounded-xl border border-blue-200 p-3.5">
-            <p class="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Processing</p>
-            <p class="text-xl font-bold text-blue-700 mt-0.5" x-text="stats.in_progress">{{ $stats['in_progress'] }}</p>
+        <div class="bg-blue-50 rounded-lg border border-blue-200 p-2.5 text-center">
+            <p class="text-[9px] font-bold text-blue-600 uppercase">Processing</p>
+            <p class="text-lg font-bold text-blue-700" x-text="stats.in_progress">{{ $stats['in_progress'] }}</p>
         </div>
-        <div class="bg-green-50 rounded-xl border border-green-200 p-3.5">
-            <p class="text-[10px] font-bold text-green-600 uppercase tracking-wider">Completed</p>
-            <p class="text-xl font-bold text-green-700 mt-0.5" x-text="stats.completed">{{ $stats['completed'] }}</p>
+        <div class="bg-green-50 rounded-lg border border-green-200 p-2.5 text-center">
+            <p class="text-[9px] font-bold text-green-600 uppercase">Done</p>
+            <p class="text-lg font-bold text-green-700" x-text="stats.completed">{{ $stats['completed'] }}</p>
         </div>
-        <div class="rounded-xl border p-3.5" :class="stats.critical > 0 ? 'bg-red-50 border-red-300 ring-2 ring-red-200 animate-pulse' : 'bg-white border-slate-200'">
-            <p class="text-[10px] font-bold uppercase tracking-wider" :class="stats.critical > 0 ? 'text-red-600' : 'text-slate-400'">Critical</p>
-            <p class="text-xl font-bold mt-0.5" :class="stats.critical > 0 ? 'text-red-700' : 'text-slate-800'" x-text="stats.critical">{{ $stats['critical'] }}</p>
+        <div class="rounded-lg border p-2.5 text-center" :class="stats.critical > 0 ? 'bg-red-50 border-red-300 ring-1 ring-red-200' : 'bg-white border-slate-200'">
+            <p class="text-[9px] font-bold uppercase" :class="stats.critical > 0 ? 'text-red-600' : 'text-slate-400'">Critical</p>
+            <p class="text-lg font-bold" :class="stats.critical > 0 ? 'text-red-700' : 'text-slate-800'" x-text="stats.critical">{{ $stats['critical'] }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-slate-200 p-3.5">
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avg TAT</p>
-            <p class="text-xl font-bold text-slate-800 mt-0.5" x-text="stats.avg_tat">{{ $stats['avg_tat'] }}</p>
+        <div class="bg-white rounded-lg border border-slate-200 p-2.5 text-center">
+            <p class="text-[9px] font-bold text-slate-400 uppercase">Avg TAT</p>
+            <p class="text-lg font-bold text-slate-800" x-text="stats.avg_tat">{{ $stats['avg_tat'] }}</p>
         </div>
     </div>
 
     {{-- Filters --}}
-    <div class="flex flex-wrap items-center gap-3 mb-4">
-        <div class="flex items-center gap-1.5">
-            <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 transition-colors">All</button>
-            <button @click="filter = 'pending'" :class="filter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 transition-colors">Pending</button>
-            <button @click="filter = 'in_progress'" :class="filter === 'in_progress' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 transition-colors">Processing</button>
-            <button @click="filter = 'completed'" :class="filter === 'completed' ? 'bg-green-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 transition-colors">Completed</button>
+    <div class="space-y-2 mb-4">
+        <div class="flex flex-wrap items-center gap-1.5">
+            <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600'" class="px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200">All</button>
+            <button @click="filter = 'pending'" :class="filter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-white text-slate-600'" class="px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200">Pending</button>
+            <button @click="filter = 'in_progress'" :class="filter === 'in_progress' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'" class="px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200">Processing</button>
+            <button @click="filter = 'completed'" :class="filter === 'completed' ? 'bg-green-600 text-white' : 'bg-white text-slate-600'" class="px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200">Done</button>
+            <span class="text-slate-300 mx-1">|</span>
+            <a href="?date=today" class="px-2.5 py-1 rounded-lg text-xs font-semibold border {{ $dateFilter === 'today' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200' }}">Today</a>
+            <a href="?date=week" class="px-2.5 py-1 rounded-lg text-xs font-semibold border {{ $dateFilter === 'week' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200' }}">Week</a>
+            <a href="?date=all" class="px-2.5 py-1 rounded-lg text-xs font-semibold border {{ $dateFilter === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200' }}">All</a>
         </div>
-        <div class="flex items-center gap-1.5 ml-auto">
-            <a href="?date=today" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors {{ $dateFilter === 'today' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">Today</a>
-            <a href="?date=week" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors {{ $dateFilter === 'week' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">Week</a>
-            <a href="?date=all" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors {{ $dateFilter === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">All</a>
-        </div>
-        <input type="text" x-model="search" placeholder="Search patient, test, doctor..." class="input-field w-full sm:w-56 text-sm">
+        <input type="text" x-model="search" placeholder="Search patient, test, doctor..." class="input-field w-full text-sm">
     </div>
 
     {{-- Orders as Cards --}}
