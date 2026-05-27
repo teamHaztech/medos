@@ -84,6 +84,8 @@
             init() {
                 this.sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
                 this.hospitalId = new URLSearchParams(window.location.search).get('hospital_id') || @json($hospital->id ?? '');
+                // Restore phone from previous conversation
+                this.phone = localStorage.getItem('medos_chat_phone') || '';
                 // Auto-start with greeting
                 this.addBot("Hi! 👋 Send any message to start booking an appointment.\n\nमैं हिंदी में भी बात कर सकता हूं।\nيمكنني التحدث بالعربية أيضاً.");
             },
@@ -129,7 +131,10 @@
                         await this.delay(300);
                     }
 
-                    if (data.state?.phone) this.phone = data.state.phone;
+                    if (data.state?.phone) {
+                        this.phone = data.state.phone;
+                        localStorage.setItem('medos_chat_phone', data.state.phone);
+                    }
                 } catch (e) {
                     this.addBot("Sorry, something went wrong. Please try again.");
                 }

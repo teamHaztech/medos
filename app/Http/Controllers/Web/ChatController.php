@@ -162,13 +162,13 @@ class ChatController extends Controller
             $state['step'] = $state['patient_id'] ? 'main_menu' : 'greeting';
         }
 
-        // Save by session ID
+        // Save by session ID (1 hour)
         cache()->put("chat_session_{$sessionId}", $state, 3600);
 
-        // Also save by phone for session persistence across conversations
+        // Also save by phone for session persistence across conversations (7 days)
         if (!empty($state['phone'])) {
             $phoneKey = 'chat_phone_' . preg_replace('/[^0-9]/', '', $state['phone']);
-            cache()->put($phoneKey, $state, 86400); // 24 hours
+            cache()->put($phoneKey, $state, 604800);
         }
 
         return response()->json(['replies' => $this->wrap($replies), 'state' => $state]);
@@ -185,6 +185,24 @@ class ChatController extends Controller
         if (strlen($digits) >= 10) {
             $state['step'] = 'ask_phone';
             return $this->handlePhone($msg, $state, $lang, $hospital);
+        }
+
+        // If user types their name, try to find them in DB
+        $trimmed = trim($msg);
+        if (strlen($trimmed) >= 3 && !is_numeric($trimmed) && !in_array(strtolower($trimmed), ['hi', 'hello', 'hey', 'start', 'menu', 'haan', 'ok'])) {
+            $patient = Patient::where('name', 'like', '%' . $trimmed . '%')
+                ->when($hospital, fn($q) => $q->where('hospital_id', $hospital->id))
+                ->first();
+            if ($patient) {
+                $state['patient_id'] = $patient->id;
+                $state['patient_name'] = $patient->name;
+                $state['phone'] = preg_replace('/[^0-9]/', '', $patient->phone ?? '');
+                $state['step'] = 'main_menu';
+                return [
+                    $this->t('welcome_back', $lang, ['name' => $patient->name]),
+                    $this->t('main_menu', $lang),
+                ];
+            }
         }
 
         $state['step'] = 'ask_phone';
