@@ -150,7 +150,12 @@ function slotsManager() {
 
         selectDoctor(doc) {
             this.selectedDoctor = doc;
-            this.schedule = JSON.parse(JSON.stringify(doc.schedule || {}));
+            const raw = doc.schedule || {};
+            this.schedule = {};
+            // Ensure all 7 days exist in the schedule object
+            this.weekDays.forEach(d => {
+                this.schedule[d.key] = Array.isArray(raw[d.key]) ? JSON.parse(JSON.stringify(raw[d.key])) : [];
+            });
             this.slotDuration = doc.duration || 15;
             this.saveMsg = '';
             this.loadPreview();

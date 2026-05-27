@@ -440,7 +440,7 @@ class AdminWebController extends Controller
     public function updateSlots(Request $request, string $staffId)
     {
         $request->validate([
-            'schedule' => 'required|array',
+            'schedule' => 'present',
             'consultation_duration_default' => 'nullable|integer|min:5|max:120',
         ]);
 

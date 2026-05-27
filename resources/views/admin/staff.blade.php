@@ -4,7 +4,7 @@
 @section('page-title', 'Staff')
 
 @section('content')
-<div x-data="{ showAddModal: false }">
+<div x-data="staffPage()" x-init="init()">
 
     {{-- Header --}}
     <div class="flex items-center justify-between mb-6">
@@ -74,7 +74,11 @@
                             @endif
                         </td>
                         <td class="table-cell">
-                            <button class="text-sm text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                            <button @click="editStaff(@json($member))" class="text-sm text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                            <form method="POST" action="{{ route('web.admin.staff.delete', $member->id) }}" class="inline" onsubmit="return confirm('Deactivate this staff member?')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="text-sm text-red-500 hover:text-red-700 font-medium ml-2">Deactivate</button>
+                            </form>
                         </td>
                     </tr>
                     @empty
@@ -87,6 +91,69 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    {{-- Edit Staff Modal --}}
+    <div x-show="showEditModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
+        <div class="absolute inset-0 bg-black/50" @click="showEditModal = false"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-slate-800">Edit Staff Member</h3>
+                <button @click="showEditModal = false" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+            </div>
+            <form :action="'/admin/staff/' + editingStaff.id" method="POST" class="space-y-4">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                    <input type="text" name="name" x-model="editingStaff.name" required class="input-field">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <input type="email" name="email" x-model="editingStaff.email" required class="input-field">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                    <input type="tel" name="phone" x-model="editingStaff.phone" class="input-field">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Role</label>
+                        <select name="role" x-model="editingStaff.role" required class="input-field">
+                            <option value="doctor">Doctor</option>
+                            <option value="nurse">Nurse</option>
+                            <option value="receptionist">Receptionist</option>
+                            <option value="pharmacist">Pharmacist</option>
+                            <option value="lab_tech">Lab Technician</option>
+                            <option value="billing_staff">Billing Staff</option>
+                            <option value="hospital_admin">Hospital Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Department</label>
+                        <input type="text" name="department" x-model="editingStaff.department" class="input-field">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Specialization</label>
+                        <input type="text" name="specialization" x-model="editingStaff.specialization" class="input-field">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Qualification</label>
+                        <input type="text" name="qualification" x-model="editingStaff.qualification" class="input-field">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Consultation Duration (minutes)</label>
+                    <input type="number" name="consultation_duration_default" x-model="editingStaff.consultation_duration_default" class="input-field" min="5" max="120">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" @click="showEditModal = false" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -153,3 +220,32 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function staffPage() {
+    return {
+        showAddModal: false,
+        showEditModal: false,
+        editingStaff: {},
+
+        init() {},
+
+        editStaff(member) {
+            this.editingStaff = {
+                id: member.id,
+                name: member.name || '',
+                email: member.email || '',
+                phone: member.phone || '',
+                role: (typeof member.role === 'object' ? member.role.value : member.role) || 'doctor',
+                department: member.department || '',
+                specialization: member.specialization || '',
+                qualification: member.qualification || '',
+                consultation_duration_default: member.consultation_duration_default || 15,
+            };
+            this.showEditModal = true;
+        },
+    };
+}
+</script>
+@endpush

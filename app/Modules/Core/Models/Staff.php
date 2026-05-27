@@ -41,7 +41,7 @@ class Staff extends Model
         'role'                          => UserRole::class,
         'schedule'                      => 'array',
         'performance_metrics'           => 'array',
-        'consultation_duration_minutes' => 'integer',
+        'consultation_duration_default' => 'integer',
         'is_active'                     => 'boolean',
     ];
 
