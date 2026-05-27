@@ -100,7 +100,14 @@ class ChatController extends Controller
             $lower = strtolower(trim($message));
             $menuWords = ['menu', 'hi', 'hello', 'start', 'main menu', 'back', 'reset', 'शुरू', 'मेनू', 'القائمة'];
             if (in_array($lower, $menuWords) && $state['patient_id'] && !in_array($state['step'], ['greeting', 'ask_phone', 'ask_name'])) {
-                $state['step'] = 'main_menu';
+                // Returning patient says hi — show appointments + menu
+                $replies = $this->welcomeBackWithAppointments($state, $lang);
+                cache()->put("chat_session_{$sessionId}", $state, 3600);
+                if (!empty($state['phone'])) {
+                    $phoneKey = 'chat_phone_' . preg_replace('/[^0-9]/', '', $state['phone']);
+                    cache()->put($phoneKey, $state, 604800);
+                }
+                return response()->json(['replies' => $this->wrap($replies), 'state' => $state]);
             }
 
             switch ($state['step']) {
@@ -197,11 +204,7 @@ class ChatController extends Controller
                 $state['patient_id'] = $patient->id;
                 $state['patient_name'] = $patient->name;
                 $state['phone'] = preg_replace('/[^0-9]/', '', $patient->phone ?? '');
-                $state['step'] = 'main_menu';
-                return [
-                    $this->t('welcome_back', $lang, ['name' => $patient->name]),
-                    $this->t('main_menu', $lang),
-                ];
+                return $this->welcomeBackWithAppointments($state, $lang);
             }
         }
 
@@ -226,12 +229,9 @@ class ChatController extends Controller
                 $state['patient_id'] = $patient->id;
                 $state['patient_name'] = $patient->name;
                 $state['phone'] = preg_replace('/[^0-9]/', '', $patient->phone ?? '');
-                $state['step'] = 'main_menu';
                 $formattedAbha = substr($abha, 0, 2) . '-' . substr($abha, 2, 4) . '-' . substr($abha, 6, 4) . '-' . substr($abha, 10, 4);
-                return [
-                    $this->t('welcome_back', $lang, ['name' => $patient->name]) . "\n🏥 ABHA: {$formattedAbha}",
-                    $this->t('main_menu', $lang),
-                ];
+                $greeting = $this->t('welcome_back', $lang, ['name' => $patient->name]) . "\n🏥 ABHA: {$formattedAbha}";
+                return $this->welcomeBackWithAppointments($state, $lang, $greeting);
             }
         }
 
@@ -253,11 +253,7 @@ class ChatController extends Controller
         if ($patient) {
             $state['patient_id'] = $patient->id;
             $state['patient_name'] = $patient->name;
-            $state['step'] = 'main_menu';
-            return [
-                $this->t('welcome_back', $lang, ['name' => $patient->name]),
-                $this->t('main_menu', $lang),
-            ];
+            return $this->welcomeBackWithAppointments($state, $lang);
         }
 
         $state['step'] = 'ask_name';
@@ -1243,6 +1239,37 @@ class ChatController extends Controller
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
+
+    /**
+     * Build welcome-back message with upcoming appointments + menu.
+     */
+    private function welcomeBackWithAppointments(array &$state, string $lang, string $extraGreeting = ''): array
+    {
+        $name = $state['patient_name'] ?? 'Patient';
+        $replies = [];
+
+        $greeting = $extraGreeting ?: $this->t('welcome_back', $lang, ['name' => $name]);
+        $appointments = $this->getUpcomingAppointments($state['patient_id']);
+
+        if ($appointments->isNotEmpty()) {
+            $list = "";
+            foreach ($appointments as $i => $apt) {
+                $doctor = Staff::find($apt->doctor_id);
+                $doctorName = $doctor?->name ?? 'Doctor';
+                $date = Carbon::parse($apt->slot_start)->format('D, M d');
+                $time = Carbon::parse($apt->slot_start)->format('g:i A');
+                $token = $apt->notes ?? '-';
+                $list .= "\n" . ($i + 1) . ". {$doctorName} — {$date} at {$time} (Token: {$token})";
+            }
+            $replies[] = $greeting . "\n\n📋 *Your upcoming appointments:*" . $list;
+        } else {
+            $replies[] = $greeting . "\n\nYou have no upcoming appointments.";
+        }
+
+        $state['step'] = 'main_menu';
+        $replies[] = $this->t('main_menu', $lang);
+        return $replies;
+    }
 
     private function getUpcomingAppointments(?string $patientId)
     {
