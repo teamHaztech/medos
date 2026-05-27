@@ -58,7 +58,18 @@ class ChatController extends Controller
             $state = cache()->get("chat_session_{$sessionId}", $defaultState);
         }
 
-        $hospital = Hospital::where('is_active', true)->first();
+        // Resolve hospital: param → session → auth user → fallback
+        $hospitalId = $request->input('hospital_id') ?: session('chat_hospital_id');
+        if ($hospitalId) {
+            $hospital = Hospital::where('id', $hospitalId)->where('is_active', true)->first();
+        }
+        if (!isset($hospital) || !$hospital) {
+            $hospital = auth()->user()?->hospital
+                ?? Hospital::where('is_active', true)->first();
+        }
+        if ($hospital) {
+            session(['chat_hospital_id' => $hospital->id]);
+        }
         $replies = [];
 
         // Detect language
@@ -187,7 +198,9 @@ class ChatController extends Controller
         $abhaClean = preg_replace('/[^0-9]/', '', $msg);
         if (strlen($abhaClean) === 14 || preg_match('/^\d{2}-?\d{4}-?\d{4}-?\d{4}$/', trim($msg))) {
             $abha = substr($abhaClean, 0, 14);
-            $patient = Patient::where('abha_number', $abha)->first();
+            $patient = Patient::where('abha_number', $abha)
+                ->when($hospital, fn($q) => $q->where('hospital_id', $hospital->id))
+                ->first();
             if ($patient) {
                 $state['patient_id'] = $patient->id;
                 $state['patient_name'] = $patient->name;
@@ -208,9 +221,13 @@ class ChatController extends Controller
         $phone = substr($phone, -10);
         $state['phone'] = $phone;
 
-        // Check if patient exists
-        $patient = Patient::where('phone', '+91' . $phone)->first()
-            ?? Patient::where('phone', 'like', '%' . $phone)->first();
+        // Check if patient exists (scoped to hospital)
+        $patient = Patient::where('phone', '+91' . $phone)
+                ->when($hospital, fn($q) => $q->where('hospital_id', $hospital->id))
+                ->first()
+            ?? Patient::where('phone', 'like', '%' . $phone)
+                ->when($hospital, fn($q) => $q->where('hospital_id', $hospital->id))
+                ->first();
 
         if ($patient) {
             $state['patient_id'] = $patient->id;

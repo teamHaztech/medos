@@ -254,7 +254,18 @@ Route::prefix('ajax')->middleware('auth')->group(function () {
 // ---------------------------------------------------------------
 // WhatsApp Bot Simulator (dev/demo)
 // ---------------------------------------------------------------
-Route::get('chat', function () { return view('chat.index'); })->name('chat');
+Route::get('chat', function (\Illuminate\Http\Request $request) {
+    $hospital = null;
+    if ($request->has('hospital_id')) {
+        $hospital = \App\Modules\Core\Models\Hospital::find($request->hospital_id);
+    } elseif (auth()->check()) {
+        $hospital = auth()->user()->hospital;
+    }
+    if (!$hospital) {
+        $hospital = \App\Modules\Core\Models\Hospital::where('is_active', true)->first();
+    }
+    return view('chat.index', ['hospital' => $hospital]);
+})->name('chat');
 Route::post('chat/send', [\App\Http\Controllers\Web\ChatController::class, 'send'])->name('chat.send');
 
 // ---------------------------------------------------------------

@@ -82,12 +82,15 @@ class KioskController extends Controller
         ]);
 
         $input = trim($request->input('token'));
+        $hospital = $this->resolveHospital($request);
+        $hospitalId = $hospital?->id;
         $todayStatuses = ['scheduled', 'confirmed', 'checked_in', 'in_progress'];
 
         // Try to find by token (stored in notes field)
         $appointment = Appointment::whereDate('slot_start', today())
             ->where('notes', $input)
             ->whereIn('status', $todayStatuses)
+            ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
             ->with(['patient', 'doctor'])
             ->first();
 
@@ -97,6 +100,7 @@ class KioskController extends Controller
             if (strlen($phoneCleaned) >= 10) {
                 $appointment = Appointment::whereDate('slot_start', today())
                     ->whereIn('status', $todayStatuses)
+                    ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
                     ->whereHas('patient', function ($q) use ($phoneCleaned) {
                         $q->where('phone', 'like', '%' . substr($phoneCleaned, -10));
                     })
@@ -110,6 +114,7 @@ class KioskController extends Controller
         if (!$appointment && strlen($input) > 2 && !is_numeric($input)) {
             $appointment = Appointment::whereDate('slot_start', today())
                 ->whereIn('status', $todayStatuses)
+                ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
                 ->whereHas('patient', function ($q) use ($input) {
                     $q->where('name', 'like', '%' . $input . '%');
                 })
@@ -270,8 +275,15 @@ class KioskController extends Controller
             $phone = '+91' . $phone;
         }
 
-        $patient = Patient::where('phone', $phone)->first()
-            ?? Patient::where('phone', 'like', '%' . substr($phone, -10))->first();
+        $hospital = $this->resolveHospital($request);
+        $hospitalId = $hospital?->id;
+
+        $patient = Patient::where('phone', $phone)
+                ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
+                ->first()
+            ?? Patient::where('phone', 'like', '%' . substr($phone, -10))
+                ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
+                ->first();
 
         if ($patient) {
             return response()->json([
@@ -296,8 +308,12 @@ class KioskController extends Controller
             ], 422);
         }
 
-        // Search in patients table
-        $patient = Patient::where('abha_number', $abha)->first();
+        // Search in patients table (scoped to hospital)
+        $hospital = $this->resolveHospital($request);
+        $hospitalId = $hospital?->id;
+        $patient = Patient::where('abha_number', $abha)
+            ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
+            ->first();
 
         if ($patient) {
             $age = $patient->date_of_birth
@@ -496,14 +512,19 @@ class KioskController extends Controller
 
     public function patientQueueView(string $doctorId)
     {
-        $doctor = Staff::find($doctorId);
+        $hospital = $this->resolveHospital();
+        $hospitalId = $hospital?->id;
+
+        $doctor = Staff::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->find($doctorId);
         if (!$doctor) {
             $doctor = Staff::whereRaw("LOWER(name) LIKE ?", ['%' . strtolower($doctorId) . '%'])
+                ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
                 ->whereIn('role', ['doctor', 'hospital_admin'])->first();
         }
         if (!$doctor) abort(404, 'Doctor not found');
 
         $appointments = Appointment::where('doctor_id', $doctor->id)
+            ->where('hospital_id', $doctor->hospital_id)
             ->whereDate('slot_start', today())
             ->whereIn('status', ['checked_in', 'in_progress'])
             ->orderBy('slot_start')
@@ -529,15 +550,20 @@ class KioskController extends Controller
     public function roomDisplay(string $doctorId)
     {
         // Accept UUID or name (first name, lowercase)
-        $doctor = Staff::find($doctorId);
+        $hospital = $this->resolveHospital();
+        $hospitalId = $hospital?->id;
+
+        $doctor = Staff::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->find($doctorId);
         if (!$doctor) {
             $doctor = Staff::whereRaw("LOWER(name) LIKE ?", ['%' . strtolower($doctorId) . '%'])
+                ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
                 ->whereIn('role', ['doctor', 'hospital_admin'])
                 ->first();
         }
         if (!$doctor) abort(404, 'Doctor not found');
 
         $appointments = Appointment::where('doctor_id', $doctor->id)
+            ->where('hospital_id', $doctor->hospital_id)
             ->whereDate('slot_start', today())
             ->whereIn('status', ['checked_in', 'in_progress', 'completed'])
             ->orderByRaw("CASE status WHEN 'in_progress' THEN 0 WHEN 'checked_in' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END, slot_start")

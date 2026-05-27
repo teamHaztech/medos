@@ -21,7 +21,7 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                 </div>
                 <div class="flex-1">
-                    <p class="font-semibold text-sm">MedOS Hospital</p>
+                    <p class="font-semibold text-sm">{{ $hospital->name ?? 'MedOS Hospital' }}</p>
                     <p class="text-xs text-white/70" x-text="typing ? 'typing...' : 'AI Assistant · Online'"></p>
                 </div>
                 <button @click="resetChat()" class="p-2 hover:bg-white/10 rounded-full" title="New Chat">
@@ -79,9 +79,11 @@
             typing: false,
             sessionId: '',
             phone: '',
+            hospitalId: '',
 
             init() {
                 this.sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
+                this.hospitalId = new URLSearchParams(window.location.search).get('hospital_id') || @json($hospital->id ?? '');
                 // Auto-start with greeting
                 this.addBot("Hi! 👋 Send any message to start booking an appointment.\n\nमैं हिंदी में भी बात कर सकता हूं।\nيمكنني التحدث بالعربية أيضاً.");
             },
@@ -110,6 +112,7 @@
                             message: text,
                             phone: this.phone,
                             session_id: this.sessionId,
+                            hospital_id: this.hospitalId,
                         }),
                     });
 
