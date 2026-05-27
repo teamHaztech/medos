@@ -111,7 +111,7 @@ class ChatController extends Controller
                     $replies = $this->handlePhone($message, $state, $lang, $hospital);
                     break;
                 case 'ask_name':
-                    $replies = $this->handleName($message, $state, $lang);
+                    $replies = $this->handleName($message, $state, $lang, $hospital);
                     break;
                 case 'main_menu':
                     $replies = $this->handleMainMenu($message, $state, $lang, $hospital);
@@ -264,13 +264,45 @@ class ChatController extends Controller
         return [$this->t('ask_name', $lang)];
     }
 
-    private function handleName(string $msg, array &$state, string $lang): array
+    private function handleName(string $msg, array &$state, string $lang, $hospital = null): array
     {
         $name = trim($msg);
         if (strlen($name) < 2) {
             return [$this->t('invalid_name', $lang)];
         }
         $state['patient_name'] = $name;
+
+        // Create patient record in DB so they're recognized next time
+        $phone = $state['phone'] ?? '';
+        $fullPhone = strlen($phone) === 10 ? '+91' . $phone : (str_starts_with($phone, '+') ? $phone : '+91' . $phone);
+        $hospitalId = $hospital?->id;
+
+        if ($hospitalId && $phone) {
+            // Check if patient already exists (edge case: cache lost but DB has them)
+            $existing = Patient::where('phone', $fullPhone)
+                ->where('hospital_id', $hospitalId)
+                ->first()
+                ?? Patient::where('phone', 'like', '%' . substr($phone, -10))
+                    ->where('hospital_id', $hospitalId)
+                    ->first();
+
+            if ($existing) {
+                $state['patient_id'] = $existing->id;
+                $state['patient_name'] = $existing->name;
+            } else {
+                $patient = Patient::create([
+                    'id' => Str::uuid()->toString(),
+                    'hospital_id' => $hospitalId,
+                    'name' => $name,
+                    'phone' => $fullPhone,
+                    'phone_verified' => false,
+                    'language_preference' => $state['language'] ?? 'en',
+                    'created_via' => 'whatsapp',
+                ]);
+                $state['patient_id'] = $patient->id;
+            }
+        }
+
         $state['step'] = 'main_menu';
         return [
             $this->t('nice_to_meet', $lang, ['name' => $name]),
