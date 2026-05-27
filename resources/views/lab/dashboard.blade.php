@@ -59,65 +59,57 @@
                      'border-slate-200': order.priority === 'routine' || !order.priority || order.status === 'completed',
                      'ring-2 ring-red-400': order.has_critical && !order.critical_acknowledged
                  }">
-                <div class="flex flex-col sm:flex-row">
-                    {{-- Patient Info --}}
-                    <div class="p-4 sm:w-56 sm:border-r border-b sm:border-b-0 border-slate-100 flex-shrink-0">
-                        <div class="flex items-center gap-3 mb-2">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                <div class="p-4">
+                    {{-- Top: Patient + Badges --}}
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
                                  :class="order.patient?.gender === 'male' ? 'bg-blue-500' : (order.patient?.gender === 'female' ? 'bg-pink-500' : 'bg-slate-400')"
                                  x-text="(order.patient?.name ?? 'U').charAt(0).toUpperCase()"></div>
                             <div class="min-w-0">
                                 <p class="font-semibold text-slate-900 text-sm truncate" x-text="order.patient?.name ?? 'Unknown'"></p>
-                                <p class="text-xs text-slate-400" x-text="[order.patient?.gender ? order.patient.gender.charAt(0).toUpperCase() : '', order.patient?.age_approximate ? order.patient.age_approximate + 'y' : ''].filter(Boolean).join(', ')"></p>
+                                <p class="text-xs text-slate-400" x-text="[order.patient?.gender ? order.patient.gender.charAt(0).toUpperCase() : '', order.patient?.age_approximate ? order.patient.age_approximate + 'y' : '', order.patient?.phone || ''].filter(Boolean).join(' · ')"></p>
                             </div>
                         </div>
-                        <p class="text-xs text-slate-400" x-show="order.patient?.phone" x-text="order.patient?.phone"></p>
-                        <p class="text-xs text-slate-500 mt-1" x-show="order.sample_id">
-                            <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[10px]" x-text="order.sample_id"></span>
-                        </p>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <span x-show="order.sample_id" class="font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px]" x-text="order.sample_id"></span>
+                            <span :class="{
+                                'bg-red-100 text-red-700 ring-1 ring-red-300': order.priority === 'stat',
+                                'bg-amber-100 text-amber-700': order.priority === 'urgent',
+                                'bg-slate-100 text-slate-500': !order.priority || order.priority === 'routine'
+                            }" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase" x-text="order.priority || 'routine'"></span>
+                            <span :class="{
+                                'bg-yellow-100 text-yellow-700': order.status === 'ordered' || order.status === 'accepted',
+                                'bg-blue-100 text-blue-700': order.status === 'in_progress',
+                                'bg-green-100 text-green-700': order.status === 'completed'
+                            }" class="px-2 py-0.5 rounded-full text-[10px] font-bold" x-text="statusLabel(order.status)"></span>
+                        </div>
                     </div>
 
-                    {{-- Tests + Details --}}
-                    <div class="p-4 flex-1 min-w-0">
-                        <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
-                            <div class="flex flex-wrap gap-1.5">
-                                <template x-for="item in (order.items || [])" :key="item.name">
-                                    <span class="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium" x-text="item.name"></span>
-                                </template>
-                            </div>
-                            <div class="flex items-center gap-2 flex-shrink-0">
-                                {{-- Priority --}}
-                                <span :class="{
-                                    'bg-red-100 text-red-700 ring-1 ring-red-300': order.priority === 'stat',
-                                    'bg-amber-100 text-amber-700': order.priority === 'urgent',
-                                    'bg-slate-100 text-slate-500': !order.priority || order.priority === 'routine'
-                                }" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase" x-text="order.priority || 'routine'"></span>
-                                {{-- Status --}}
-                                <span :class="{
-                                    'bg-yellow-100 text-yellow-700': order.status === 'ordered' || order.status === 'accepted',
-                                    'bg-blue-100 text-blue-700': order.status === 'in_progress',
-                                    'bg-green-100 text-green-700': order.status === 'completed'
-                                }" class="px-2 py-0.5 rounded-full text-[10px] font-bold" x-text="statusLabel(order.status)"></span>
-                            </div>
-                        </div>
+                    {{-- Tests --}}
+                    <div class="flex flex-wrap gap-1.5 mb-2">
+                        <template x-for="item in (order.items || [])" :key="item.name">
+                            <span class="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium" x-text="item.name"></span>
+                        </template>
+                    </div>
 
-                        {{-- Meta row --}}
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400 mb-3">
-                            <span x-text="'Dr. ' + (order.ordered_by?.name ?? '-')"></span>
-                            <span x-text="formatTime(order.created_at) + ' · ' + formatDate(order.created_at)"></span>
-                            <span :class="{'text-green-600': order.tat_color === 'green', 'text-yellow-600 font-semibold': order.tat_color === 'yellow', 'text-red-600 font-bold': order.tat_color === 'red'}"
-                                  x-text="'TAT: ' + order.tat_display"
-                                  x-show="order.status !== 'completed'"></span>
-                            <span x-show="order.lab_status" class="font-medium text-slate-500" x-text="labStatusLabel(order.lab_status)"></span>
-                        </div>
+                    {{-- Meta row --}}
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400 mb-3">
+                        <span x-text="'Dr. ' + (order.ordered_by?.name ?? '-')"></span>
+                        <span x-text="formatTime(order.created_at) + ' · ' + formatDate(order.created_at)"></span>
+                        <span :class="{'text-green-600': order.tat_color === 'green', 'text-yellow-600 font-semibold': order.tat_color === 'yellow', 'text-red-600 font-bold': order.tat_color === 'red'}"
+                              x-text="'TAT: ' + order.tat_display"
+                              x-show="order.status !== 'completed'"></span>
+                        <span x-show="order.lab_status" class="font-medium text-slate-500" x-text="labStatusLabel(order.lab_status)"></span>
+                    </div>
 
-                        {{-- Critical alert banner --}}
-                        <div x-show="order.has_critical && !order.critical_acknowledged" class="bg-red-100 border border-red-300 rounded-lg px-3 py-2 mb-3 flex items-center justify-between">
-                            <p class="text-xs font-bold text-red-700">CRITICAL VALUES DETECTED — requires doctor acknowledgment</p>
-                            <button @click="acknowledgeCritical(order.id)" class="text-xs bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 font-medium">Acknowledge</button>
-                        </div>
+                    {{-- Critical alert banner --}}
+                    <div x-show="order.has_critical && !order.critical_acknowledged" class="bg-red-100 border border-red-300 rounded-lg px-3 py-2 mb-3 flex items-center justify-between">
+                        <p class="text-xs font-bold text-red-700">CRITICAL VALUES — requires doctor acknowledgment</p>
+                        <button @click="acknowledgeCritical(order.id)" class="text-xs bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 font-medium flex-shrink-0 ml-2">Acknowledge</button>
+                    </div>
 
-                        {{-- Actions --}}
+                    {{-- Actions --}}
                         <div class="flex flex-wrap items-center gap-2">
                             <template x-if="order.status === 'ordered' || order.status === 'accepted'">
                                 <button @click="collectSample(order.id)" class="text-xs bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
@@ -152,8 +144,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </template>
+            </template>
 
         {{-- Empty State --}}
         <template x-if="filteredOrders.length === 0">
