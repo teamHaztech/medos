@@ -49,8 +49,9 @@
                 $result = $existingResults[$index] ?? [];
                 $testName = $item['name'] ?? 'Test ' . ($index + 1);
                 $catalog = $testCatalog[$testName] ?? null;
-                $ranges = $catalog ? (is_string($catalog->reference_ranges) ? json_decode($catalog->reference_ranges, true) : ($catalog->reference_ranges ?? [])) : [];
-                $unit = $catalog->unit ?? '';
+                $rawRanges = $catalog && isset($catalog->reference_ranges) ? $catalog->reference_ranges : null;
+                $ranges = $rawRanges ? (is_string($rawRanges) ? json_decode($rawRanges, true) : $rawRanges) : [];
+                $unit = $catalog && isset($catalog->unit) ? ($catalog->unit ?? '') : '';
                 $prev = $previousResults[$testName] ?? null;
                 $patientGender = $order->patient?->gender ?? 'male';
                 $genderRange = $ranges[$patientGender] ?? $ranges['default'] ?? $ranges;

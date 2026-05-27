@@ -140,12 +140,17 @@ class LabController extends Controller
     {
         $order = Order::with(['patient', 'orderedBy'])->findOrFail($id);
 
-        // Get reference ranges from available_tests catalog
+        // Get reference ranges from available_tests catalog (safe if columns don't exist yet)
         $testNames = collect($order->items ?? [])->pluck('name')->toArray();
-        $testCatalog = DB::table('available_tests')
-            ->whereIn('name', $testNames)
-            ->get(['name', 'unit', 'reference_ranges', 'critical_values'])
-            ->keyBy('name');
+        try {
+            $testCatalog = DB::table('available_tests')
+                ->whereIn('name', $testNames)
+                ->get(['name', 'unit', 'reference_ranges', 'critical_values'])
+                ->keyBy('name');
+        } catch (\Throwable $e) {
+            // Columns may not exist if migration hasn't run
+            $testCatalog = collect();
+        }
 
         // Get patient's previous results for these tests (trend comparison)
         $previousOrders = Order::where('patient_id', $order->patient_id)
@@ -182,10 +187,14 @@ class LabController extends Controller
         // Check for critical values
         $hasCritical = false;
         $testNames = collect($order->items ?? [])->pluck('name')->toArray();
-        $testCatalog = DB::table('available_tests')
-            ->whereIn('name', $testNames)
-            ->get(['name', 'critical_values'])
-            ->keyBy('name');
+        try {
+            $testCatalog = DB::table('available_tests')
+                ->whereIn('name', $testNames)
+                ->get(['name', 'critical_values'])
+                ->keyBy('name');
+        } catch (\Throwable $e) {
+            $testCatalog = collect();
+        }
 
         foreach ($results as &$result) {
             $testName = $result['test_name'] ?? '';
