@@ -68,7 +68,7 @@
         </div>
 
         {{-- Label --}}
-        <p class="text-center text-xs text-slate-400 mt-3">MedOS WhatsApp Bot Simulator · <a href="{{ route('kiosk.index') }}" class="text-blue-400 hover:underline">Kiosk</a> · <a href="{{ route('login') }}" class="text-blue-400 hover:underline">Login</a></p>
+        <p class="text-center text-xs text-slate-400 mt-3">MedOS v{{ config('medos.version') }} · <a href="{{ route('kiosk.index') }}" class="text-blue-400 hover:underline">Kiosk</a> · <a href="{{ route('login') }}" class="text-blue-400 hover:underline">Login</a></p>
     </div>
 
     <script>

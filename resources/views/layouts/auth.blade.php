@@ -44,7 +44,7 @@
             @yield('content')
         </div>
 
-        <p class="text-center text-xs text-slate-400 mt-6">MedOS &copy; {{ date('Y') }}. All rights reserved.</p>
+        <p class="text-center text-xs text-slate-400 mt-6">MedOS v{{ config('medos.version') }} &copy; {{ date('Y') }}. All rights reserved.</p>
     </div>
 
 </body>

@@ -102,6 +102,7 @@
                     <p class="text-xs text-slate-400 truncate">{{ auth()->user()?->role?->label() ?? 'Staff' }}</p>
                 </div>
             </div>
+            <p class="text-[10px] text-slate-600 mt-2 text-center">MedOS v{{ config('medos.version') }}</p>
         </div>
     </aside>
 

@@ -36,6 +36,8 @@
         @yield('content')
     </main>
 
+    <p class="text-[10px] text-slate-300 text-center py-2">MedOS v{{ config('medos.version') }}</p>
+
     @include('layouts._region_data')
     @stack('scripts')
 </body>
