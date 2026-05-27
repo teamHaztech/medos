@@ -1221,6 +1221,9 @@ class ChatController extends Controller
         $state['step'] = 'completed';
         $state['token'] = $token;
 
+        $hospitalPhone = $hospital?->phone ?? '';
+        $hospitalName = $hospital?->name ?? 'MedOS Hospital';
+
         return [
             $this->t('booking_confirmed', $lang, [
                 'token' => $token,
@@ -1229,7 +1232,11 @@ class ChatController extends Controller
                 'name' => $state['patient_name'],
             ]),
             $this->t('arrival_instructions', $lang, ['token' => $token]),
-            $this->t('main_menu', $lang),
+            $this->t('care_message', $lang, [
+                'name' => $state['patient_name'],
+                'hospital' => $hospitalName,
+                'phone' => $hospitalPhone,
+            ]),
         ];
     }
 
@@ -1567,9 +1574,14 @@ class ChatController extends Controller
                 'ar' => "✅ *تم تأكيد الموعد!*\n\n🎫 التذكرة: *{token}*\n👤 المريض: {name}\n🩺 الطبيب: {doctor}\n📅 الموعد: {slot}\n\nيرجى الحضور قبل 10 دقائق من موعدك.",
             ],
             'arrival_instructions' => [
-                'en' => "When you arrive, go to the kiosk and enter token *{token}* or your phone number to check in. See you soon! 👋",
-                'hi' => "जब आप पहुंचें, कियोस्क पर जाएं और टोकन *{token}* या अपना फोन नंबर डालकर चेक-इन करें। जल्द मिलते हैं! 👋",
-                'ar' => "عند وصولك، اذهب إلى الكشك وأدخل التذكرة *{token}* أو رقم هاتفك لتسجيل الحضور. نراك قريباً! 👋",
+                'en' => "When you arrive, go to the kiosk and enter token *{token}* or your phone number to check in.",
+                'hi' => "जब आप पहुंचें, कियोस्क पर जाएं और टोकन *{token}* या अपना फोन नंबर डालकर चेक-इन करें।",
+                'ar' => "عند وصولك، اذهب إلى الكشك وأدخل التذكرة *{token}* أو رقم هاتفك لتسجيل الحضور.",
+            ],
+            'care_message' => [
+                'en' => "💙 *{name}, you're in good hands!*\n\nOur team at {hospital} is here to take care of you. Don't worry — we'll make sure you get the best treatment.\n\nFor any queries or assistance, call us at *{phone}*.\n\nStay positive, stay strong! 💪\nWe look forward to seeing you. 🙏",
+                'hi' => "💙 *{name}, आप सही जगह पर हैं!*\n\n{hospital} की हमारी टीम आपकी देखभाल के लिए यहाँ है। चिंता न करें — हम आपका सबसे अच्छा इलाज सुनिश्चित करेंगे।\n\nकिसी भी सवाल या सहायता के लिए हमें कॉल करें: *{phone}*\n\nसकारात्मक रहें, मज़बूत रहें! 💪\nआपसे मिलने का इंतज़ार है। 🙏",
+                'ar' => "💙 *{name}، أنت في أيدٍ أمينة!*\n\nفريقنا في {hospital} هنا للعناية بك. لا تقلق — سنضمن لك أفضل علاج.\n\nلأي استفسار أو مساعدة، اتصل بنا على *{phone}*\n\nابقَ إيجابياً وقوياً! 💪\nنتطلع لرؤيتك. 🙏",
             ],
             'no_appointments' => [
                 'en' => "You don't have any upcoming appointments.",
