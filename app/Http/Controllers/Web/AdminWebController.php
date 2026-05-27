@@ -707,6 +707,17 @@ class AdminWebController extends Controller
         return redirect()->route('web.admin.staff')->with('success', 'Staff member deactivated.');
     }
 
+    public function activateStaff(string $id)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        \DB::table('staff')->where('id', $id)->where('hospital_id', $hospitalId)->update([
+            'is_active'  => true,
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('web.admin.staff')->with('success', 'Staff member activated.');
+    }
+
     // ---------------------------------------------------------------
     // Appointment Check-In & Cancel
     // ---------------------------------------------------------------

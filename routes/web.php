@@ -31,6 +31,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
     Route::post('staff', [AdminWebController::class, 'storeStaff'])->name('staff.store');
     Route::put('staff/{id}', [AdminWebController::class, 'updateStaff'])->name('staff.update');
     Route::delete('staff/{id}', [AdminWebController::class, 'deleteStaff'])->name('staff.delete');
+    Route::post('staff/{id}/activate', [AdminWebController::class, 'activateStaff'])->name('staff.activate');
     Route::post('appointments/{id}/check-in', [AdminWebController::class, 'checkInAppointment'])->name('appointments.checkin');
     Route::post('appointments/{id}/cancel', [AdminWebController::class, 'cancelAppointment'])->name('appointments.cancel');
     Route::get('analytics', [AdminWebController::class, 'analytics'])->name('analytics');

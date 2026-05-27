@@ -75,10 +75,17 @@
                         </td>
                         <td class="table-cell">
                             <button @click="editStaff(@json($member))" class="text-sm text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                            @if($member->is_active)
                             <form method="POST" action="{{ route('web.admin.staff.delete', $member->id) }}" class="inline" onsubmit="return confirm('Deactivate this staff member?')">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="text-sm text-red-500 hover:text-red-700 font-medium ml-2">Deactivate</button>
                             </form>
+                            @else
+                            <form method="POST" action="{{ route('web.admin.staff.activate', $member->id) }}" class="inline" onsubmit="return confirm('Activate this staff member?')">
+                                @csrf
+                                <button type="submit" class="text-sm text-green-600 hover:text-green-800 font-medium ml-2">Activate</button>
+                            </form>
+                            @endif
                         </td>
                     </tr>
                     @empty
