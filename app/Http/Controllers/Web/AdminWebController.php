@@ -337,6 +337,19 @@ class AdminWebController extends Controller
         return redirect()->route('web.admin.settings')->with('success', 'Hospital settings saved.');
     }
 
+    public function saveOperatingHours(Request $request)
+    {
+        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+
+        $request->validate(['hours' => 'required|array']);
+
+        $config = is_array($hospital->config) ? $hospital->config : json_decode($hospital->config ?? '{}', true);
+        $config['operating_hours'] = $request->input('hours');
+        $hospital->update(['config' => $config]);
+
+        return response()->json(['success' => true, 'message' => 'Operating hours saved.']);
+    }
+
     public function tests(Request $request)
     {
         $tests = \DB::table('available_tests')

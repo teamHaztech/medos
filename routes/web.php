@@ -40,6 +40,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
     Route::middleware('admin')->group(function () {
         Route::get('settings', [AdminWebController::class, 'settings'])->name('settings');
         Route::post('settings', [AdminWebController::class, 'saveSettings'])->name('settings.save');
+        Route::post('settings/hours', [AdminWebController::class, 'saveOperatingHours'])->name('settings.hours');
         Route::get('slots', [AdminWebController::class, 'slots'])->name('slots');
         Route::post('slots/{staffId}', [AdminWebController::class, 'updateSlots'])->name('slots.update');
         Route::get('tests', [AdminWebController::class, 'tests'])->name('tests');

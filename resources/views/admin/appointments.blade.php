@@ -68,23 +68,17 @@
                         </td>
                         <td class="table-cell">
                             <div class="flex items-center gap-2">
-                                @if(in_array($apt->status?->value, ['scheduled', 'confirmed']))
-                                <form method="POST" action="#" class="inline">
-                                    @csrf
+                                @if(in_array(is_object($apt->status) ? $apt->status->value : ($apt->status ?? ''), ['scheduled', 'confirmed']))
                                     <button type="button"
-                                        @click="checkIn({{ $apt->id }})"
+                                        @click="checkIn('{{ $apt->id }}')"
                                         class="text-xs px-2 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 font-medium transition-colors">
                                         Check In
                                     </button>
-                                </form>
-                                <form method="POST" action="#" class="inline">
-                                    @csrf
                                     <button type="button"
-                                        @click="cancelAppointment({{ $apt->id }})"
+                                        @click="cancelAppointment('{{ $apt->id }}')"
                                         class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 font-medium transition-colors">
                                         Cancel
                                     </button>
-                                </form>
                                 @endif
                             </div>
                         </td>

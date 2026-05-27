@@ -262,15 +262,26 @@ function settingsPage() {
             phone: @json($hospital->phone ?? ''),
             address: @json($hospital->address ?? ''),
         },
-        days: [
-            { name: 'monday', label: 'Monday', open: true, start: '08:00', end: '18:00' },
-            { name: 'tuesday', label: 'Tuesday', open: true, start: '08:00', end: '18:00' },
-            { name: 'wednesday', label: 'Wednesday', open: true, start: '08:00', end: '18:00' },
-            { name: 'thursday', label: 'Thursday', open: true, start: '08:00', end: '18:00' },
-            { name: 'friday', label: 'Friday', open: true, start: '08:00', end: '18:00' },
-            { name: 'saturday', label: 'Saturday', open: true, start: '09:00', end: '14:00' },
-            { name: 'sunday', label: 'Sunday', open: false, start: '09:00', end: '14:00' },
-        ],
+        days: (() => {
+            const saved = @json(($hospital->config ?? [])['operating_hours'] ?? []);
+            const defaults = {
+                monday: { open: true, start: '08:00', end: '18:00' },
+                tuesday: { open: true, start: '08:00', end: '18:00' },
+                wednesday: { open: true, start: '08:00', end: '18:00' },
+                thursday: { open: true, start: '08:00', end: '18:00' },
+                friday: { open: true, start: '08:00', end: '18:00' },
+                saturday: { open: true, start: '09:00', end: '14:00' },
+                sunday: { open: false, start: '09:00', end: '14:00' },
+            };
+            const labels = { monday: 'Monday', tuesday: 'Tuesday', wednesday: 'Wednesday', thursday: 'Thursday', friday: 'Friday', saturday: 'Saturday', sunday: 'Sunday' };
+            return Object.keys(defaults).map(name => ({
+                name,
+                label: labels[name],
+                open: saved[name]?.open ?? defaults[name].open,
+                start: saved[name]?.start ?? defaults[name].start,
+                end: saved[name]?.end ?? defaults[name].end,
+            }));
+        })(),
         departments: [
             { name: 'General Medicine', active: true, editing: false },
             { name: 'Cardiology', active: true, editing: false },
@@ -302,9 +313,24 @@ function settingsPage() {
             // TODO: POST to API
             alert('Hospital info saved (placeholder)');
         },
-        saveHours() {
-            // TODO: POST to API
-            alert('Operating hours saved (placeholder)');
+        async saveHours() {
+            const hours = {};
+            this.days.forEach(d => {
+                hours[d.name] = { open: d.open, start: d.start, end: d.end };
+            });
+            try {
+                const res = await fetch('{{ route("web.admin.settings.hours") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ hours }),
+                });
+                const data = await res.json();
+                alert(data.message || 'Saved!');
+            } catch(e) { alert('Failed to save hours.'); }
         },
     };
 }
