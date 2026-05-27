@@ -6,22 +6,56 @@ use App\Http\Controllers\Controller;
 use App\Modules\Core\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class LabController extends Controller
 {
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $hospitalId = Auth::user()->hospital_id;
 
-        $orders = Order::where('hospital_id', $hospitalId)
+        // Date filter: default today, allow 'all' or specific date
+        $dateFilter = $request->get('date', 'today');
+
+        $query = Order::where('hospital_id', $hospitalId)
             ->whereIn('type', ['lab', 'imaging'])
-            ->whereIn('status', ['ordered', 'accepted', 'in_progress', 'completed'])
+            ->whereIn('status', ['ordered', 'accepted', 'in_progress', 'completed']);
+
+        if ($dateFilter === 'today') {
+            $query->whereDate('created_at', today());
+        } elseif ($dateFilter === 'week') {
+            $query->where('created_at', '>=', now()->startOfWeek());
+        } elseif ($dateFilter !== 'all') {
+            $query->whereDate('created_at', $dateFilter);
+        }
+
+        $orders = $query
             ->orderByRaw("CASE WHEN priority = 'stat' THEN 0 WHEN priority = 'urgent' THEN 1 ELSE 2 END")
+            ->orderByRaw("CASE WHEN status = 'ordered' THEN 0 WHEN status = 'accepted' THEN 1 WHEN status = 'in_progress' THEN 2 ELSE 3 END")
             ->orderBy('created_at')
-            ->with(['patient', 'orderedBy'])
+            ->with(['patient', 'orderedBy', 'collectedBy', 'verifiedBy'])
             ->get();
 
-        return view('lab.dashboard', compact('orders'));
+        // Stats
+        $todayAll = Order::where('hospital_id', $hospitalId)
+            ->whereIn('type', ['lab', 'imaging'])
+            ->whereDate('created_at', today());
+
+        $stats = [
+            'pending' => (clone $todayAll)->whereIn('status', ['ordered', 'accepted'])->count(),
+            'in_progress' => (clone $todayAll)->where('status', 'in_progress')->count(),
+            'completed' => (clone $todayAll)->where('status', 'completed')->count(),
+            'stat_urgent' => (clone $todayAll)->whereIn('priority', ['stat', 'urgent'])->whereNotIn('status', ['completed'])->count(),
+        ];
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'orders' => $orders,
+                'stats' => $stats,
+            ]);
+        }
+
+        return view('lab.dashboard', compact('orders', 'stats', 'dateFilter'));
     }
 
     public function collectSample(string $id)
@@ -40,7 +74,7 @@ class LabController extends Controller
 
     public function showResults(string $id)
     {
-        $order = Order::with('patient')->findOrFail($id);
+        $order = Order::with(['patient', 'orderedBy'])->findOrFail($id);
 
         return view('lab.enter-results', compact('order'));
     }
