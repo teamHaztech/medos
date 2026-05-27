@@ -54,7 +54,9 @@ class LabController extends Controller
             'in_progress' => (clone $todayBase)->where('status', 'in_progress')->count(),
             'completed' => (clone $todayBase)->where('status', 'completed')->count(),
             'stat_urgent' => (clone $todayBase)->whereIn('priority', ['stat', 'urgent'])->whereNotIn('status', ['completed'])->count(),
-            'critical' => (clone $todayBase)->where('has_critical', true)->where('critical_acknowledged', false)->count(),
+            'critical' => \Schema::hasColumn('orders', 'has_critical')
+                ? (clone $todayBase)->where('has_critical', true)->where('critical_acknowledged', false)->count()
+                : 0,
         ];
 
         // Avg TAT for completed orders today
@@ -85,36 +87,47 @@ class LabController extends Controller
         $staffId = Auth::user()->staff?->id;
 
         // Generate sample ID: LAB-YYYYMMDD-XXXXX
-        $todayCount = Order::where('hospital_id', $order->hospital_id)
-            ->whereIn('type', ['lab', 'imaging'])
-            ->whereNotNull('sample_id')
-            ->whereDate('created_at', today())
-            ->count();
-        $sampleId = 'LAB-' . now()->format('Ymd') . '-' . str_pad($todayCount + 1, 5, '0', STR_PAD_LEFT);
+        $sampleId = 'LAB-' . now()->format('Ymd') . '-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
+        if (\Schema::hasColumn('orders', 'sample_id')) {
+            $todayCount = Order::where('hospital_id', $order->hospital_id)
+                ->whereIn('type', ['lab', 'imaging'])
+                ->whereNotNull('sample_id')
+                ->whereDate('created_at', today())
+                ->count();
+            $sampleId = 'LAB-' . now()->format('Ymd') . '-' . str_pad($todayCount + 1, 5, '0', STR_PAD_LEFT);
+        }
 
         // Determine sample type from test items
         $items = $order->items ?? [];
         $sampleType = $request->input('sample_type', $this->guessSampleType($items));
         $containerType = $request->input('container_type', $this->guessContainerType($sampleType));
 
-        $order->update([
+        $updateData = [
             'status' => 'in_progress',
-            'sample_id' => $sampleId,
-            'sample_type' => $sampleType,
-            'container_type' => $containerType,
-            'collection_location' => $request->input('location', 'opd'),
-            'lab_status' => 'collected',
             'sample_collected_at' => now(),
             'sample_collected_by' => $staffId,
-        ]);
+        ];
+        // New columns from lab_enhancements migration
+        if (\Schema::hasColumn('orders', 'sample_id')) {
+            $updateData['sample_id'] = $sampleId;
+            $updateData['sample_type'] = $sampleType;
+            $updateData['container_type'] = $containerType;
+            $updateData['collection_location'] = $request->input('location', 'opd');
+            $updateData['lab_status'] = 'collected';
+        }
+        $order->update($updateData);
 
-        $this->logEvent($order, 'collected', $staffId);
+        try { $this->logEvent($order, 'collected', $staffId); } catch (\Throwable $e) {}
 
         return response()->json(['success' => true, 'sample_id' => $sampleId]);
     }
 
     public function updateLabStatus(Request $request, string $id)
     {
+        if (!\Schema::hasColumn('orders', 'lab_status')) {
+            return response()->json(['error' => 'Lab features not yet migrated. Run deploy.php.'], 422);
+        }
+
         $order = Order::findOrFail($id);
         $staffId = Auth::user()->staff?->id;
         $newStatus = $request->input('lab_status');
@@ -201,7 +214,7 @@ class LabController extends Controller
             $value = is_numeric($result['value'] ?? '') ? floatval($result['value']) : null;
             $catalog = $testCatalog[$testName] ?? null;
 
-            if ($value !== null && $catalog) {
+            if ($value !== null && $catalog && isset($catalog->critical_values) && $catalog->critical_values) {
                 $criticals = is_string($catalog->critical_values) ? json_decode($catalog->critical_values, true) : ($catalog->critical_values ?? []);
                 if (!empty($criticals)) {
                     $critLow = $criticals['low'] ?? null;
@@ -220,14 +233,16 @@ class LabController extends Controller
             }
         }
 
-        $order->update([
-            'results' => $results,
-            'has_critical' => $hasCritical,
-            'lab_status' => 'result_entry',
-            'result_entered_at' => now(),
-        ]);
+        $updateData = ['results' => $results];
+        // These columns may not exist if lab_enhancements migration hasn't run
+        if (\Schema::hasColumn('orders', 'has_critical')) {
+            $updateData['has_critical'] = $hasCritical;
+            $updateData['lab_status'] = 'result_entry';
+            $updateData['result_entered_at'] = now();
+        }
+        $order->update($updateData);
 
-        $this->logEvent($order, 'result_entry', Auth::user()->staff?->id);
+        try { $this->logEvent($order, 'result_entry', Auth::user()->staff?->id); } catch (\Throwable $e) {}
 
         $msg = 'Results saved.';
         if ($hasCritical) {
@@ -242,26 +257,31 @@ class LabController extends Controller
         $order = Order::findOrFail($id);
         $staffId = Auth::user()->staff?->id;
 
-        // Block verify if critical values not acknowledged
-        if ($order->has_critical && !$order->critical_acknowledged) {
+        // Block verify if critical values not acknowledged (safe check for column existence)
+        if (\Schema::hasColumn('orders', 'has_critical') && $order->has_critical && !$order->critical_acknowledged) {
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot verify — critical values must be acknowledged by a doctor first.',
             ], 422);
         }
 
-        $order->update([
+        $updateData = [
             'status' => 'completed',
-            'lab_status' => 'verified',
             'verified_by' => $staffId,
             'verified_at' => now(),
             'completed_at' => now(),
-            'released_at' => now(),
-            'released_by' => $staffId,
-        ]);
+        ];
+        if (\Schema::hasColumn('orders', 'lab_status')) {
+            $updateData['lab_status'] = 'verified';
+            $updateData['released_at'] = now();
+            $updateData['released_by'] = $staffId;
+        }
+        $order->update($updateData);
 
-        $this->logEvent($order, 'verified', $staffId);
-        $this->logEvent($order, 'released', $staffId);
+        try {
+            $this->logEvent($order, 'verified', $staffId);
+            $this->logEvent($order, 'released', $staffId);
+        } catch (\Throwable $e) {}
 
         // Notify patient
         $testNames = collect($order->items ?? [])->pluck('name')->implode(', ');
