@@ -302,6 +302,8 @@ Route::get('/', function () {
     return match ($roleValue) {
         'super_admin' => redirect()->route('web.superadmin.index'),
         'doctor' => redirect()->route('web.doctor.dashboard'),
+        'lab_tech' => redirect()->route('web.lab.dashboard'),
+        'pharmacist' => redirect()->route('web.pharmacy.dashboard'),
         default => redirect()->route('web.admin.dashboard'),
     };
 })->middleware('auth');
