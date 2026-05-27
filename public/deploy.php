@@ -17,7 +17,9 @@ echo "<html><head><title>MedOS Deploy</title>
 <style>body{font-family:monospace;padding:40px;background:#0f172a;color:#e2e8f0;max-width:800px;margin:0 auto;}
 h1{color:#60a5fa;}pre{background:#1e293b;padding:20px;border-radius:8px;overflow:auto;margin:16px 0;}
 .ok{color:#4ade80;}.err{color:#f87171;}.info{color:#fbbf24;}</style></head><body>";
-echo "<h1>MedOS Deployment</h1><pre>";
+echo "<h1>MedOS Deployment</h1>";
+echo "<p style='color:#94a3b8;margin:0 0 8px;'>Version: <strong style='color:#60a5fa;'>v2.4.0</strong> &middot; Built: <strong>2026-05-27 22:30 IST</strong> &middot; Git: <code>" . trim(shell_exec('git rev-parse --short HEAD 2>/dev/null') ?: 'unknown') . "</code></p>";
+echo "<pre>";
 
 $root = dirname(__DIR__);
 
