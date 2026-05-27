@@ -134,13 +134,17 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-base font-semibold text-slate-800">Departments</h3>
-            <button @click="departments.push({ name: '', active: true, editing: true })" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add Department</button>
+            <button @click="if(!departments.some(d => d.editing)) departments.push({ name: '', active: true, editing: true })" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add Department</button>
         </div>
         <div class="space-y-2">
             <template x-for="(dept, index) in departments" :key="index">
                 <div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
                     <template x-if="dept.editing">
-                        <input type="text" x-model="dept.name" @keydown.enter="dept.editing = false" class="input-field flex-1" placeholder="Department name">
+                        <input type="text" x-model="dept.name"
+                               @keydown.enter="dept.name = dept.name.replace(/[^a-zA-Z\s\-&(),]/g, '').trim().substring(0, 100); dept.editing = dept.name.length >= 2"
+                               maxlength="100"
+                               pattern="^[a-zA-Z\s\-&(),]+$"
+                               class="input-field flex-1" placeholder="e.g. Cardiology">
                     </template>
                     <template x-if="!dept.editing">
                         <span class="flex-1 text-sm text-slate-700" x-text="dept.name"></span>
@@ -149,7 +153,7 @@
                         <input type="checkbox" x-model="dept.active" class="rounded border-slate-300 text-blue-600">
                         <span class="text-xs text-slate-500">Active</span>
                     </label>
-                    <button @click="dept.editing = !dept.editing" class="text-xs text-blue-600 hover:text-blue-800">
+                    <button @click="if(dept.editing) { dept.name = dept.name.replace(/[^a-zA-Z\s\-&(),]/g, '').trim().substring(0, 100); if(dept.name.length < 2) return; } dept.editing = !dept.editing" class="text-xs text-blue-600 hover:text-blue-800">
                         <span x-text="dept.editing ? 'Save' : 'Edit'"></span>
                     </button>
                     <button @click="departments.splice(index, 1)" class="text-xs text-red-500 hover:text-red-700">Remove</button>
