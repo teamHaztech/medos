@@ -14,6 +14,7 @@ class PharmacyStock extends Model
     protected $table = 'pharmacy_stock';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'medicine_id',
         'batch_number',

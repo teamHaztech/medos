@@ -17,6 +17,7 @@ class NotificationLog extends Model
     protected $table = 'notification_logs';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'patient_id',
         'staff_id',

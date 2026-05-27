@@ -17,6 +17,7 @@ class AbhaHealthRecord extends Model
     protected $table = 'abha_health_records';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'patient_id',
         'abha_number',

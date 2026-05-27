@@ -21,6 +21,7 @@ class Appointment extends Model
     protected $table = 'appointments';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'patient_id',
         'doctor_id',

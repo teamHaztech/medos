@@ -15,7 +15,7 @@ class Order extends Model
     protected $table = 'orders';
 
     protected $fillable = [
-        'hospital_id', 'encounter_id', 'patient_id', 'ordered_by',
+        'id', 'hospital_id', 'encounter_id', 'patient_id', 'ordered_by',
         'type', 'status', 'items', 'priority', 'results', 'notes', 'completed_at',
         'sample_collected_at', 'sample_collected_by', 'verified_by', 'verified_at',
     ];

@@ -18,6 +18,7 @@ class InsuranceTransaction extends Model
     protected $table = 'insurance_transactions';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'encounter_id',
         'patient_id',

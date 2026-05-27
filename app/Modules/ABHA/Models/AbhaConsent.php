@@ -17,6 +17,7 @@ class AbhaConsent extends Model
     protected $table = 'abha_consents';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'patient_id',
         'abha_number',

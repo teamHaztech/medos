@@ -20,6 +20,7 @@ class Conversation extends Model
     protected $table = 'conversations';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'patient_id',
         'encounter_id',

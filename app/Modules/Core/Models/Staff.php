@@ -20,19 +20,20 @@ class Staff extends Model
     protected $table = 'staff';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'user_id',
+        'name',
         'role',
         'specialty',
+        'specialization',
         'department',
         'license_number',
-        'first_name',
-        'last_name',
         'phone',
         'email',
         'schedule',
         'performance_metrics',
-        'consultation_duration_minutes',
+        'consultation_duration_default',
         'is_active',
     ];
 

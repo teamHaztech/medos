@@ -26,6 +26,7 @@ class Encounter extends Model
     protected $table = 'encounters';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'patient_id',
         'doctor_id',

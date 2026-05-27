@@ -19,6 +19,7 @@ class Bill extends Model
     protected $table = 'bills';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'encounter_id',
         'patient_id',

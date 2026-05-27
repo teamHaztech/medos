@@ -18,6 +18,7 @@ class QueueEntry extends Model
     protected $table = 'queue_entries';
 
     protected $fillable = [
+        'id',
         'hospital_id',
         'appointment_id',
         'patient_id',
