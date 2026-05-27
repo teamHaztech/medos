@@ -72,8 +72,19 @@ try {
     echo "<span class='err'>✗ Seeding error: " . htmlspecialchars($e->getMessage()) . "</span>\n";
 }
 
-// 5. Create storage link
-echo "\n<span class='info'>5. Storage link...</span>\n";
+// 5. Clear caches
+echo "\n<span class='info'>5. Clearing caches...</span>\n";
+try {
+    Artisan::call('config:clear');
+    Artisan::call('route:clear');
+    Artisan::call('view:clear');
+    echo "<span class='ok'>✓ Config, route, and view caches cleared</span>\n";
+} catch (Exception $e) {
+    echo "<span class='err'>✗ Cache clear error: " . htmlspecialchars($e->getMessage()) . "</span>\n";
+}
+
+// 6. Create storage link
+echo "\n<span class='info'>6. Storage link...</span>\n";
 try {
     Artisan::call('storage:link', ['--force' => true]);
     echo Artisan::output();
@@ -82,8 +93,8 @@ try {
     echo "<span class='info'>⊘ " . htmlspecialchars($e->getMessage()) . "</span>\n";
 }
 
-// 6. Verify tables
-echo "\n<span class='info'>6. Verifying tables...</span>\n";
+// 7. Verify tables
+echo "\n<span class='info'>7. Verifying tables...</span>\n";
 try {
     $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
     echo "Tables found: " . count($tables) . "\n";
@@ -95,7 +106,7 @@ try {
 }
 
 // 7. Verify users
-echo "\n<span class='info'>7. Checking users...</span>\n";
+echo "\n<span class='info'>8. Checking users...</span>\n";
 try {
     $users = DB::table('users')->get(['email', 'role']);
     echo "Users found: " . $users->count() . "\n";
