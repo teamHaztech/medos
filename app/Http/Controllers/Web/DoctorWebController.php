@@ -433,6 +433,20 @@ class DoctorWebController extends Controller
         $followUp = $request->has('follow_up_date') ? $request->input('follow_up_date') : null;
         \App\Modules\Core\Services\WhatsAppNotifier::consultationComplete($apt, $followUp);
 
+        // Auto-generate the bill now that the consultation and its orders are recorded.
+        // Idempotent — safe even if a bill already exists. Non-fatal so a billing
+        // hiccup never blocks completing the consultation.
+        if ($encounter) {
+            try {
+                app(\App\Modules\Billing\Services\BillingService::class)->generateBill($encounter);
+            } catch (\Throwable $e) {
+                \Log::warning('[MedOS] Auto bill generation failed', [
+                    'encounter_id' => $encounter->id,
+                    'error'        => $e->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json(['success' => true, 'message' => 'Consultation completed.']);
     }
 

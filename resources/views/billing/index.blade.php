@@ -5,6 +5,49 @@
 
 @section('content')
 <div>
+    @if(session('info'))
+        <div class="mb-4 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800">{{ session('info') }}</div>
+    @endif
+    @if(session('success'))
+        <div class="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">{{ session('success') }}</div>
+    @endif
+
+    {{-- Pending / Unbilled encounters --}}
+    @if(isset($unbilled) && $unbilled->count() > 0)
+    <div class="mb-6 bg-white rounded-xl shadow-sm border border-amber-200 overflow-hidden">
+        <div class="px-4 py-3 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
+            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/></svg>
+            <h3 class="text-sm font-semibold text-amber-800">Pending — Completed visits not yet billed ({{ $unbilled->count() }})</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="table-header">Date</th>
+                        <th class="table-header">Patient</th>
+                        <th class="table-header">Doctor</th>
+                        <th class="table-header">Encounter #</th>
+                        <th class="table-header">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach($unbilled as $enc)
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3 text-sm text-slate-600">{{ $enc->updated_at?->format('M d, Y') }}</td>
+                            <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ $enc->patient->name ?? '-' }}</td>
+                            <td class="px-4 py-3 text-sm text-slate-600">{{ $enc->doctor->name ?? '-' }}</td>
+                            <td class="px-4 py-3 text-xs font-mono text-slate-500">{{ $enc->encounter_number }}</td>
+                            <td class="px-4 py-3">
+                                <a href="{{ route('web.billing.create', $enc->id) }}" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700">Generate Bill</a>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
     {{-- Filters --}}
     <form method="GET" action="{{ route('web.billing.index') }}" class="mb-6">
         <div class="flex flex-col sm:flex-row gap-3 items-end">

@@ -4,10 +4,13 @@ namespace App\Modules\Billing\Services;
 
 use App\Modules\Billing\Models\Bill;
 use App\Modules\Core\Enums\PaymentStatus;
+use App\Modules\Core\Models\Order;
 use App\Modules\Core\Services\BaseModuleService;
 use App\Modules\Core\Services\HospitalContext;
+use App\Modules\Core\Services\RegionService;
 use App\Modules\Patient\Models\Encounter;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class BillingService extends BaseModuleService
@@ -24,75 +27,38 @@ class BillingService extends BaseModuleService
     /**
      * Auto-generate a bill from an encounter.
      *
-     * 1. Get consultation fee (from doctor/department settings)
-     * 2. Get lab/pharmacy/procedure charges from orders
-     * 3. Apply insurance coverage
-     * 4. Calculate taxes (if applicable)
-     * 5. Calculate patient payable
-     * 6. Create Bill record with line items
+     * Idempotent: if a bill already exists for the encounter, it is returned
+     * unchanged. Line items are built from the consultation fee plus the
+     * encounter's lab / imaging / pharmacy orders.
      */
     public function generateBill(Encounter $encounter): Bill
     {
-        $hospitalId = $this->requireHospital();
-        $patient = $encounter->patient;
-
-        $lineItems = [];
-
-        // 1. Consultation fee
-        $consultationFee = $this->getConsultationFee($encounter);
-        if ($consultationFee > 0) {
-            $lineItems[] = [
-                'description' => 'Consultation Fee',
-                'code'        => 'CONSULT',
-                'category'    => 'consultation',
-                'quantity'    => 1,
-                'unit_price'  => $consultationFee,
-                'total'       => $consultationFee,
-            ];
+        // Idempotency — never create a second bill for the same encounter.
+        $existing = Bill::where('encounter_id', $encounter->id)->first();
+        if ($existing) {
+            return $existing;
         }
 
-        // 2. Lab charges from orders
-        $labCharges = $this->getLabCharges($encounter);
-        foreach ($labCharges as $charge) {
-            $lineItems[] = $charge;
-        }
+        $data = $this->buildBillData($encounter);
 
-        // 3. Pharmacy charges from orders
-        $pharmacyCharges = $this->getPharmacyCharges($encounter);
-        foreach ($pharmacyCharges as $charge) {
-            $lineItems[] = $charge;
-        }
-
-        // 4. Procedure charges
-        $procedureCharges = $this->getProcedureCharges($encounter);
-        foreach ($procedureCharges as $charge) {
-            $lineItems[] = $charge;
-        }
-
-        // Calculate subtotal
-        $subtotal = array_sum(array_column($lineItems, 'total'));
-
-        // 4. Calculate taxes (configurable per hospital/country)
-        $taxRate = $this->getTaxRate();
-        $taxAmount = round($subtotal * $taxRate, 2);
-
-        // 5. Create the bill
         $bill = Bill::create([
-            'hospital_id'              => $hospitalId,
-            'encounter_id'             => $encounter->id,
-            'patient_id'               => $patient->id,
-            'bill_number'              => $this->generateBillNumber(),
-            'line_items'               => $lineItems,
-            'subtotal'                 => $subtotal,
-            'tax_amount'               => $taxAmount,
-            'discount_amount'          => 0,
-            'insurance_covered_amount' => 0,
-            'total_amount'             => $subtotal + $taxAmount,
-            'amount_paid'              => 0,
-            'balance_due'              => $subtotal + $taxAmount,
-            'payment_status'           => PaymentStatus::Pending,
-            'currency'                 => config('medos.billing.currency', 'AED'),
-            'issued_at'                => now(),
+            'id'                => Str::uuid()->toString(),
+            'hospital_id'       => $encounter->hospital_id,
+            'encounter_id'      => $encounter->id,
+            'patient_id'        => $encounter->patient_id,
+            'bill_number'       => $this->generateBillNumber(),
+            'line_items'        => $data['line_items'],
+            'subtotal'          => $data['subtotal'],
+            'tax_amount'        => $data['tax_amount'],
+            'discount_amount'   => 0,
+            'insurance_covered' => 0,
+            'total_amount'      => $data['total_amount'],
+            'patient_payable'   => $data['total_amount'],
+            'amount_paid'       => 0,
+            'balance_due'       => $data['total_amount'],
+            'payment_status'    => PaymentStatus::Pending,
+            'currency'          => RegionService::currencyCode(),
+            'issued_at'         => now(),
         ]);
 
         $this->logInfo('Bill generated', [
@@ -102,6 +68,94 @@ class BillingService extends BaseModuleService
         ]);
 
         return $bill;
+    }
+
+    /**
+     * Build the bill line items and totals for an encounter without persisting.
+     * Shared by generateBill() and the web "Generate Bill" form so both stay
+     * consistent.
+     *
+     * @return array{line_items: array, subtotal: float, tax_rate: int, tax_amount: float, total_amount: float}
+     */
+    public function buildBillData(Encounter $encounter): array
+    {
+        $encounter->loadMissing('doctor');
+
+        $lineItems = [];
+
+        // Consultation fee based on the attending doctor's department.
+        $consultationFee = $this->getConsultationFee($encounter->doctor);
+        $lineItems[] = [
+            'description' => 'Consultation Fee (' . ($encounter->doctor->department ?? 'General') . ')',
+            'quantity'    => 1,
+            'unit_price'  => $consultationFee,
+            'total'       => $consultationFee,
+            'category'    => 'consultation',
+        ];
+
+        // Lab / imaging / pharmacy charges from the encounter's orders.
+        foreach ($this->getOrderCharges($encounter) as $charge) {
+            $lineItems[] = $charge;
+        }
+
+        $subtotal  = collect($lineItems)->sum('total');
+        $taxRate   = RegionService::taxRate();
+        $taxAmount = round($subtotal * $taxRate / 100, 2);
+
+        return [
+            'line_items'   => $lineItems,
+            'subtotal'     => $subtotal,
+            'tax_rate'     => $taxRate,
+            'tax_amount'   => $taxAmount,
+            'total_amount' => $subtotal + $taxAmount,
+        ];
+    }
+
+    /**
+     * Build line items from an encounter's lab / imaging / pharmacy orders.
+     */
+    protected function getOrderCharges(Encounter $encounter): array
+    {
+        $charges = [];
+
+        $orders = Order::where('encounter_id', $encounter->id)->get();
+
+        foreach ($orders as $order) {
+            $items = $order->items ?? [];
+
+            if ($order->type === 'pharmacy') {
+                foreach ($items as $item) {
+                    $price = (float) ($item['price'] ?? 0);
+                    $qty   = (int) ($item['quantity'] ?? 1);
+                    $charges[] = [
+                        'description' => trim(($item['name'] ?? 'Medicine') . ' ' . ($item['dosage'] ?? '')),
+                        'quantity'    => $qty,
+                        'unit_price'  => $price,
+                        'total'       => $price * $qty,
+                        'category'    => 'pharmacy',
+                    ];
+                }
+            } else {
+                // lab / imaging orders
+                foreach ($items as $item) {
+                    $testName = $item['name'] ?? $item['test_name'] ?? 'Test';
+                    $price    = (float) ($item['price'] ?? 0);
+                    if ($price <= 0) {
+                        $test  = DB::table('available_tests')->where('name', $testName)->first();
+                        $price = $test ? (float) $test->price : 0;
+                    }
+                    $charges[] = [
+                        'description' => $testName,
+                        'quantity'    => 1,
+                        'unit_price'  => $price,
+                        'total'       => $price,
+                        'category'    => $order->type ?? 'lab',
+                    ];
+                }
+            }
+        }
+
+        return $charges;
     }
 
     // ---------------------------------------------------------------
@@ -394,114 +448,30 @@ class BillingService extends BaseModuleService
     // ---------------------------------------------------------------
 
     /**
-     * Get the consultation fee for an encounter based on doctor/department settings.
-     *
-     * TODO: Pull from hospital fee master / doctor settings
+     * Get the consultation fee for the attending doctor based on department.
      */
-    protected function getConsultationFee(Encounter $encounter): float
+    protected function getConsultationFee(?\App\Modules\Core\Models\Staff $doctor): float
     {
-        // TODO: Look up actual fee from doctor profile or department configuration
-        $defaultFees = [
-            'general_medicine'  => 200.00,
-            'cardiology'        => 500.00,
-            'orthopedics'       => 400.00,
-            'dermatology'       => 300.00,
-            'pediatrics'        => 250.00,
-            'gynecology'        => 350.00,
-            'neurology'         => 500.00,
-            'ophthalmology'     => 300.00,
-            'ent'               => 300.00,
-            'psychiatry'        => 400.00,
+        if (! $doctor) {
+            return 500;
+        }
+
+        $department = strtolower($doctor->department ?? 'general');
+
+        $fees = [
+            'pediatrics'        => 500,
+            'cardiology'        => 800,
+            'orthopedics'       => 700,
+            'dermatology'       => 600,
+            'ophthalmology'     => 600,
+            'ent'               => 500,
+            'gynecology'        => 700,
+            'neurology'         => 900,
+            'general'           => 400,
+            'internal medicine' => 500,
         ];
 
-        $department = strtolower($encounter->department ?? 'general_medicine');
-        return $defaultFees[$department] ?? 300.00;
-    }
-
-    /**
-     * Get lab charges from encounter orders.
-     *
-     * TODO: Pull from lab order records linked to the encounter
-     */
-    protected function getLabCharges(Encounter $encounter): array
-    {
-        $charges = [];
-
-        // TODO: Replace with actual lab order lookup
-        // $labOrders = $encounter->labOrders ?? [];
-        // foreach ($labOrders as $order) {
-        //     $charges[] = [
-        //         'description' => $order->test_name,
-        //         'code'        => $order->test_code,
-        //         'category'    => 'laboratory',
-        //         'quantity'    => 1,
-        //         'unit_price'  => $order->price,
-        //         'total'       => $order->price,
-        //     ];
-        // }
-
-        return $charges;
-    }
-
-    /**
-     * Get pharmacy charges from encounter prescriptions.
-     *
-     * TODO: Pull from pharmacy/prescription records linked to the encounter
-     */
-    protected function getPharmacyCharges(Encounter $encounter): array
-    {
-        $charges = [];
-
-        // TODO: Replace with actual pharmacy order lookup
-        // $prescriptions = $encounter->prescriptions ?? [];
-        // foreach ($prescriptions as $rx) {
-        //     $charges[] = [
-        //         'description' => $rx->medication_name,
-        //         'code'        => $rx->medication_code,
-        //         'category'    => 'pharmacy',
-        //         'quantity'    => $rx->quantity,
-        //         'unit_price'  => $rx->unit_price,
-        //         'total'       => $rx->quantity * $rx->unit_price,
-        //     ];
-        // }
-
-        return $charges;
-    }
-
-    /**
-     * Get procedure charges from encounter records.
-     *
-     * TODO: Pull from procedure records linked to the encounter
-     */
-    protected function getProcedureCharges(Encounter $encounter): array
-    {
-        $charges = [];
-
-        // TODO: Replace with actual procedure lookup
-        // $procedures = $encounter->procedures ?? [];
-        // foreach ($procedures as $proc) {
-        //     $charges[] = [
-        //         'description' => $proc->name,
-        //         'code'        => $proc->cpt_code,
-        //         'category'    => 'procedure',
-        //         'quantity'    => 1,
-        //         'unit_price'  => $proc->fee,
-        //         'total'       => $proc->fee,
-        //     ];
-        // }
-
-        return $charges;
-    }
-
-    /**
-     * Get the applicable tax rate for the current hospital.
-     *
-     * TODO: Pull from hospital/country tax configuration
-     */
-    protected function getTaxRate(): float
-    {
-        // UAE VAT is 5%, India GST on healthcare is generally exempt
-        return config('medos.billing.tax_rate', 0.05);
+        return $fees[$department] ?? 500;
     }
 
     /**

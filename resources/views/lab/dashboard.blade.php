@@ -140,6 +140,11 @@
                                     View Results
                                 </a>
                             </template>
+                            <template x-if="order.status === 'completed' && order.encounter_id">
+                                <a :href="'/billing/create/' + order.encounter_id" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 font-semibold">
+                                    Generate Bill
+                                </a>
+                            </template>
                         </div>
                     </div>
                 </div>

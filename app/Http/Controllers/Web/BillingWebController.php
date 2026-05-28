@@ -4,15 +4,14 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Billing\Models\Bill;
+use App\Modules\Billing\Services\BillingService;
 use App\Modules\Core\Models\Order;
 use App\Modules\Core\Models\Hospital;
-use App\Modules\Core\Models\Staff;
 use App\Modules\Core\Services\RegionService;
 use App\Modules\Patient\Models\Encounter;
 use App\Modules\Patient\Models\Patient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class BillingWebController extends Controller
@@ -51,7 +50,18 @@ class BillingWebController extends Controller
 
         $bills = $query->orderByDesc('created_at')->paginate(20);
 
-        return view('billing.index', compact('bills'));
+        // Completed encounters that have not been billed yet — these are the
+        // patients who went through consultation/lab but have no bill.
+        $billedEncounterIds = Bill::where('hospital_id', $hospitalId)->pluck('encounter_id');
+        $unbilled = Encounter::where('hospital_id', $hospitalId)
+            ->where('status', 'completed')
+            ->whereNotIn('id', $billedEncounterIds)
+            ->with(['patient', 'doctor'])
+            ->orderByDesc('updated_at')
+            ->limit(50)
+            ->get();
+
+        return view('billing.index', compact('bills', 'unbilled'));
     }
 
     /**
@@ -69,67 +79,25 @@ class BillingWebController extends Controller
     /**
      * Create bill form — pre-populate from encounter orders.
      */
-    public function create(string $encounterId)
+    public function create(string $encounterId, BillingService $billingService)
     {
         $encounter = Encounter::where('hospital_id', Auth::user()->hospital_id)
             ->with(['patient', 'doctor'])
             ->findOrFail($encounterId);
 
-        $orders = Order::where('encounter_id', $encounterId)->get();
-
-        $lineItems = [];
-
-        // Consultation fee based on department
-        $consultationFee = $this->getConsultationFee($encounter->doctor);
-        $lineItems[] = [
-            'description' => 'Consultation Fee (' . ($encounter->doctor->department ?? 'General') . ')',
-            'quantity'    => 1,
-            'unit_price'  => $consultationFee,
-            'total'       => $consultationFee,
-            'category'    => 'consultation',
-        ];
-
-        foreach ($orders as $order) {
-            $items = $order->items ?? [];
-
-            if ($order->type === 'pharmacy') {
-                foreach ($items as $item) {
-                    $price = floatval($item['price'] ?? 0);
-                    $qty = intval($item['quantity'] ?? 1);
-                    $lineItems[] = [
-                        'description' => ($item['name'] ?? 'Medicine') . ' ' . ($item['dosage'] ?? ''),
-                        'quantity'    => $qty,
-                        'unit_price'  => $price,
-                        'total'       => $price * $qty,
-                        'category'    => 'pharmacy',
-                    ];
-                }
-            } else {
-                // lab / imaging orders
-                foreach ($items as $item) {
-                    $testName = $item['name'] ?? $item['test_name'] ?? 'Test';
-                    // Look up price from available_tests
-                    $price = floatval($item['price'] ?? 0);
-                    if ($price <= 0) {
-                        $test = DB::table('available_tests')
-                            ->where('name', $testName)
-                            ->first();
-                        $price = $test ? floatval($test->price) : 0;
-                    }
-                    $lineItems[] = [
-                        'description' => $testName,
-                        'quantity'    => 1,
-                        'unit_price'  => $price,
-                        'total'       => $price,
-                        'category'    => $order->type ?? 'lab',
-                    ];
-                }
-            }
+        // A bill already exists for this encounter — show it instead of creating a duplicate.
+        $existing = Bill::where('encounter_id', $encounter->id)->first();
+        if ($existing) {
+            return redirect()->route('web.billing.show', $existing->id)
+                ->with('info', 'A bill already exists for this encounter.');
         }
 
-        $subtotal = collect($lineItems)->sum('total');
-        $taxRate = RegionService::taxRate();
-        $taxAmount = round($subtotal * $taxRate / 100, 2);
+        $data = $billingService->buildBillData($encounter);
+
+        $lineItems = $data['line_items'];
+        $subtotal  = $data['subtotal'];
+        $taxRate   = $data['tax_rate'];
+        $taxAmount = $data['tax_amount'];
 
         return view('billing.create', compact('encounter', 'lineItems', 'subtotal', 'taxRate', 'taxAmount'));
     }
@@ -151,6 +119,13 @@ class BillingWebController extends Controller
         $encounter = Encounter::with('patient')
             ->where('hospital_id', Auth::user()->hospital_id)
             ->findOrFail($request->encounter_id);
+
+        // Never create a second bill for the same encounter.
+        $existing = Bill::where('encounter_id', $encounter->id)->first();
+        if ($existing) {
+            return redirect()->route('web.billing.show', $existing->id)
+                ->with('info', 'A bill already exists for this encounter.');
+        }
 
         $totalAmount = $request->subtotal + $request->tax_amount - $request->discount_amount;
         $patientPayable = $totalAmount - $request->insurance_covered;
@@ -253,29 +228,4 @@ class BillingWebController extends Controller
         return view('billing.discharge', compact('encounter', 'orders', 'bills', 'hospital'));
     }
 
-    /**
-     * Get consultation fee by department.
-     */
-    private function getConsultationFee(?Staff $doctor): float
-    {
-        if (!$doctor) return 500;
-
-        $department = strtolower($doctor->department ?? 'general');
-
-        // Default fees by department — can be moved to config later
-        $fees = [
-            'pediatrics'     => 500,
-            'cardiology'     => 800,
-            'orthopedics'    => 700,
-            'dermatology'    => 600,
-            'ophthalmology'  => 600,
-            'ent'            => 500,
-            'gynecology'     => 700,
-            'neurology'      => 900,
-            'general'        => 400,
-            'internal medicine' => 500,
-        ];
-
-        return $fees[$department] ?? 500;
-    }
 }
