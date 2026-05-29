@@ -26,10 +26,13 @@ class Hospital extends Model
         'phone',
         'email',
         'logo_url',
+        'logo_path',
         'config',
         'modules_enabled',
         'timezone',
         'currency',
+        'subscription_plan',
+        'subscription_status',
         'is_active',
     ];
 
