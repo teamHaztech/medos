@@ -107,6 +107,29 @@ class Appointment extends Model
     // ---------------------------------------------------------------
 
     /**
+     * Generate a queue token (e.g. "GEN-002") that is unique for a given
+     * doctor on a given day. Uses the department prefix + sequence, and
+     * increments the sequence until it finds an unused token so two bookings
+     * can never collide on the same number.
+     */
+    public static function generateToken(string $doctorId, ?string $department, \Carbon\Carbon $slotStart): string
+    {
+        $prefix = strtoupper(substr(str_replace(' ', '', $department ?: 'GEN'), 0, 3));
+        $date   = $slotStart->toDateString();
+
+        $base = static::where('doctor_id', $doctorId)->whereDate('slot_start', $date);
+        $seq  = (clone $base)->count() + 1;
+
+        do {
+            $token = $prefix . '-' . str_pad((string) $seq, 3, '0', STR_PAD_LEFT);
+            $taken = (clone $base)->where('notes', $token)->exists();
+            $seq++;
+        } while ($taken);
+
+        return $token;
+    }
+
+    /**
      * Mark the patient as checked in.
      */
     public function checkIn(): self

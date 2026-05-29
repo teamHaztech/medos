@@ -477,15 +477,12 @@ class KioskController extends Controller
             ],
         ]);
 
-        // Generate token
-        $deptPrefix = strtoupper(substr(str_replace(' ', '', $doctor->department ?? 'GEN'), 0, 3));
-        $todayCount = Appointment::where('doctor_id', $doctor->id)
-            ->whereDate('slot_start', today())
-            ->count();
-        $token = $deptPrefix . '-' . str_pad($todayCount + 1, 3, '0', STR_PAD_LEFT);
-
         // Create appointment
         $slotStart = now()->addMinutes(15); // next available roughly
+
+        // Generate a token unique to this doctor for the day
+        $token = Appointment::generateToken($doctor->id, $doctor->department, $slotStart);
+
         $appointment = Appointment::create([
             'id'                       => Str::uuid()->toString(),
             'hospital_id'             => $hospital->id,

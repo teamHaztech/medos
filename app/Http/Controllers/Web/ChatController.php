@@ -1185,9 +1185,7 @@ class ChatController extends Controller
             ];
         }
 
-        $deptPrefix = strtoupper(substr(str_replace(' ', '', $doctor?->department ?? 'GEN'), 0, 3));
-        $todayCount = Appointment::where('doctor_id', $state['doctor_id'])->whereDate('slot_start', $slotStart->toDateString())->count();
-        $token = $deptPrefix . '-' . str_pad($todayCount + 1, 3, '0', STR_PAD_LEFT);
+        $token = Appointment::generateToken($state['doctor_id'], $doctor?->department, $slotStart);
 
         Appointment::create([
             'id' => Str::uuid()->toString(),
