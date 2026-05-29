@@ -84,43 +84,45 @@ class KioskController extends Controller
         $input = trim($request->input('token'));
         $hospital = $this->resolveHospital($request);
         $hospitalId = $hospital?->id;
-        $todayStatuses = ['scheduled', 'confirmed', 'checked_in', 'in_progress'];
+        $activeStatuses = ['scheduled', 'confirmed', 'checked_in', 'in_progress'];
 
-        // Try to find by token (stored in notes field)
-        $appointment = Appointment::whereDate('slot_start', today())
-            ->where('notes', $input)
-            ->whereIn('status', $todayStatuses)
-            ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
-            ->with(['patient', 'doctor'])
-            ->first();
+        // Build a matcher that prefers today's appointment but falls back to any
+        // active appointment, so a valid token/phone/name always resolves even if
+        // the visit was booked for another day. The patient is pulled into today's
+        // queue below on arrival.
+        $match = function (callable $constrain) use ($hospitalId, $activeStatuses) {
+            $build = function (bool $todayOnly) use ($hospitalId, $activeStatuses, $constrain) {
+                $q = Appointment::query()
+                    ->whereIn('status', $activeStatuses)
+                    ->when($hospitalId, fn($qq) => $qq->where('hospital_id', $hospitalId))
+                    ->when($todayOnly, fn($qq) => $qq->whereDate('slot_start', today()))
+                    ->with(['patient', 'doctor'])
+                    ->orderBy('slot_start');
+                $constrain($q);
+                return $q;
+            };
+
+            return $build(true)->first() ?? $build(false)->first();
+        };
+
+        // Try token (stored in notes field)
+        $appointment = $match(fn($q) => $q->where('notes', $input));
 
         // Try phone number (with or without +91 prefix)
         if (!$appointment) {
             $phoneCleaned = preg_replace('/[^0-9]/', '', $input);
             if (strlen($phoneCleaned) >= 10) {
-                $appointment = Appointment::whereDate('slot_start', today())
-                    ->whereIn('status', $todayStatuses)
-                    ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
-                    ->whereHas('patient', function ($q) use ($phoneCleaned) {
-                        $q->where('phone', 'like', '%' . substr($phoneCleaned, -10));
-                    })
-                    ->with(['patient', 'doctor'])
-                    ->latest('created_at')
-                    ->first();
+                $appointment = $match(fn($q) => $q->whereHas('patient', fn($p) =>
+                    $p->where('phone', 'like', '%' . substr($phoneCleaned, -10))
+                ));
             }
         }
 
         // Try patient name (partial match)
         if (!$appointment && strlen($input) > 2 && !is_numeric($input)) {
-            $appointment = Appointment::whereDate('slot_start', today())
-                ->whereIn('status', $todayStatuses)
-                ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
-                ->whereHas('patient', function ($q) use ($input) {
-                    $q->where('name', 'like', '%' . $input . '%');
-                })
-                ->with(['patient', 'doctor'])
-                ->latest('created_at')
-                ->first();
+            $appointment = $match(fn($q) => $q->whereHas('patient', fn($p) =>
+                $p->where('name', 'like', '%' . $input . '%')
+            ));
         }
 
         if (!$appointment) {
@@ -130,13 +132,22 @@ class KioskController extends Controller
             ], 404);
         }
 
-        // Check in if not already
+        // The patient is physically here: check them in and pull the visit into
+        // today's live queue (so it shows on the doctor's queue) if it was booked
+        // for another day.
         $aptStatus = is_object($appointment->status) ? $appointment->status->value : $appointment->status;
+        $updates = [];
         if (in_array($aptStatus, ['scheduled', 'confirmed'])) {
-            $appointment->update([
-                'status' => 'checked_in',
-                'check_in_time' => now(),
-            ]);
+            $updates['status'] = 'checked_in';
+            $updates['check_in_time'] = now();
+        }
+        if (!$appointment->slot_start || !$appointment->slot_start->isToday()) {
+            $duration = $appointment->doctor?->consultation_duration_default ?? 15;
+            $updates['slot_start'] = now();
+            $updates['slot_end'] = now()->copy()->addMinutes($duration);
+        }
+        if (!empty($updates)) {
+            $appointment->update($updates);
         }
 
         // Count patients ahead
