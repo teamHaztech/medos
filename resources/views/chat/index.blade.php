@@ -176,6 +176,10 @@
             },
 
             resetChat() {
+                // Forget the remembered patient so a fresh conversation starts from
+                // scratch (the bot will ask for phone, then name). Without this,
+                // init() reloads the saved phone and recognises the returning patient.
+                localStorage.removeItem('medos_chat_phone');
                 this.messages = [];
                 this.phone = '';
                 this.sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
