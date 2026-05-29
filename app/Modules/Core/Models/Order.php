@@ -18,6 +18,11 @@ class Order extends Model
         'id', 'hospital_id', 'encounter_id', 'patient_id', 'ordered_by',
         'type', 'status', 'items', 'priority', 'results', 'notes', 'completed_at',
         'sample_collected_at', 'sample_collected_by', 'verified_by', 'verified_at',
+        // Lab workflow fields (lab_enhancements migration)
+        'sample_id', 'sample_type', 'container_type', 'collection_location', 'lab_status',
+        'transported_at', 'received_at', 'processing_at', 'result_entered_at',
+        'released_at', 'released_by', 'has_critical', 'critical_acknowledged',
+        'critical_acknowledged_by', 'critical_acknowledged_at', 'assigned_to',
     ];
 
     protected $casts = [
@@ -26,6 +31,14 @@ class Order extends Model
         'completed_at' => 'datetime',
         'sample_collected_at' => 'datetime',
         'verified_at' => 'datetime',
+        'transported_at' => 'datetime',
+        'received_at' => 'datetime',
+        'processing_at' => 'datetime',
+        'result_entered_at' => 'datetime',
+        'released_at' => 'datetime',
+        'critical_acknowledged_at' => 'datetime',
+        'has_critical' => 'boolean',
+        'critical_acknowledged' => 'boolean',
     ];
 
     public function encounter(): BelongsTo { return $this->belongsTo(Encounter::class); }
