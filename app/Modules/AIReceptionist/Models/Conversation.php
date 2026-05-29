@@ -26,23 +26,25 @@ class Conversation extends Model
         'encounter_id',
         'escalated_to_staff_id',
         'channel',
-        'state',
-        'language',
+        'status',
+        'current_state',
+        'language_detected',
         'messages',
         'ai_reasoning_trace',
-        'external_chat_id',
+        'intent_detected',
+        'escalation_reason',
+        'handled_by_ai',
         'started_at',
         'ended_at',
-        'escalated_at',
     ];
 
     protected $casts = [
         'channel'            => Channel::class,
         'messages'           => 'array',
         'ai_reasoning_trace' => 'array',
+        'handled_by_ai'      => 'boolean',
         'started_at'         => 'datetime',
         'ended_at'           => 'datetime',
-        'escalated_at'       => 'datetime',
     ];
 
     // ---------------------------------------------------------------
@@ -111,7 +113,7 @@ class Conversation extends Model
      */
     public function transition(string $newState): self
     {
-        $this->state = $newState;
+        $this->current_state = $newState;
         $this->save();
 
         return $this;

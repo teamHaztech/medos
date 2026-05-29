@@ -154,9 +154,9 @@ class PatientService extends BaseModuleService
                 'id'      => $conversation->id,
                 'date'    => $conversation->started_at?->toIso8601String() ?? $conversation->created_at->toIso8601String(),
                 'title'   => 'AI Conversation (' . ($conversation->channel?->label() ?? 'Unknown') . ')',
-                'status'  => $conversation->state,
+                'status'  => $conversation->current_state,
                 'details' => [
-                    'language'      => $conversation->language,
+                    'language'      => $conversation->language_detected,
                     'message_count' => count($conversation->messages ?? []),
                 ],
             ]);

@@ -127,7 +127,7 @@ class IntakeHandler
         $messages = $conversation->messages ?? [];
         $context  = [
             'message_count'     => count($messages),
-            'language'          => $conversation->language ?? 'en',
+            'language'          => $conversation->language_detected ?? 'en',
             'collected_so_far'  => [],
         ];
 

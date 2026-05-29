@@ -167,14 +167,23 @@ class ProcessIncomingMessage implements ShouldQueue
             }
         }
 
-        // Fallback: check if there's an active conversation for this phone number
-        $conversation = \App\Modules\AIReceptionist\Models\Conversation::where('external_chat_id', $this->phone)
-            ->whereNull('ended_at')
-            ->latest()
+        // Fallback: check if there's an active conversation for this phone number.
+        // Conversations link to a patient (no phone column), so resolve the patient
+        // by phone first, then their most recent open conversation.
+        $patient = \App\Modules\Patient\Models\Patient::withoutGlobalScopes()
+            ->where('phone', $this->phone)
             ->first();
 
-        if ($conversation) {
-            return $conversation->hospital_id;
+        if ($patient) {
+            $conversation = \App\Modules\AIReceptionist\Models\Conversation::withoutGlobalScopes()
+                ->where('patient_id', $patient->id)
+                ->whereNull('ended_at')
+                ->latest()
+                ->first();
+
+            if ($conversation) {
+                return $conversation->hospital_id;
+            }
         }
 
         // Last resort: if there is only one hospital, use it
@@ -261,7 +270,7 @@ class ProcessIncomingMessage implements ShouldQueue
     }
 
     /**
-     * Log the incoming message to notification_logs.
+     * Log the incoming message to notifications_log.
      */
     private function logIncomingMessage(): void
     {
@@ -270,8 +279,7 @@ class ProcessIncomingMessage implements ShouldQueue
                 'hospital_id' => $this->hospitalId,
                 'channel'     => Channel::WhatsApp,
                 'type'        => 'incoming_' . $this->messageType,
-                'recipient'   => $this->phone,
-                'content'     => $this->messageContent,
+                'content'     => ['recipient' => $this->phone, 'body' => $this->messageContent],
                 'status'      => 'received',
                 'external_id' => $this->metadata['message_id'] ?? null,
             ]);

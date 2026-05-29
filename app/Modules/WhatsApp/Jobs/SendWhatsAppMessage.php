@@ -156,7 +156,7 @@ class SendWhatsAppMessage implements ShouldQueue
     }
 
     /**
-     * Log the notification to the notification_logs table.
+     * Log the notification to the notifications_log table.
      */
     private function logNotification(?array $result, ?string $error = null): void
     {
@@ -165,16 +165,15 @@ class SendWhatsAppMessage implements ShouldQueue
             $hasError = $error !== null || ($result['_error'] ?? false);
 
             NotificationLog::create([
-                'hospital_id'   => $this->hospitalId,
-                'patient_id'    => $this->patientId,
-                'channel'       => Channel::WhatsApp,
-                'type'          => $this->notificationType ?? $this->messageType,
-                'recipient'     => $this->phone,
-                'content'       => $this->content,
-                'status'        => $hasError ? 'failed' : 'sent',
-                'external_id'   => $externalId,
-                'error_message' => $error ?? ($result['_exception'] ?? null),
-                'sent_at'       => $hasError ? null : now(),
+                'hospital_id' => $this->hospitalId,
+                'patient_id'  => $this->patientId,
+                'channel'     => Channel::WhatsApp,
+                'type'        => $this->notificationType ?? $this->messageType,
+                'content'     => ['recipient' => $this->phone, 'body' => $this->content],
+                'status'      => $hasError ? 'failed' : 'sent',
+                'external_id' => $externalId,
+                'error'       => $error ?? ($result['_exception'] ?? null),
+                'sent_at'     => $hasError ? null : now(),
             ]);
         } catch (\Throwable $e) {
             // Logging failure should not break message sending

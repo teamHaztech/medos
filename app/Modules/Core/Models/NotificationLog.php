@@ -14,7 +14,7 @@ class NotificationLog extends Model
     use HasUuid;
     use BelongsToHospital;
 
-    protected $table = 'notification_logs';
+    protected $table = 'notifications_log';
 
     protected $fillable = [
         'id',
@@ -23,15 +23,12 @@ class NotificationLog extends Model
         'staff_id',
         'channel',
         'type',
-        'recipient',
-        'subject',
         'content',
         'status',
         'external_id',
-        'error_message',
+        'error',
         'sent_at',
         'delivered_at',
-        'read_at',
     ];
 
     protected $casts = [
@@ -39,7 +36,6 @@ class NotificationLog extends Model
         'content'      => 'array',
         'sent_at'      => 'datetime',
         'delivered_at' => 'datetime',
-        'read_at'      => 'datetime',
     ];
 
     // ---------------------------------------------------------------

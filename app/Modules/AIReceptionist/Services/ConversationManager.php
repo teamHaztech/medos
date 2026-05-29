@@ -73,7 +73,7 @@ class ConversationManager
         }
 
         // ----- Step 4: Add incoming message to conversation -----
-        $language = $conversation->language ?? $patient->preferredLanguage();
+        $language = $conversation->language_detected ?? $patient->preferredLanguage();
         $conversation->addMessage('patient', $message, $language);
 
         // ----- Step 5: Handle emergency if detected -----
@@ -87,7 +87,7 @@ class ConversationManager
         } catch (\Throwable $e) {
             Log::error('[ConversationManager] state processing failed', [
                 'conversation_id' => $conversation->id,
-                'state'           => $conversation->state,
+                'state'           => $conversation->current_state,
                 'error'           => $e->getMessage(),
             ]);
 
@@ -109,14 +109,14 @@ class ConversationManager
 
             Log::info('[ConversationManager] state transition', [
                 'conversation_id' => $conversation->id,
-                'from'            => $result['current_state'] ?? $conversation->state,
+                'from'            => $result['current_state'] ?? $conversation->current_state,
                 'to'              => $newState->value,
             ]);
         }
 
         return [
             'messages'        => $result['messages'],
-            'state'           => $conversation->state,
+            'state'           => $conversation->current_state,
             'conversation_id' => $conversation->id,
         ];
     }
@@ -132,7 +132,7 @@ class ConversationManager
      */
     public function processState(Conversation $conversation, string $message): array
     {
-        $state = ConversationState::tryFrom($conversation->state) ?? ConversationState::Greeting;
+        $state = ConversationState::tryFrom($conversation->current_state) ?? ConversationState::Greeting;
 
         Log::debug('[ConversationManager] processing state', [
             'conversation_id' => $conversation->id,
@@ -166,7 +166,7 @@ class ConversationManager
      */
     public function shouldTransition(Conversation $conversation, array $aiResponse): ?ConversationState
     {
-        $currentState = ConversationState::tryFrom($conversation->state) ?? ConversationState::Greeting;
+        $currentState = ConversationState::tryFrom($conversation->current_state) ?? ConversationState::Greeting;
         $possibleNext = $currentState->next();
 
         if (empty($possibleNext)) {
@@ -250,10 +250,10 @@ class ConversationManager
     public function handleEscalation(Conversation $conversation, string $reason): array
     {
         $conversation->transition(ConversationState::Escalated->value);
-        $conversation->escalated_at = now();
+        $conversation->escalation_reason = $reason;
         $conversation->save();
 
-        $language = $conversation->language ?? 'en';
+        $language = $conversation->language_detected ?? 'en';
 
         event(new EscalationRequested(
             conversationId: $conversation->id,
@@ -289,7 +289,7 @@ class ConversationManager
         $langResult = $this->aiService->detectLanguage($message);
 
         if ($langResult['confidence'] >= config('medos.languages.detection_confidence_threshold', 0.8)) {
-            $conversation->language = $langResult['language'];
+            $conversation->language_detected = $langResult['language'];
             $conversation->save();
 
             // Update patient preferred language if not set
@@ -369,7 +369,7 @@ class ConversationManager
             $conversation->ai_reasoning_trace = $trace;
             $conversation->save();
 
-            $language = $conversation->language ?? 'en';
+            $language = $conversation->language_detected ?? 'en';
             $urgency  = $triageResult['urgency_level'] ?? 'standard';
 
             $responseText = match ($language) {
@@ -400,7 +400,7 @@ class ConversationManager
     private function handleInsuranceCheck(Conversation $conversation, string $message): array
     {
         $patient = $conversation->patient;
-        $language = $conversation->language ?? 'en';
+        $language = $conversation->language_detected ?? 'en';
 
         try {
             // Delegate to InsuranceService if available
@@ -466,7 +466,7 @@ class ConversationManager
 
     private function handleConfirmation(Conversation $conversation, string $message): array
     {
-        $language = $conversation->language ?? 'en';
+        $language = $conversation->language_detected ?? 'en';
         $trace    = $conversation->ai_reasoning_trace ?? [];
         $booking  = $trace['pending_booking'] ?? [];
 
@@ -488,7 +488,7 @@ class ConversationManager
 
     private function handleEscalatedState(Conversation $conversation, string $message): array
     {
-        $language = $conversation->language ?? 'en';
+        $language = $conversation->language_detected ?? 'en';
 
         $responseText = match ($language) {
             'hi' => 'आपकी बातचीत हमारे स्टाफ को भेज दी गई है। वे जल्द ही आपसे संपर्क करेंगे। कृपया प्रतीक्षा करें।',
@@ -504,7 +504,7 @@ class ConversationManager
 
     private function handleEmergencyState(Conversation $conversation, string $message): array
     {
-        $language = $conversation->language ?? 'en';
+        $language = $conversation->language_detected ?? 'en';
 
         $responseText = match ($language) {
             'hi' => "यह एक आपातकालीन स्थिति लगती है। कृपया तुरंत 112 पर कॉल करें या नजदीकी आपातकालीन विभाग में जाएं। हमने आपकी स्थिति के बारे में हमारी आपातकालीन टीम को सूचित कर दिया है।",
@@ -521,7 +521,7 @@ class ConversationManager
     private function handleCompleted(Conversation $conversation, string $message): array
     {
         // If a patient sends a message to a completed conversation, start a new flow
-        $language = $conversation->language ?? 'en';
+        $language = $conversation->language_detected ?? 'en';
 
         $responseText = match ($language) {
             'hi' => 'नमस्ते! आप फिर से हमसे संपर्क कर रहे हैं। मैं आपकी कैसे मदद कर सकता हूँ?',
@@ -568,7 +568,7 @@ class ConversationManager
             'keywords'        => $emergencyCheck['matched_keywords'],
         ]);
 
-        $language = $conversation->language ?? $patient->preferredLanguage();
+        $language = $conversation->language_detected ?? $patient->preferredLanguage();
 
         $responseText = match ($language) {
             'hi' => "⚠️ आपातकाल का पता चला है। कृपया तुरंत 112 पर कॉल करें या नजदीकी आपातकालीन विभाग में जाएं। हमने आपके अस्पताल की आपातकालीन टीम को तुरंत सूचित कर दिया है। कृपया शांत रहें — मदद आ रही है।",
@@ -641,14 +641,14 @@ class ConversationManager
     private function createConversation(Patient $patient, Channel $channel, ?string $hospitalId): Conversation
     {
         return Conversation::create([
-            'hospital_id' => $hospitalId,
-            'patient_id'  => $patient->id,
-            'channel'     => $channel->value,
-            'state'       => ConversationState::Greeting->value,
-            'language'    => $patient->preferredLanguage(),
-            'messages'    => [],
+            'hospital_id'       => $hospitalId,
+            'patient_id'        => $patient->id,
+            'channel'           => $channel->value,
+            'current_state'     => ConversationState::Greeting->value,
+            'language_detected' => $patient->preferredLanguage(),
+            'messages'          => [],
             'ai_reasoning_trace' => [],
-            'started_at'  => now(),
+            'started_at'        => now(),
         ]);
     }
 

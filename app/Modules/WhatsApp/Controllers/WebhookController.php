@@ -302,8 +302,8 @@ class WebhookController extends Controller
 
                 case 'read':
                     $notificationLog->update([
-                        'status'  => 'read',
-                        'read_at' => $now,
+                        'status'       => 'read',
+                        'delivered_at' => $notificationLog->delivered_at ?? $now,
                     ]);
                     break;
 
@@ -314,8 +314,8 @@ class WebhookController extends Controller
                         : 'Unknown delivery failure';
 
                     $notificationLog->update([
-                        'status'        => 'failed',
-                        'error_message' => $errorMessage,
+                        'status' => 'failed',
+                        'error'  => $errorMessage,
                     ]);
                     break;
             }

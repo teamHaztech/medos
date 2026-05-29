@@ -228,7 +228,7 @@ class AnalyticsService extends BaseModuleService
             ->get();
 
         $total = $conversations->count();
-        $escalated = $conversations->whereNotNull('escalated_at')->count();
+        $escalated = $conversations->whereNotNull('escalation_reason')->count();
         $completed = $conversations->whereNotNull('ended_at')->count();
 
         $escalationRate = $total > 0

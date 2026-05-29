@@ -70,14 +70,13 @@ class PatientCalledNotifier implements ShouldQueue
     private function logNotification(PatientCalled $event, Patient $patient, string $message): void
     {
         try {
-            DB::table('notification_logs')->insert([
+            DB::table('notifications_log')->insert([
                 'id'          => \Illuminate\Support\Str::uuid()->toString(),
                 'hospital_id' => $event->hospitalId,
                 'patient_id'  => $event->patientId,
                 'type'        => 'patient_called',
                 'channel'     => 'whatsapp',
-                'recipient'   => $patient->phone,
-                'message'     => $message,
+                'content'     => json_encode(['recipient' => $patient->phone, 'body' => $message]),
                 'status'      => 'sent',
                 'created_at'  => now(),
                 'updated_at'  => now(),
