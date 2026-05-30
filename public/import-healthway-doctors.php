@@ -1,11 +1,13 @@
 <?php
 /**
- * One-time importer: add doctors (staff + login accounts) to Healthway Hospital.
+ * One-time importer: add a hospital admin + doctors (staff + login accounts) to
+ * Healthway Hospital.
  * Access: https://medos.haztech.cloud/import-healthway-doctors.php?key=haztech2026
  * DELETE this file after running it.
  *
- * Idempotent: re-running skips doctors whose email already exists.
- * Default login password for every doctor: password123
+ * Idempotent: re-running skips any account whose email already exists.
+ * Default login password for every account: password123
+ * Admin login: admin@healthway.medos.local
  */
 
 if (($_GET['key'] ?? '') !== 'haztech2026') { die('Unauthorized'); }
@@ -49,6 +51,36 @@ if (!$hospital) {
     exit;
 }
 echo "Hospital: {$hospital->name} (id " . substr($hospital->id, 0, 8) . ", slug {$hospital->slug})\n";
+echo str_repeat('-', 60) . "\n";
+
+// --- Hospital admin login (so admin can view All Patients for this hospital) ---
+$adminEmail = 'admin@healthway.medos.local';
+if (User::where('email', $adminEmail)->exists()) {
+    echo "SKIP  Admin {$adminEmail} already exists\n";
+} else {
+    $adminId = Str::uuid()->toString();
+    User::create([
+        'id'          => $adminId,
+        'name'        => 'Healthway Admin',
+        'email'       => $adminEmail,
+        'password'    => Hash::make($defaultPassword),
+        'hospital_id' => $hospital->id,
+        'role'        => 'hospital_admin',
+        'is_active'   => true,
+    ]);
+    if (Schema::hasTable('user_hospital')) {
+        DB::table('user_hospital')->insert([
+            'id'          => Str::uuid()->toString(),
+            'user_id'     => $adminId,
+            'hospital_id' => $hospital->id,
+            'role'        => 'hospital_admin',
+            'is_active'   => true,
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+    }
+    echo "ADD   Hospital Admin  login: {$adminEmail} / {$defaultPassword}\n";
+}
 echo str_repeat('-', 60) . "\n";
 
 $emailFromName = function (string $name) use ($emailDomain): string {
