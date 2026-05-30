@@ -46,19 +46,8 @@ class ChatController extends Controller
             'doctor_name' => null,
         ];
 
-        // Try phone-based session first (persistent across conversations)
-        $state = null;
-        if ($phone) {
-            $phoneKey = 'chat_phone_' . preg_replace('/[^0-9]/', '', $phone);
-            $state = cache()->get($phoneKey);
-        }
-
-        // Fall back to session-based
-        if (!$state) {
-            $state = cache()->get("chat_session_{$sessionId}", $defaultState);
-        }
-
-        // Resolve hospital: param → session → auth user → fallback
+        // Resolve hospital FIRST so all patient state is scoped to it.
+        // param → session → auth user → fallback
         $hospitalId = $request->input('hospital_id') ?: session('chat_hospital_id');
         if ($hospitalId) {
             $hospital = Hospital::where('id', $hospitalId)->where('is_active', true)->first();
@@ -70,6 +59,34 @@ class ChatController extends Controller
         if ($hospital) {
             session(['chat_hospital_id' => $hospital->id]);
         }
+
+        // Cache keys are scoped per hospital so a patient from one hospital is
+        // never recognised in another hospital's chat.
+        $scopeId = $hospital?->id ?? 'none';
+
+        // Try phone-based session first (persistent across conversations)
+        $state = null;
+        if ($phone) {
+            $phoneKey = 'chat_phone_' . $scopeId . '_' . preg_replace('/[^0-9]/', '', $phone);
+            $state = cache()->get($phoneKey);
+        }
+
+        // Fall back to session-based
+        if (!$state) {
+            $state = cache()->get("chat_session_{$sessionId}", $defaultState);
+        }
+
+        // Defense-in-depth: never trust a cached identity that doesn't belong to
+        // THIS hospital (stale cache, shared browser, switched hospital, etc.).
+        if (!empty($state['patient_id']) && $hospital) {
+            $belongs = Patient::where('id', $state['patient_id'])
+                ->where('hospital_id', $hospital->id)
+                ->exists();
+            if (!$belongs) {
+                $state = $defaultState;
+            }
+        }
+
         $replies = [];
 
         // Detect language
@@ -104,7 +121,7 @@ class ChatController extends Controller
                 $replies = $this->welcomeBackWithAppointments($state, $lang);
                 cache()->put("chat_session_{$sessionId}", $state, 3600);
                 if (!empty($state['phone'])) {
-                    $phoneKey = 'chat_phone_' . preg_replace('/[^0-9]/', '', $state['phone']);
+                    $phoneKey = 'chat_phone_' . $scopeId . '_' . preg_replace('/[^0-9]/', '', $state['phone']);
                     cache()->put($phoneKey, $state, 604800);
                 }
                 return response()->json(['replies' => $this->wrap($replies), 'state' => $state]);
@@ -172,9 +189,10 @@ class ChatController extends Controller
         // Save by session ID (1 hour)
         cache()->put("chat_session_{$sessionId}", $state, 3600);
 
-        // Also save by phone for session persistence across conversations (7 days)
+        // Also save by phone for session persistence across conversations (7 days),
+        // scoped per hospital so identities never cross hospitals.
         if (!empty($state['phone'])) {
-            $phoneKey = 'chat_phone_' . preg_replace('/[^0-9]/', '', $state['phone']);
+            $phoneKey = 'chat_phone_' . $scopeId . '_' . preg_replace('/[^0-9]/', '', $state['phone']);
             cache()->put($phoneKey, $state, 604800);
         }
 
