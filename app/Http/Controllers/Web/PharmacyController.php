@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class PharmacyController extends Controller
 {
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $hospitalId = Auth::user()->hospital_id;
 
@@ -22,6 +22,12 @@ class PharmacyController extends Controller
             ->orderByRaw("CASE WHEN priority = 'stat' THEN 0 WHEN priority = 'urgent' THEN 1 ELSE 2 END")
             ->orderBy('created_at')
             ->get();
+
+        // Polled by the dashboard every few seconds so new prescriptions appear
+        // without a manual reload.
+        if ($request->wantsJson()) {
+            return response()->json(compact('orders'));
+        }
 
         return view('pharmacy.dashboard', compact('orders'));
     }

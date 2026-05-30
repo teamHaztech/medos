@@ -3,7 +3,7 @@
 @section('page-title', 'Pharmacy')
 
 @section('content')
-<div x-data="pharmacyDashboard()">
+<div x-data="pharmacyDashboard()" x-init="init()">
     {{-- Pending Orders --}}
     <div class="mb-8">
         <h3 class="text-sm font-semibold text-slate-700 mb-3">Pending Prescriptions</h3>
@@ -39,7 +39,7 @@
                                     </div>
                                 </template>
                             </td>
-                            <td class="table-cell text-sm" x-text="order.ordered_by_staff?.name ?? (order.ordered_by_name ?? '-')"></td>
+                            <td class="table-cell text-sm" x-text="order.ordered_by?.name ?? (order.ordered_by_staff?.name ?? (order.ordered_by_name ?? '-'))"></td>
                             <td class="table-cell">
                                 <span :class="{
                                     'bg-red-100 text-red-700': order.priority === 'stat',
@@ -88,7 +88,7 @@
                                     <span class="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded mr-1 mb-1" x-text="item.name"></span>
                                 </template>
                             </td>
-                            <td class="table-cell text-sm" x-text="order.ordered_by_staff?.name ?? (order.ordered_by_name ?? '-')"></td>
+                            <td class="table-cell text-sm" x-text="order.ordered_by?.name ?? (order.ordered_by_staff?.name ?? (order.ordered_by_name ?? '-'))"></td>
                             <td class="table-cell">
                                 <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">Dispensed</span>
                             </td>
@@ -104,6 +104,23 @@
 function pharmacyDashboard() {
     return {
         orders: @json($orders),
+
+        init() {
+            // Auto-refresh so prescriptions from doctors appear without a reload.
+            setInterval(() => this.refreshData(), 5000);
+        },
+
+        async refreshData() {
+            try {
+                const res = await fetch('{{ route('web.pharmacy.dashboard') }}', {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.orders = data.orders;
+                }
+            } catch (e) {}
+        },
 
         get pendingOrders() {
             return this.orders.filter(o => o.status === 'ordered' || o.status === 'accepted');
