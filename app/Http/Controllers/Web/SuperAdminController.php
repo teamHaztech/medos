@@ -172,13 +172,15 @@ class SuperAdminController extends Controller
         $staffId = Str::uuid()->toString();
         $userId  = Str::uuid()->toString();
 
-        // Create user account
+        // Create user account. staff_id links the login to the staff record so the
+        // Doctor Console can resolve $user->staff — without it the queue is empty.
         User::create([
             'id'          => $userId,
             'name'        => $v['name'],
             'email'       => $v['email'],
             'password'    => Hash::make($v['password'] ?? 'password123'),
             'hospital_id' => $hospital->id,
+            'staff_id'    => $staffId,
             'role'        => $v['role'],
             'is_active'   => true,
         ]);
