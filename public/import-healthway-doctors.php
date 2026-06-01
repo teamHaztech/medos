@@ -39,6 +39,17 @@ $doctors = [
     ['name' => 'Dr. Chandrakant Sharma',       'department' => 'General Medicine'],
     ['name' => 'Dr. Janitta Shamkant Kundaikar','department' => 'Pediatrics'],
     ['name' => 'Dr. Prathibha B. Naik',        'department' => 'Gynecology'],
+    // page 2
+    ['name' => 'Dr. Simran',                   'department' => 'General Medicine'],
+    ['name' => 'Dr. Ashwini Colaco',           'department' => 'General Medicine'],
+    ['name' => 'Dr. Vasan Satya Srini',        'department' => 'General Medicine'],
+    ['name' => 'Dr. Rudra Nayak',              'department' => 'General Medicine'],
+    ['name' => 'Dr. Divesha Shikerkar',        'department' => 'General Medicine'],
+    ['name' => 'Dr. Akshada Amonkar',          'department' => 'General Medicine'],
+    ['name' => 'Dr. Gaurav Sardesai',          'department' => 'General Medicine'],
+    ['name' => 'Dr. Harish Peshwe',            'department' => 'General Medicine'],
+    ['name' => 'Dr. Mayank Prakash Nigam',     'department' => 'General Medicine'],
+    ['name' => 'Dr. Antonio De Bossuet Afonso','department' => 'General Medicine'],
 ];
 
 $emailDomain = 'healthway.medos.local';
