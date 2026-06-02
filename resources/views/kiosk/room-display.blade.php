@@ -46,8 +46,8 @@
                 <div class="bg-gradient-to-r from-green-500/20 to-emerald-500/10 border border-green-500/30 rounded-2xl p-6 flex items-center gap-6">
                     <div class="flex-shrink-0 text-center">
                         <p class="text-xs font-bold text-green-400 uppercase tracking-widest mb-1">Now Serving</p>
-                        <div class="w-24 h-24 bg-green-500 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/30">
-                            <p class="text-2xl font-black text-white" x-text="currentPatient.token"></p>
+                        <div class="bg-green-500 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/30" style="min-width:6rem;height:6rem;padding:0 0.85rem">
+                            <p class="text-2xl font-black text-white" style="white-space:nowrap" x-text="currentPatient.token"></p>
                         </div>
                     </div>
                     <div class="flex-1">
@@ -84,8 +84,8 @@
                 <p class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3">Next Up / अगला</p>
                 <template x-if="waitingList.length > 0">
                     <div class="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-5 text-center">
-                        <div class="w-20 h-20 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/20">
-                            <p class="text-xl font-black text-white" x-text="waitingList[0].token"></p>
+                        <div class="bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/20" style="min-width:5rem;height:5rem;padding:0 0.85rem;width:fit-content">
+                            <p class="text-xl font-black text-white" style="white-space:nowrap" x-text="waitingList[0].token"></p>
                         </div>
                         <p class="text-2xl font-bold text-white" x-text="waitingList[0].name"></p>
                         <p class="text-sm text-blue-300 mt-1">Please be ready / तैयार रहें</p>
@@ -119,8 +119,8 @@
                             <template x-for="(patient, idx) in waitingList.slice(1)" :key="patient.token">
                                 <div class="flex items-center gap-4 px-5 py-3">
                                     <div class="w-8 h-8 bg-slate-700 rounded-lg flex items-center justify-center text-sm font-bold text-slate-300 flex-shrink-0" x-text="idx + 2"></div>
-                                    <div class="w-16 text-center">
-                                        <span class="text-sm font-bold text-slate-300" x-text="patient.token"></span>
+                                    <div class="text-center flex-shrink-0" style="min-width:5rem">
+                                        <span class="text-sm font-bold text-slate-300" style="white-space:nowrap" x-text="patient.token"></span>
                                     </div>
                                     <p class="text-base font-medium text-slate-200 flex-1" x-text="patient.name"></p>
                                     <div class="flex gap-1 flex-shrink-0">
