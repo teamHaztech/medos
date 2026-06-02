@@ -38,7 +38,7 @@
         </div>
     </header>
 
-    <main class="p-6">
+    <main class="p-6 pb-28">
 
         {{-- NOW SERVING — full width hero --}}
         <div class="mb-6">
@@ -151,7 +151,7 @@
     </main>
 
     {{-- Footer with QR Code --}}
-    <footer class="fixed bottom-0 inset-x-0 bg-white/5 border-t border-white/10 px-6 py-2">
+    <footer class="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur border-t border-white/10 px-6 py-2 z-40">
         <div class="flex items-center justify-between text-xs text-slate-500">
             <span class="flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
