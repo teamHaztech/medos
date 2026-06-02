@@ -355,6 +355,13 @@ class KioskController extends Controller
 
     public function processRegister(Request $request)
     {
+        // Normalize gender: a returning patient may carry a stored value outside the
+        // selectable set (e.g. the DB default 'unknown', or a value from the chat bot).
+        // Map anything that isn't male/female/other to null so it passes validation;
+        // it is stored as 'unknown' below.
+        $g = strtolower(trim((string) $request->input('gender')));
+        $request->merge(['gender' => in_array($g, ['male', 'female', 'other'], true) ? $g : null]);
+
         $validated = $request->validate([
             'name'         => 'required|string|max:255',
             'phone'        => 'required|string|min:4|max:15',
