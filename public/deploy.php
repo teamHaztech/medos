@@ -60,15 +60,20 @@ try {
     echo "<span class='err'>✗ Migration error: " . htmlspecialchars($e->getMessage()) . "</span>\n";
 }
 
-// 4. Run seeders
+// 4. Run seeders — ONLY on a fresh/empty database. The seeders TRUNCATE their
+//    tables, so re-running them on a populated production DB would wipe real data
+//    (registered patients, imported staff, appointments, etc.). Guard against that.
 echo "\n<span class='info'>4. Seeding database...</span>\n";
 try {
-    $exitCode = Artisan::call('db:seed', ['--force' => true]);
-    echo Artisan::output();
-    if ($exitCode === 0) {
-        echo "<span class='ok'>✓ Seeding complete</span>\n";
+    $alreadySeeded = DB::table('users')->count() > 0;
+    if ($alreadySeeded) {
+        echo "<span class='info'>⊘ Skipped — database already populated (seeders truncate, so they are not re-run on a live DB).</span>\n";
     } else {
-        echo "<span class='err'>✗ Seeding failed (exit code: {$exitCode})</span>\n";
+        $exitCode = Artisan::call('db:seed', ['--force' => true]);
+        echo Artisan::output();
+        echo $exitCode === 0
+            ? "<span class='ok'>✓ Seeding complete (fresh database)</span>\n"
+            : "<span class='err'>✗ Seeding failed (exit code: {$exitCode})</span>\n";
     }
 } catch (Exception $e) {
     echo "<span class='err'>✗ Seeding error: " . htmlspecialchars($e->getMessage()) . "</span>\n";
