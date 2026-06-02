@@ -387,8 +387,13 @@ class KioskController extends Controller
             $phone = strlen($phone) === 10 ? '+91' . $phone : '+' . $phone;
         }
 
-        // Find or create patient
-        $patient = Patient::where('hospital_id', $hospital->id)->where('phone', $phone)->first();
+        // Find or create patient. Include soft-deleted rows: a previously-deleted
+        // patient still holds the unique (hospital_id, phone) slot, so restore it
+        // instead of inserting a duplicate (which would violate the constraint).
+        $patient = Patient::withTrashed()->where('hospital_id', $hospital->id)->where('phone', $phone)->first();
+        if ($patient && method_exists($patient, 'trashed') && $patient->trashed()) {
+            $patient->restore();
+        }
 
         // Update existing patient's ABHA if provided and not already set
         if ($patient && !empty($validated['abha_number']) && !$patient->abha_number) {

@@ -292,15 +292,22 @@ class ChatController extends Controller
         $hospitalId = $hospital?->id;
 
         if ($hospitalId && $phone) {
-            // Check if patient already exists (edge case: cache lost but DB has them)
-            $existing = Patient::where('phone', $fullPhone)
+            // Look up INCLUDING soft-deleted rows. A previously-deleted patient
+            // still occupies the unique (hospital_id, phone) slot, so creating a
+            // new one would violate the constraint — restore the old record instead.
+            $existing = Patient::withTrashed()
                 ->where('hospital_id', $hospitalId)
-                ->first()
-                ?? Patient::where('phone', 'like', '%' . substr($phone, -10))
-                    ->where('hospital_id', $hospitalId)
-                    ->first();
+                ->where(function ($q) use ($fullPhone, $phone) {
+                    $q->where('phone', $fullPhone)
+                      ->orWhere('phone', 'like', '%' . substr($phone, -10));
+                })
+                ->first();
 
             if ($existing) {
+                if (method_exists($existing, 'trashed') && $existing->trashed()) {
+                    $existing->restore();
+                }
+                $existing->update(['name' => $name]);
                 $state['patient_id'] = $existing->id;
                 $state['patient_name'] = $existing->name;
             } else {
