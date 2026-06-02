@@ -145,7 +145,11 @@
                             </div>
                         </template>
                     </div>
-                    <button @click="startConsultation()" class="btn-primary w-full py-3 text-base">Start Consultation</button>
+                    <div class="flex gap-2">
+                        <button @click="startConsultation()" class="btn-primary flex-1 py-3 text-base">Start Consultation</button>
+                        <button @click="skipPatient(selectedPatient)" class="px-4 py-3 rounded-lg bg-amber-100 text-amber-800 font-semibold hover:bg-amber-200 text-sm" title="Patient is running late — send to back of queue">Skip</button>
+                        <button @click="markNoShow(selectedPatient)" class="px-4 py-3 rounded-lg bg-red-100 text-red-700 font-semibold hover:bg-red-200 text-sm" title="Patient didn't come — remove from today's queue">No-show</button>
+                    </div>
                 </div>
             </template>
 
@@ -271,6 +275,36 @@ function doctorDashboard() {
                 this.showConsultation = false;
                 this.resetConsultation();
             }
+        },
+
+        async skipPatient(p) {
+            if (!p) return;
+            if (!confirm('Skip ' + p.name + "? They'll move to the back of the queue so you can call them again later.")) return;
+            p.status = 'waiting'; // clear local 'called' so the refresh keeps the server's value
+            try {
+                await fetch('/doctor/skip/' + p.id, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+                });
+            } catch(e) {}
+            this.selectedPatient = null;
+            this.showConsultation = false;
+            this.refreshQueue();
+        },
+
+        async markNoShow(p) {
+            if (!p) return;
+            if (!confirm('Mark ' + p.name + " as no-show? They'll be removed from today's queue.")) return;
+            this.queue = this.queue.filter(e => e.id !== p.id);
+            try {
+                await fetch('/doctor/no-show/' + p.id, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+                });
+            } catch(e) {}
+            this.selectedPatient = null;
+            this.showConsultation = false;
+            this.refreshQueue();
         },
 
         startConsultation() {

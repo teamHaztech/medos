@@ -338,6 +338,42 @@ class DoctorWebController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /**
+     * Mark a patient as a no-show — removes them from today's active queue and
+     * the room display (no_show is excluded from both).
+     */
+    public function markNoShow(Request $request, string $appointmentId)
+    {
+        $apt = Appointment::where('doctor_id', $this->doctorId())->findOrFail($appointmentId);
+        $apt->update(['status' => 'no_show']);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Skip a patient who is running late: return them to the waiting queue and
+     * push them to the back (so Call Next picks others first), to be called later.
+     */
+    public function skipPatient(Request $request, string $appointmentId)
+    {
+        $apt = Appointment::where('doctor_id', $this->doctorId())->findOrFail($appointmentId);
+        $apt->update([
+            'status'                  => 'checked_in',
+            'slot_start'              => now(),   // sort to the back of today's queue
+            'consultation_start_time' => null,
+        ]);
+
+        $encounter = Encounter::where('patient_id', $apt->patient_id)
+            ->where('doctor_id', $apt->doctor_id)
+            ->whereDate('created_at', today())
+            ->first();
+        if ($encounter) {
+            $encounter->update(['status' => 'checked_in']);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
     public function completeConsultation(Request $request, string $appointmentId)
     {
         $apt = Appointment::where('doctor_id', $this->doctorId())->findOrFail($appointmentId);

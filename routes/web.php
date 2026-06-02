@@ -70,6 +70,8 @@ Route::middleware('auth')->prefix('doctor')->name('web.doctor.')->group(function
     Route::post('referrals/{id}/decline', [DoctorWebController::class, 'declineReferral'])->name('referrals.decline');
     Route::post('complete/{appointmentId}', [DoctorWebController::class, 'completeConsultation'])->name('complete');
     Route::post('call-next/{appointmentId}', [DoctorWebController::class, 'callNextPatient'])->name('call-next');
+    Route::post('no-show/{appointmentId}', [DoctorWebController::class, 'markNoShow'])->name('no-show');
+    Route::post('skip/{appointmentId}', [DoctorWebController::class, 'skipPatient'])->name('skip');
     Route::get('queue-json', [DoctorWebController::class, 'queueJson'])->name('queue-json');
 });
 
