@@ -73,6 +73,16 @@
                 <span class="ml-auto px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">Cardiology</span>
             </button>
 
+            <button @click="email='rajesh.kumar@city-care.medos.local'; password='password123'; $nextTick(() => $el.closest('div').previousElementSibling.querySelector('form').submit())"
+                class="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-green-50 border border-slate-200 hover:border-green-300 rounded-lg transition-all text-left">
+                <div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">R</div>
+                <div>
+                    <p class="text-sm font-semibold text-slate-800">Dr. Rajesh Kumar</p>
+                    <p class="text-xs text-slate-500">rajesh.kumar@city-care.medos.local</p>
+                </div>
+                <span class="ml-auto px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">General Medicine</span>
+            </button>
+
             <button @click="email='lab@haztech.in'; password='password123'; $nextTick(() => $el.closest('div').previousElementSibling.querySelector('form').submit())"
                 class="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-lg transition-all text-left">
                 <div class="w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs font-bold">L</div>
