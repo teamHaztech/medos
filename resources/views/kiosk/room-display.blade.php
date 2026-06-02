@@ -177,7 +177,14 @@
             currentTime: '', currentDate: '', lastUpdated: '',
 
             get currentPatient() { return this.allPatients.find(p => p.status === 'in_progress') || null; },
-            get waitingList() { return this.allPatients.filter(p => p.status === 'checked_in'); },
+            // Waiting = everyone not currently being served and not finished. This
+            // includes checked-in patients AND any extra patients left in_progress
+            // (the doctor called several without completing) — otherwise they'd
+            // disappear from the board entirely once their token was called.
+            get waitingList() {
+                const cur = this.currentPatient;
+                return this.allPatients.filter(p => p !== cur && p.status !== 'completed');
+            },
             get doneList() { return this.allPatients.filter(p => p.status === 'completed'); },
 
             init() {
