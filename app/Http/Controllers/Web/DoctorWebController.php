@@ -670,6 +670,25 @@ class DoctorWebController extends Controller
         return redirect()->route('web.doctor.packages')->with('success', 'Package added.');
     }
 
+    public function updatePackage(Request $request, string $id)
+    {
+        $pkg = \App\Modules\Core\Models\TreatmentPackage::where('staff_id', $this->doctorId())->findOrFail($id);
+
+        $v = $request->validate([
+            'name'        => 'required|string|max:120',
+            'price'       => 'required|numeric|min:0|max:9999999',
+            'description' => 'nullable|string|max:500',
+        ]);
+
+        $pkg->update([
+            'name'        => $v['name'],
+            'price'       => $v['price'],
+            'description' => $v['description'] ?? null,
+        ]);
+
+        return redirect()->route('web.doctor.packages')->with('success', 'Package updated.');
+    }
+
     public function togglePackage(string $id)
     {
         $pkg = \App\Modules\Core\Models\TreatmentPackage::where('staff_id', $this->doctorId())->findOrFail($id);
