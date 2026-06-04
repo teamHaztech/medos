@@ -530,6 +530,100 @@ class KioskController extends Controller
         ]);
     }
 
+    /**
+     * Kiosk lab-test booking page: pick tests + a lab slot, no doctor.
+     */
+    public function labBooking(Request $request)
+    {
+        $hospital = $this->resolveHospital($request);
+        if (! $hospital) {
+            return redirect()->route('kiosk.index');
+        }
+
+        $tests = \DB::table('available_tests')
+            ->where('is_active', true)
+            ->where(fn ($q) => $q->whereNull('hospital_id')->orWhere('hospital_id', $hospital->id))
+            ->orderBy('type')->orderBy('name')
+            ->get(['name', 'type', 'price']);
+
+        $slots = \App\Modules\Core\Services\LabSlotService::availableSlots($hospital->id, 7, 12);
+
+        return view('kiosk.lab', compact('hospital', 'tests', 'slots'));
+    }
+
+    public function processLabBooking(Request $request)
+    {
+        $hospital = $this->resolveHospital($request);
+        if (! $hospital) {
+            return response()->json(['success' => false, 'message' => 'Hospital not selected.'], 400);
+        }
+
+        $v = $request->validate([
+            'name'          => 'required|string|max:255',
+            'phone'         => 'required|string|min:4|max:15',
+            'tests'         => 'required|array|min:1',
+            'tests.*.name'  => 'required|string|max:255',
+            'tests.*.price' => 'nullable|numeric|min:0',
+            'tests.*.type'  => 'nullable|string',
+            'scheduled_for' => 'nullable|date',
+        ]);
+
+        $phone = preg_replace('/[^0-9+]/', '', $v['phone']);
+        if (! str_starts_with($phone, '+')) {
+            $phone = strlen($phone) === 10 ? '+91' . $phone : '+' . $phone;
+        }
+
+        // Find / restore / create the patient (soft-delete aware, like check-in).
+        $patient = Patient::withTrashed()->where('hospital_id', $hospital->id)->where('phone', $phone)->first();
+        if ($patient && method_exists($patient, 'trashed') && $patient->trashed()) {
+            $patient->restore();
+        }
+        if (! $patient) {
+            $patient = Patient::create([
+                'id'                  => Str::uuid()->toString(),
+                'hospital_id'         => $hospital->id,
+                'name'                => $v['name'],
+                'phone'               => $phone,
+                'phone_verified'      => false,
+                'language_preference' => 'en',
+                'created_via'         => 'kiosk_lab',
+            ]);
+        }
+
+        $token = 'LAB-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4));
+        $scheduledFor = $v['scheduled_for'] ?? null;
+
+        $byType = collect($v['tests'])->groupBy(
+            fn ($t) => in_array(($t['type'] ?? 'lab'), ['lab', 'imaging', 'procedure'], true) ? $t['type'] : 'lab'
+        );
+        foreach ($byType as $type => $items) {
+            \App\Modules\Core\Models\Order::create([
+                'id'             => Str::uuid()->toString(),
+                'hospital_id'    => $hospital->id,
+                'patient_id'     => $patient->id,
+                'encounter_id'   => null,
+                'ordered_by'     => null,
+                'type'           => $type,
+                'status'         => 'ordered',
+                'priority'       => 'routine',
+                'items'          => $items->map(fn ($t) => ['name' => $t['name'], 'price' => (float) ($t['price'] ?? 0)])->values()->all(),
+                'scheduled_for'  => $scheduledFor,
+                'booking_source' => 'kiosk_lab',
+                'notes'          => $token,
+            ]);
+        }
+
+        $total = collect($v['tests'])->sum('price');
+
+        return response()->json([
+            'success' => true,
+            'token'   => $token,
+            'name'    => $patient->name,
+            'total'   => $total,
+            'when'    => $scheduledFor ? \Carbon\Carbon::parse($scheduledFor)->format('D, M d \a\t g:i A') : 'Walk-in today',
+        ]);
+    }
+
     public function patientQueueView(string $doctorId)
     {
         $hospital = $this->resolveHospital();

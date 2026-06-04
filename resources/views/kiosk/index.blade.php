@@ -48,6 +48,20 @@
             <span class="text-2xl font-bold">New Patient</span>
             <span class="text-base mt-2 opacity-90">Start registration</span>
         </a>
+
+        {{-- Lab test --}}
+        <a href="{{ route('kiosk.lab') }}" class="flex flex-col items-center justify-center p-10 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] min-h-[200px]">
+            <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+            <span class="text-2xl font-bold">Lab Test / Scan</span>
+            <span class="text-base mt-2 opacity-90">Book a test — no doctor needed</span>
+        </a>
+
+        {{-- Emergency --}}
+        <a href="{{ route('kiosk.register', ['emergency' => 1]) }}" class="flex flex-col items-center justify-center p-10 bg-red-600 hover:bg-red-700 text-white rounded-2xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] min-h-[200px]">
+            <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/></svg>
+            <span class="text-2xl font-bold">Emergency</span>
+            <span class="text-base mt-2 opacity-90">Get seen immediately</span>
+        </a>
     </div>
 
     {{-- Language selector --}}

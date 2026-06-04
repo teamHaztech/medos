@@ -138,6 +138,8 @@ Route::prefix('kiosk')->name('kiosk.')->group(function () {
     Route::get('checkin', [KioskController::class, 'checkin'])->name('checkin');
     Route::post('checkin', [KioskController::class, 'processCheckin'])->name('checkin.process');
     Route::get('register', [KioskController::class, 'register'])->name('register');
+    Route::get('lab', [KioskController::class, 'labBooking'])->name('lab');
+    Route::post('lab', [KioskController::class, 'processLabBooking'])->name('lab.process');
     Route::get('check-phone', [KioskController::class, 'checkPhone'])->name('check-phone');
     Route::get('doctors', [KioskController::class, 'doctors'])->name('doctors');
     Route::get('match-doctors', [KioskController::class, 'matchDoctors'])->name('match-doctors');
