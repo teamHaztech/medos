@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Core\Models\Order;
+use App\Modules\Core\Models\LabAvailability;
 use App\Modules\Patient\Models\Patient;
 use App\Modules\Core\Models\Staff;
 use Illuminate\Http\Request;
@@ -79,6 +80,63 @@ class LabController extends Controller
         }
 
         return view('lab.dashboard', compact('orders', 'stats', 'dateFilter'));
+    }
+
+    /**
+     * Show the lab availability editor (shared by Lab Technician and Admin).
+     */
+    public function slots()
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        $avail = LabAvailability::where('hospital_id', $hospitalId)->first();
+
+        $schedule = ($avail && ! empty($avail->schedule)) ? $avail->schedule : LabAvailability::defaultSchedule();
+        $duration = $avail->slot_duration ?? 15;
+        $capacity = $avail->capacity ?? 4;
+        $isActive = $avail ? (bool) $avail->is_active : true;
+
+        return view('lab.slots', compact('schedule', 'duration', 'capacity', 'isActive'));
+    }
+
+    /**
+     * Save the lab availability (weekly schedule, slot length, capacity).
+     */
+    public function saveSlots(Request $request)
+    {
+        $v = $request->validate([
+            'schedule'      => 'nullable|array',
+            'slot_duration' => 'required|integer|min:5|max:120',
+            'capacity'      => 'required|integer|min:1|max:50',
+            'is_active'     => 'nullable|boolean',
+        ]);
+
+        // Keep only valid blocks (start < end) per day.
+        $clean = [];
+        foreach (($v['schedule'] ?? []) as $day => $blocks) {
+            if (! is_array($blocks)) {
+                continue;
+            }
+            $day = strtolower($day);
+            foreach ($blocks as $b) {
+                $start = $b['start'] ?? null;
+                $end = $b['end'] ?? null;
+                if ($start && $end && $start < $end) {
+                    $clean[$day][] = ['start' => $start, 'end' => $end];
+                }
+            }
+        }
+
+        LabAvailability::updateOrCreate(
+            ['hospital_id' => Auth::user()->hospital_id],
+            [
+                'schedule'      => $clean,
+                'slot_duration' => $v['slot_duration'],
+                'capacity'      => $v['capacity'],
+                'is_active'     => $request->boolean('is_active', true),
+            ]
+        );
+
+        return redirect()->route('web.lab.slots')->with('success', 'Lab availability saved.');
     }
 
     public function collectSample(Request $request, string $id)
