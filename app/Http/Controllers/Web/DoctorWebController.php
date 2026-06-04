@@ -339,6 +339,50 @@ class DoctorWebController extends Controller
     }
 
     /**
+     * Refer a patient to the lab: create lab/imaging/procedure orders (one per type)
+     * for the selected tests, attributed to this doctor. Appears on the Lab dashboard.
+     */
+    public function referToLab(Request $request, string $appointmentId)
+    {
+        $apt = Appointment::where('doctor_id', $this->doctorId())->findOrFail($appointmentId);
+
+        $v = $request->validate([
+            'tests'         => 'required|array|min:1',
+            'tests.*.name'  => 'required|string|max:255',
+            'tests.*.price' => 'nullable|numeric|min:0',
+            'tests.*.type'  => 'nullable|string',
+        ]);
+
+        $encounter = Encounter::where('patient_id', $apt->patient_id)
+            ->where('doctor_id', $apt->doctor_id)
+            ->whereDate('created_at', today())
+            ->first();
+
+        $grouped = collect($v['tests'])->groupBy(
+            fn ($t) => in_array(($t['type'] ?? 'lab'), ['lab', 'imaging', 'procedure'], true) ? $t['type'] : 'lab'
+        );
+
+        $count = 0;
+        foreach ($grouped as $type => $items) {
+            \App\Modules\Core\Models\Order::create([
+                'id'             => \Illuminate\Support\Str::uuid()->toString(),
+                'hospital_id'    => Auth::user()->hospital_id,
+                'patient_id'     => $apt->patient_id,
+                'encounter_id'   => $encounter?->id,
+                'ordered_by'     => $this->doctorId(),
+                'type'           => $type,
+                'status'         => 'ordered',
+                'priority'       => 'routine',
+                'items'          => $items->map(fn ($t) => ['name' => $t['name'], 'price' => (float) ($t['price'] ?? 0)])->values()->all(),
+                'booking_source' => 'doctor_referral',
+            ]);
+            $count += $items->count();
+        }
+
+        return response()->json(['success' => true, 'count' => $count]);
+    }
+
+    /**
      * Mark a patient as a no-show — removes them from today's active queue and
      * the room display (no_show is excluded from both).
      */

@@ -145,8 +145,9 @@
                             </div>
                         </template>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-2">
                         <button @click="startConsultation()" class="btn-primary flex-1 py-3 text-base">Start Consultation</button>
+                        <button @click="openReferLab()" class="px-4 py-3 rounded-lg bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 text-sm" title="Send this patient to the lab for tests">Refer to Lab</button>
                         <button @click="skipPatient(selectedPatient)" class="px-4 py-3 rounded-lg bg-amber-100 text-amber-800 font-semibold hover:bg-amber-200 text-sm" title="Patient is running late — send to back of queue">Skip</button>
                         <button @click="markNoShow(selectedPatient)" class="px-4 py-3 rounded-lg bg-red-100 text-red-700 font-semibold hover:bg-red-200 text-sm" title="Patient didn't come — remove from today's queue">No-show</button>
                     </div>
@@ -167,6 +168,49 @@
             </template>
         </div>
     </div>
+
+    {{-- Refer to Lab modal --}}
+    <div x-show="showReferLab" x-transition.opacity style="display:none"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+         @keydown.escape.window="showReferLab = false">
+        <div @click.away="showReferLab = false" class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">Refer to Lab</h3>
+                    <p class="text-xs text-slate-500" x-text="selectedPatient ? ('Tests for ' + selectedPatient.name) : ''"></p>
+                </div>
+                <button type="button" @click="showReferLab = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            <div class="px-6 pt-3 flex flex-wrap items-center gap-1.5">
+                <template x-for="f in ['all','lab','imaging','procedure']" :key="f">
+                    <button @click="referFilter = f" :class="referFilter === f ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'" class="px-2.5 py-1 rounded-lg text-xs font-semibold capitalize" x-text="f === 'all' ? 'All' : f"></button>
+                </template>
+            </div>
+
+            <div class="px-6 py-3 overflow-y-auto flex-1">
+                <div class="flex flex-wrap gap-1.5">
+                    <template x-for="t in filteredReferTests" :key="t.id">
+                        <button @click="toggleReferTest(t)"
+                            :class="isReferred(t) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'"
+                            class="px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all">
+                            <span x-text="t.name"></span>
+                            <span class="opacity-70" x-text="' · ₹' + t.price"></span>
+                        </button>
+                    </template>
+                    <p x-show="!filteredReferTests.length" class="text-sm text-slate-400 py-6">No tests available.</p>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between gap-3">
+                <p class="text-sm text-slate-600"><span class="font-semibold" x-text="referTests.length"></span> selected · <span class="font-semibold" x-text="'₹' + referTotal()"></span></p>
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="showReferLab = false" class="text-sm text-slate-500 hover:text-slate-700 px-3 py-2">Cancel</button>
+                    <button type="button" @click="submitReferLab()" :disabled="!referTests.length" class="btn-primary px-5 py-2.5 disabled:opacity-40">Send to Lab</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -184,6 +228,7 @@ function doctorDashboard() {
         vitals: { bp:'',temp:'',pulse:'',spo2:'',weight:'',rr:'',examNotes:'' },
         selectedDiagnoses: [], customDiagnosis: '',
         orders: [], testFilter: 'all', allTests: [],
+        showReferLab: false, referTests: [], referFilter: 'all',
         prescriptions: [], medSearch: '', medResults: [], medSearching: false,
         referral: null, referralReason: '', referralSlot: null, referralDays: [], referralSelectedDay: null, referralLoading: false, referralUrgency: 'normal',
         followUp: null,
@@ -230,6 +275,43 @@ function doctorDashboard() {
         get filteredTests() {
             if (this.testFilter === 'all') return this.allTests;
             return this.allTests.filter(t => t.type === this.testFilter);
+        },
+
+        get filteredReferTests() {
+            if (this.referFilter === 'all') return this.allTests;
+            return this.allTests.filter(t => t.type === this.referFilter);
+        },
+        referTotal() { return this.referTests.reduce((s, t) => s + (parseFloat(t.price) || 0), 0); },
+        async openReferLab() {
+            if (!this.selectedPatient) return;
+            if (!this.allTests.length) {
+                try { const r = await fetch('/ajax/tests', { headers: { 'Accept': 'application/json' } }); if (r.ok) this.allTests = await r.json(); } catch(e) {}
+            }
+            this.referTests = [];
+            this.referFilter = 'all';
+            this.showReferLab = true;
+        },
+        toggleReferTest(t) {
+            const i = this.referTests.findIndex(x => x.name === t.name);
+            i >= 0 ? this.referTests.splice(i, 1) : this.referTests.push({ name: t.name, price: t.price, type: t.type });
+        },
+        isReferred(t) { return this.referTests.some(x => x.name === t.name); },
+        async submitReferLab() {
+            if (!this.referTests.length || !this.selectedPatient) return;
+            try {
+                const res = await fetch('/doctor/refer-lab/' + this.selectedPatient.id, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+                    body: JSON.stringify({ tests: this.referTests }),
+                });
+                if (res.ok) {
+                    const d = await res.json();
+                    this.showReferLab = false;
+                    this.newPatientAlert = 'Referred ' + (d.count || this.referTests.length) + ' test(s) to the lab';
+                    setTimeout(() => { this.newPatientAlert = null; }, 4000);
+                    this.referTests = [];
+                }
+            } catch(e) { console.error('Refer to lab failed', e); }
         },
 
         async init() {
