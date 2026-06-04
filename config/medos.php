@@ -2,7 +2,7 @@
 
 return [
     'name' => env('MEDOS_APP_NAME', 'MedOS'),
-    'version' => '2.5.36',
+    'version' => '2.5.37',
 
     'current_hospital_id' => null, // Set at runtime via middleware
 

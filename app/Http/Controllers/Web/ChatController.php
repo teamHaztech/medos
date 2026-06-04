@@ -597,45 +597,82 @@ class ChatController extends Controller
             $cartList .= "\n• {$c['name']} — " . RegionService::formatMoney((float) $c['price']);
         }
 
+        return $this->offerLabSlots($state, $lang, $hospital, "🧾 *Your tests:*{$cartList}\n\n*Total: " . RegionService::formatMoney((float) $total) . "*");
+    }
+
+    /** Show the lab's available time slots (capacity-aware) + walk-in option. */
+    private function offerLabSlots(array &$state, string $lang, $hospital, string $cartMsg): array
+    {
+        $slots = \App\Modules\Core\Services\LabSlotService::availableSlots($hospital->id, 7, 10);
+        $state['lab_slots'] = $slots;
         $state['step'] = 'lab_when';
+
+        if (empty($slots)) {
+            // No configured/available slots — fall back to a same-day walk-in.
+            $state['lab_scheduled_for'] = null;
+            $state['lab_when_label'] = 'Walk-in today';
+            return $this->labSummary($state) ;
+        }
+
+        $list = "";
+        foreach ($slots as $i => $s) {
+            $num = $i + 1;
+            $list .= "\n*{$num}.* {$s['label']}";
+        }
+        $walkNum = count($slots) + 1;
+        $list .= "\n*{$walkNum}.* Walk-in (anytime today)";
+
         return [
-            "🧾 *Your tests:*{$cartList}\n\n*Total: " . RegionService::formatMoney((float) $total) . "*",
-            "When would you like to come?\n\nReply *now* for a walk-in today, or type a date & time (e.g. *tomorrow 10am*).",
+            $cartMsg,
+            "🗓 *Pick a lab slot:*" . $list . "\n\nReply with a *number* (1-{$walkNum}).",
         ];
     }
 
-    /** Patient chooses walk-in or a scheduled date/time. */
+    /** Patient picks a lab slot number (or the walk-in option). */
     private function handleLabWhen(string $msg, array &$state, string $lang, $hospital): array
     {
-        $trimmed = strtolower(trim($msg));
-        $scheduledFor = null;
-        $whenLabel = 'Walk-in today';
+        $slots = $state['lab_slots'] ?? [];
 
-        if (! in_array($trimmed, ['now', 'walk-in', 'walkin', 'walk in', 'today', 'asap'])) {
-            try {
-                $parsed = Carbon::parse($msg);
-                if ($parsed->isFuture()) {
-                    $scheduledFor = $parsed;
-                    $whenLabel = $parsed->format('l, M d \a\t g:i A');
-                }
-            } catch (\Throwable $e) {
-                // unparseable — treat as walk-in
-            }
+        // No slots were offered — already defaulted to walk-in; just confirm.
+        if (empty($slots)) {
+            $state['lab_scheduled_for'] = null;
+            $state['lab_when_label'] = 'Walk-in today';
+            $state['step'] = 'lab_confirm';
+            return $this->labSummary($state);
         }
 
-        $state['lab_scheduled_for'] = $scheduledFor?->toDateTimeString();
-        $state['lab_when_label'] = $whenLabel;
+        $trimmed = strtolower(trim($msg));
+        $walkNum = count($slots) + 1;
 
+        if (in_array($trimmed, ['walk-in', 'walkin', 'walk in', 'now', 'today']) || (int) $trimmed === $walkNum) {
+            $state['lab_scheduled_for'] = null;
+            $state['lab_when_label'] = 'Walk-in today';
+        } elseif (is_numeric($trimmed) && (int) $trimmed >= 1 && (int) $trimmed <= count($slots)) {
+            $slot = $slots[(int) $trimmed - 1];
+            $state['lab_scheduled_for'] = $slot['start'];
+            $state['lab_when_label'] = $slot['label'];
+        } else {
+            return ["Please reply with a *number* between 1 and {$walkNum} to pick a slot."];
+        }
+
+        $state['step'] = 'lab_confirm';
+        return $this->labSummary($state);
+    }
+
+    /** Build the lab booking summary + confirm prompt from state. */
+    private function labSummary(array &$state): array
+    {
+        $state['step'] = 'lab_confirm';
         $cart = $state['lab_cart'] ?? [];
         $total = collect($cart)->sum('price');
         $cartList = "";
         foreach ($cart as $c) {
             $cartList .= "\n• {$c['name']} — " . RegionService::formatMoney((float) $c['price']);
         }
+        $when = $state['lab_when_label'] ?? 'Walk-in today';
 
-        $state['step'] = 'lab_confirm';
         return [
-            "📋 *Lab Booking Summary*{$cartList}\n\n🗓 {$whenLabel}\n*Total: " . RegionService::formatMoney((float) $total) . "*",
+            "📋 *Lab Booking Summary*{$cartList}\n\n🗓 {$when}\n*Total: " . RegionService::formatMoney((float) $total) . "*",
             "Reply *Yes* to confirm or *No* to cancel.",
         ];
     }
