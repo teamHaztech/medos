@@ -55,11 +55,32 @@
                 Welcome, <span x-text="result.patientName"></span>!
             </h2>
 
-            <div class="space-y-3 text-xl text-slate-700">
-                <p>You're <span class="font-bold text-green-700">#<span x-text="result.queuePosition"></span></span> in line</p>
-                <p>for <span class="font-bold" x-text="result.doctorName"></span></p>
-                <p>Estimated wait: <span class="font-bold text-blue-600" x-text="result.estimatedWait"></span></p>
-            </div>
+            {{-- Lab booking result --}}
+            <template x-if="result.type === 'lab'">
+                <div>
+                    <div class="space-y-2 text-xl text-slate-700">
+                        <p class="text-sm text-slate-500 uppercase font-bold">Lab Token</p>
+                        <p class="text-3xl font-black text-indigo-600" x-text="result.token"></p>
+                        <p class="text-base text-slate-600" x-text="'🗓 ' + result.when"></p>
+                    </div>
+                    <template x-if="result.tests && result.tests.length">
+                        <div class="mt-4 flex flex-wrap justify-center gap-1.5">
+                            <template x-for="t in result.tests" :key="t">
+                                <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-sm text-slate-700" x-text="t"></span>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            {{-- Doctor appointment result --}}
+            <template x-if="result.type !== 'lab'">
+                <div class="space-y-3 text-xl text-slate-700">
+                    <p>You're <span class="font-bold text-green-700">#<span x-text="result.queuePosition"></span></span> in line</p>
+                    <p>for <span class="font-bold" x-text="result.doctorName"></span></p>
+                    <p>Estimated wait: <span class="font-bold text-blue-600" x-text="result.estimatedWait"></span></p>
+                </div>
+            </template>
 
             <div class="mt-6 p-4 bg-white rounded-xl text-lg">
                 <p class="text-slate-500">Please proceed to</p>

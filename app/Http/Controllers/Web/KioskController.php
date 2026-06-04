@@ -125,10 +125,47 @@ class KioskController extends Controller
             ));
         }
 
+        // No doctor appointment matched — try a lab booking (orders carry LAB- tokens).
         if (!$appointment) {
+            $phoneCleaned = preg_replace('/[^0-9]/', '', $input);
+            $labOrders = \App\Modules\Core\Models\Order::query()
+                ->whereIn('type', ['lab', 'imaging', 'procedure'])
+                ->whereNotIn('status', ['cancelled', 'completed'])
+                ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
+                ->where(function ($q) use ($input, $phoneCleaned) {
+                    $q->where('notes', $input);
+                    if (strlen($phoneCleaned) >= 10) {
+                        $q->orWhereHas('patient', fn($p) => $p->where('phone', 'like', '%' . substr($phoneCleaned, -10)));
+                    }
+                    if (strlen($input) > 2 && !is_numeric($input)) {
+                        $q->orWhereHas('patient', fn($p) => $p->where('name', 'like', '%' . $input . '%'));
+                    }
+                })
+                ->with('patient')
+                ->orderByDesc('created_at')
+                ->get();
+
+            if ($labOrders->isNotEmpty()) {
+                // A booking is one token spanning one or more type-orders; show that group.
+                $token = $labOrders->first()->notes;
+                $group = $token ? $labOrders->where('notes', $token) : $labOrders->take(1);
+                $tests = $group->flatMap(fn($o) => collect($o->items)->pluck('name'))->filter()->values()->all();
+                $slot = $group->first()->scheduled_for;
+
+                return response()->json([
+                    'success'     => true,
+                    'type'        => 'lab',
+                    'patientName' => $group->first()->patient?->name ?? 'Patient',
+                    'token'       => $token ?? 'LAB',
+                    'tests'       => $tests,
+                    'when'        => $slot ? $slot->format('D, M d \a\t g:i A') : 'Walk-in today',
+                    'room'        => 'Sample Collection Counter',
+                ]);
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'No appointment found. Try your token number, phone number, or name.',
+                'message' => 'No booking found. Try your token number, phone number, or name.',
             ], 404);
         }
 
