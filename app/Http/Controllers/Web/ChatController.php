@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Modules\Core\Models\Hospital;
 use App\Modules\Core\Models\Staff;
+use App\Modules\Core\Models\TreatmentPackage;
+use App\Modules\Core\Services\RegionService;
 use App\Modules\Multilingual\Services\LanguageDetector;
 use App\Modules\Patient\Models\Patient;
 use App\Modules\Patient\Models\Encounter;
@@ -145,6 +147,9 @@ class ChatController extends Controller
                     break;
                 case 'show_doctors':
                     $replies = $this->handleDoctorSelection($message, $state, $lang, $hospital);
+                    break;
+                case 'pick_package':
+                    $replies = $this->handlePickPackage($message, $state, $lang, $hospital);
                     break;
                 case 'pick_time':
                     $replies = $this->handlePickTime($message, $state, $lang, $hospital);
@@ -913,9 +918,79 @@ class ChatController extends Controller
 
         $state['doctor_id'] = $doc['id'];
         $state['doctor_name'] = $doc['name'];
+        $state['doctor_dept'] = $doc['dept'] ?? '';
+        // Reset any previously chosen package (e.g. user went back and changed doctor).
+        $state['package'] = null;
 
-        // Build available slots for next 3 days and show to user
-        $doctor = Staff::find($doc['id']);
+        // If this doctor offers treatment packages, let the patient pick one first.
+        $packages = TreatmentPackage::where('staff_id', $doc['id'])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'description', 'price']);
+
+        if ($packages->isNotEmpty()) {
+            $options = [];
+            $list = "";
+            foreach ($packages as $i => $pkg) {
+                $num = $i + 1;
+                $price = RegionService::formatMoney((float) $pkg->price);
+                $desc = $pkg->description ? " — {$pkg->description}" : "";
+                $list .= "\n*{$num}.* {$pkg->name} ({$price}){$desc}";
+                $options[] = ['id' => $pkg->id, 'name' => $pkg->name, 'price' => (float) $pkg->price];
+            }
+            $consultNum = count($options) + 1;
+            $list .= "\n*{$consultNum}.* Just a regular consultation";
+
+            $state['available_packages'] = $options;
+            $state['step'] = 'pick_package';
+
+            return [
+                "Dr. {$doc['name']} offers these treatment packages:" . $list,
+                "Reply with a *number* (1-{$consultNum}) to choose.",
+            ];
+        }
+
+        // No packages — go straight to slot selection.
+        return $this->offerSlots($state, $lang);
+    }
+
+    /**
+     * Handle the patient's package choice, then move on to slot selection.
+     */
+    private function handlePickPackage(string $msg, array &$state, string $lang, $hospital): array
+    {
+        $packages = $state['available_packages'] ?? [];
+        $trimmed = trim($msg);
+        $consultNum = count($packages) + 1;
+
+        if (! is_numeric($trimmed)) {
+            return ["Please reply with a *number* between 1 and {$consultNum} to choose a package."];
+        }
+
+        $choice = (int) $trimmed;
+        if ($choice < 1 || $choice > $consultNum) {
+            return ["That option doesn't exist. Please reply with a number between 1 and {$consultNum}."];
+        }
+
+        if ($choice === $consultNum) {
+            $state['package'] = null; // regular consultation
+        } else {
+            $state['package'] = $packages[$choice - 1];
+        }
+
+        return $this->offerSlots($state, $lang);
+    }
+
+    /**
+     * Build available slots for the selected doctor and prompt the patient to pick a time.
+     */
+    private function offerSlots(array &$state, string $lang): array
+    {
+        $doctorId = $state['doctor_id'];
+        $doctorName = $state['doctor_name'] ?? 'Doctor';
+        $dept = $state['doctor_dept'] ?? '';
+
+        $doctor = Staff::find($doctorId);
         $schedule = is_array($doctor->schedule) ? $doctor->schedule : json_decode($doctor->schedule ?? '{}', true);
         $duration = $doctor->consultation_duration_default ?? 15;
         $availableSlots = [];
@@ -927,7 +1002,7 @@ class ChatController extends Controller
             if (empty($blocks)) continue;
 
             $booked = \DB::table('appointments')
-                ->where('doctor_id', $doc['id'])
+                ->where('doctor_id', $doctorId)
                 ->whereDate('slot_start', $date->toDateString())
                 ->whereNotIn('status', ['cancelled', 'no_show'])
                 ->pluck('slot_start')
@@ -952,7 +1027,7 @@ class ChatController extends Controller
         }
 
         if (empty($availableSlots)) {
-            return [$this->t('no_slots', $lang, ['doctor' => $doc['name']])];
+            return [$this->t('no_slots', $lang, ['doctor' => $doctorName])];
         }
 
         $state['available_slots'] = $availableSlots;
@@ -964,8 +1039,12 @@ class ChatController extends Controller
             $slotList .= "\n*{$num}.* {$slot['label']}";
         }
 
+        $pkgLine = ! empty($state['package'])
+            ? " for *{$state['package']['name']}* (" . RegionService::formatMoney((float) $state['package']['price']) . ")"
+            : "";
+
         return [
-            "Great! Dr. {$doc['name']} ({$doc['dept']}) is available at these times:" . $slotList,
+            "Great! Dr. {$doctorName}" . ($dept ? " ({$dept})" : "") . " is available at these times{$pkgLine}:" . $slotList,
             "Reply with a *number* (1-" . count($availableSlots) . ") or type your preferred time (e.g. *3pm*, *tomorrow 10am*, *4:30 PM*).",
         ];
     }
@@ -1080,15 +1159,21 @@ class ChatController extends Controller
             if ($d['id'] === $state['doctor_id']) { $doc = $d; break; }
         }
 
+        $summary = $this->t('booking_summary', $lang, [
+            'doctor' => $doc['name'],
+            'dept' => $doc['dept'],
+            'date' => $slotStart->format('l, M d'),
+            'time' => $slotStart->format('g:i A'),
+            'wait' => $doc['wait'],
+            'complaint' => $state['complaint'],
+        ]);
+
+        if (! empty($state['package'])) {
+            $summary .= "\n📦 Package: *{$state['package']['name']}* (" . RegionService::formatMoney((float) $state['package']['price']) . ")";
+        }
+
         return [
-            $this->t('booking_summary', $lang, [
-                'doctor' => $doc['name'],
-                'dept' => $doc['dept'],
-                'date' => $slotStart->format('l, M d'),
-                'time' => $slotStart->format('g:i A'),
-                'wait' => $doc['wait'],
-                'complaint' => $state['complaint'],
-            ]),
+            $summary,
             $this->t('confirm_prompt', $lang),
         ];
     }
@@ -1132,10 +1217,14 @@ class ChatController extends Controller
             'type' => 'consultation',
             'status' => 'booked',
             'channel' => 'whatsapp',
-            'intake_data' => [
+            'intake_data' => array_filter([
                 'chief_complaint' => $state['complaint'],
                 'source' => 'whatsapp_bot',
-            ],
+                'package' => ! empty($state['package']) ? [
+                    'name'  => $state['package']['name'],
+                    'price' => (float) $state['package']['price'],
+                ] : null,
+            ], fn ($v) => $v !== null),
         ]);
 
         // Create appointment — with database-level lock to prevent double booking

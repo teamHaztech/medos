@@ -628,4 +628,60 @@ class DoctorWebController extends Controller
 
         return view('doctor.history', compact('encounters'));
     }
+
+    // ---------------------------------------------------------------
+    // Treatment Packages
+    // ---------------------------------------------------------------
+
+    public function packages()
+    {
+        $staff = $this->staff();
+        $packages = $staff
+            ? \App\Modules\Core\Models\TreatmentPackage::where('staff_id', $staff->id)
+                ->orderByDesc('is_active')->orderBy('name')->get()
+            : collect();
+
+        return view('doctor.packages', compact('packages'));
+    }
+
+    public function storePackage(Request $request)
+    {
+        $staff = $this->staff();
+        if (! $staff) {
+            return redirect()->back()->with('error', 'No staff profile linked to your account.');
+        }
+
+        $v = $request->validate([
+            'name'        => 'required|string|max:120',
+            'price'       => 'required|numeric|min:0|max:9999999',
+            'description' => 'nullable|string|max:500',
+        ]);
+
+        \App\Modules\Core\Models\TreatmentPackage::create([
+            'id'          => \Illuminate\Support\Str::uuid()->toString(),
+            'hospital_id' => Auth::user()->hospital_id,
+            'staff_id'    => $staff->id,
+            'name'        => $v['name'],
+            'price'       => $v['price'],
+            'description' => $v['description'] ?? null,
+            'is_active'   => true,
+        ]);
+
+        return redirect()->route('web.doctor.packages')->with('success', 'Package added.');
+    }
+
+    public function togglePackage(string $id)
+    {
+        $pkg = \App\Modules\Core\Models\TreatmentPackage::where('staff_id', $this->doctorId())->findOrFail($id);
+        $pkg->update(['is_active' => ! $pkg->is_active]);
+
+        return redirect()->route('web.doctor.packages')->with('success', 'Package updated.');
+    }
+
+    public function deletePackage(string $id)
+    {
+        \App\Modules\Core\Models\TreatmentPackage::where('staff_id', $this->doctorId())->where('id', $id)->delete();
+
+        return redirect()->route('web.doctor.packages')->with('success', 'Package removed.');
+    }
 }

@@ -83,15 +83,30 @@ class BillingService extends BaseModuleService
 
         $lineItems = [];
 
-        // Consultation fee based on the attending doctor's department.
-        $consultationFee = $this->getConsultationFee($encounter->doctor);
-        $lineItems[] = [
-            'description' => 'Consultation Fee (' . ($encounter->doctor->department ?? 'General') . ')',
-            'quantity'    => 1,
-            'unit_price'  => $consultationFee,
-            'total'       => $consultationFee,
-            'category'    => 'consultation',
-        ];
+        // If the patient booked a treatment package, it is the primary charge and
+        // replaces the flat consultation fee. Otherwise bill the department fee.
+        $intake  = is_array($encounter->intake_data) ? $encounter->intake_data : [];
+        $package = $intake['package'] ?? null;
+
+        if (is_array($package) && ! empty($package['name'])) {
+            $packagePrice = (float) ($package['price'] ?? 0);
+            $lineItems[] = [
+                'description' => 'Package: ' . $package['name'],
+                'quantity'    => 1,
+                'unit_price'  => $packagePrice,
+                'total'       => $packagePrice,
+                'category'    => 'consultation',
+            ];
+        } else {
+            $consultationFee = $this->getConsultationFee($encounter->doctor);
+            $lineItems[] = [
+                'description' => 'Consultation Fee (' . ($encounter->doctor->department ?? 'General') . ')',
+                'quantity'    => 1,
+                'unit_price'  => $consultationFee,
+                'total'       => $consultationFee,
+                'category'    => 'consultation',
+            ];
+        }
 
         // Lab / imaging / pharmacy charges from the encounter's orders.
         foreach ($this->getOrderCharges($encounter) as $charge) {

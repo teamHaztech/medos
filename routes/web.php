@@ -65,6 +65,10 @@ Route::middleware('auth')->prefix('doctor')->name('web.doctor.')->group(function
     Route::get('my-patients/{id}', [DoctorWebController::class, 'patientDetail'])->name('patients.show');
     Route::get('my-appointments', [DoctorWebController::class, 'myAppointments'])->name('appointments');
     Route::get('history', [DoctorWebController::class, 'consultationHistory'])->name('history');
+    Route::get('packages', [DoctorWebController::class, 'packages'])->name('packages');
+    Route::post('packages', [DoctorWebController::class, 'storePackage'])->name('packages.store');
+    Route::post('packages/{id}/toggle', [DoctorWebController::class, 'togglePackage'])->name('packages.toggle');
+    Route::post('packages/{id}/delete', [DoctorWebController::class, 'deletePackage'])->name('packages.delete');
     Route::get('referrals', [DoctorWebController::class, 'referrals'])->name('referrals');
     Route::post('referrals/{id}/accept', [DoctorWebController::class, 'acceptReferral'])->name('referrals.accept');
     Route::post('referrals/{id}/decline', [DoctorWebController::class, 'declineReferral'])->name('referrals.decline');
