@@ -17,6 +17,7 @@ class Order extends Model
     protected $fillable = [
         'id', 'hospital_id', 'encounter_id', 'patient_id', 'ordered_by',
         'type', 'status', 'items', 'priority', 'results', 'notes', 'completed_at',
+        'scheduled_for', 'booking_source',
         'sample_collected_at', 'sample_collected_by', 'verified_by', 'verified_at',
         // Lab workflow fields (lab_enhancements migration)
         'sample_id', 'sample_type', 'container_type', 'collection_location', 'lab_status',
@@ -29,6 +30,7 @@ class Order extends Model
         'items' => 'array',
         'results' => 'array',
         'completed_at' => 'datetime',
+        'scheduled_for' => 'datetime',
         'sample_collected_at' => 'datetime',
         'verified_at' => 'datetime',
         'transported_at' => 'datetime',

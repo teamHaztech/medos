@@ -151,6 +151,18 @@ class ChatController extends Controller
                 case 'pick_package':
                     $replies = $this->handlePickPackage($message, $state, $lang, $hospital);
                     break;
+                case 'lab_pick':
+                    $replies = $this->handleLabPick($message, $state, $lang, $hospital);
+                    break;
+                case 'lab_select':
+                    $replies = $this->handleLabSelect($message, $state, $lang, $hospital);
+                    break;
+                case 'lab_when':
+                    $replies = $this->handleLabWhen($message, $state, $lang, $hospital);
+                    break;
+                case 'lab_confirm':
+                    $replies = $this->handleLabConfirm($message, $state, $lang, $hospital);
+                    break;
                 case 'pick_time':
                     $replies = $this->handlePickTime($message, $state, $lang, $hospital);
                     break;
@@ -365,6 +377,9 @@ class ChatController extends Controller
             case 'status':
                 return $this->showStatus($state, $lang);
 
+            case 'lab':
+                return $this->startLabBooking($state, $lang);
+
             default:
                 return [$this->t('main_menu', $lang)];
         }
@@ -379,6 +394,13 @@ class ChatController extends Controller
         if ($trimmed === '2') return 'reschedule';
         if ($trimmed === '3') return 'cancel';
         if ($trimmed === '4') return 'status';
+        if ($trimmed === '5') return 'lab';
+
+        // Lab / test / scan keywords
+        $labWords = ['lab test', 'lab', 'blood test', 'test', 'scan', 'x-ray', 'xray', 'mri', 'ct scan', 'ultrasound', 'usg', 'ecg', 'sonography', 'pathology', 'जांच', 'टेस्ट', 'खून', 'فحص', 'تحليل', 'أشعة'];
+        foreach ($labWords as $w) {
+            if (str_contains($lower, $w)) return 'lab';
+        }
 
         // Book keywords
         $bookWords = ['book', 'new appointment', 'appointment', 'schedule', 'see doctor', 'visit', 'consult', 'checkup', 'check up', 'need doctor', 'want doctor', 'meet doctor', 'नया', 'बुक', 'अपॉइंटमेंट', 'दिखाना', 'दिखाओ', 'जाना', 'حجز', 'جديد'];
@@ -474,6 +496,202 @@ class ChatController extends Controller
         $replies[] = $this->t('main_menu', $lang);
         $state['step'] = 'main_menu';
         return $replies;
+    }
+
+    // ---------------------------------------------------------------
+    // Lab / test booking (no doctor)
+    // ---------------------------------------------------------------
+
+    private function startLabBooking(array &$state, string $lang): array
+    {
+        $state['step'] = 'lab_pick';
+        $state['lab_cart'] = [];
+        return [
+            "🧪 *Book a lab test or scan*\n\nWhat would you like to book?\n\n*1.* 🩸 Lab tests\n*2.* 🩻 Imaging / Scans\n*3.* 🫀 Procedures\n\nOr just *type a test name* (e.g. *MRI brain*, *CBC*, *X-Ray chest*).",
+        ];
+    }
+
+    /** Patient picks a category (1/2/3) or types a test name to search. */
+    private function handleLabPick(string $msg, array &$state, string $lang, $hospital): array
+    {
+        $hospitalId = $hospital?->id;
+        $trimmed = trim($msg);
+        $catMap = ['1' => 'lab', '2' => 'imaging', '3' => 'procedure'];
+
+        $query = \DB::table('available_tests')
+            ->where('is_active', true)
+            ->when($hospitalId, fn ($q) => $q->where(fn ($w) => $w->whereNull('hospital_id')->orWhere('hospital_id', $hospitalId)));
+
+        if (isset($catMap[$trimmed])) {
+            $query->where('type', $catMap[$trimmed]);
+            $heading = "🧪 " . ucfirst($catMap[$trimmed] === 'lab' ? 'Lab tests' : ($catMap[$trimmed] === 'imaging' ? 'Imaging / Scans' : 'Procedures'));
+        } elseif (strlen($trimmed) >= 2) {
+            $query->where('name', 'like', '%' . $trimmed . '%');
+            $heading = "🔍 Results for \"{$trimmed}\"";
+        } else {
+            return ["Please reply *1*, *2*, *3*, or type a test name to search."];
+        }
+
+        $tests = $query->orderBy('name')->limit(60)->get(['name', 'price', 'type']);
+
+        if ($tests->isEmpty()) {
+            return ["I couldn't find any matching tests. Reply *1* (Lab), *2* (Imaging), *3* (Procedures), or type a different name."];
+        }
+
+        $list = "";
+        $options = [];
+        foreach ($tests as $i => $t) {
+            $num = $i + 1;
+            $list .= "\n*{$num}.* {$t->name} — " . RegionService::formatMoney((float) $t->price);
+            $options[] = ['name' => $t->name, 'price' => (float) $t->price, 'type' => $t->type];
+        }
+
+        $state['lab_options'] = $options;
+        $state['step'] = 'lab_select';
+
+        return [
+            "{$heading}:" . $list,
+            "Reply with the *number(s)* you want — e.g. *1* or *1,3,5* for several. Type *back* to change category.",
+        ];
+    }
+
+    /** Patient selects one or more tests by number(s). */
+    private function handleLabSelect(string $msg, array &$state, string $lang, $hospital): array
+    {
+        $trimmed = strtolower(trim($msg));
+        if (in_array($trimmed, ['back', 'menu', 'cancel'])) {
+            return $this->startLabBooking($state, $lang);
+        }
+
+        $options = $state['lab_options'] ?? [];
+        // Accept comma/space separated numbers.
+        preg_match_all('/\d+/', $trimmed, $m);
+        $nums = array_unique(array_map('intval', $m[0] ?? []));
+
+        if (empty($nums)) {
+            return ["Please reply with the *number(s)* of the test(s) you want — e.g. *2* or *1,4*."];
+        }
+
+        $cart = $state['lab_cart'] ?? [];
+        $added = [];
+        foreach ($nums as $n) {
+            if ($n >= 1 && $n <= count($options)) {
+                $pick = $options[$n - 1];
+                // avoid duplicates by name
+                if (! collect($cart)->contains(fn ($c) => $c['name'] === $pick['name'])) {
+                    $cart[] = $pick;
+                    $added[] = $pick['name'];
+                }
+            }
+        }
+
+        if (empty($added)) {
+            return ["Those numbers aren't in the list. Please reply with a number between 1 and " . count($options) . "."];
+        }
+
+        $state['lab_cart'] = $cart;
+        $total = collect($cart)->sum('price');
+
+        $cartList = "";
+        foreach ($cart as $c) {
+            $cartList .= "\n• {$c['name']} — " . RegionService::formatMoney((float) $c['price']);
+        }
+
+        $state['step'] = 'lab_when';
+        return [
+            "🧾 *Your tests:*{$cartList}\n\n*Total: " . RegionService::formatMoney((float) $total) . "*",
+            "When would you like to come?\n\nReply *now* for a walk-in today, or type a date & time (e.g. *tomorrow 10am*).",
+        ];
+    }
+
+    /** Patient chooses walk-in or a scheduled date/time. */
+    private function handleLabWhen(string $msg, array &$state, string $lang, $hospital): array
+    {
+        $trimmed = strtolower(trim($msg));
+        $scheduledFor = null;
+        $whenLabel = 'Walk-in today';
+
+        if (! in_array($trimmed, ['now', 'walk-in', 'walkin', 'walk in', 'today', 'asap'])) {
+            try {
+                $parsed = Carbon::parse($msg);
+                if ($parsed->isFuture()) {
+                    $scheduledFor = $parsed;
+                    $whenLabel = $parsed->format('l, M d \a\t g:i A');
+                }
+            } catch (\Throwable $e) {
+                // unparseable — treat as walk-in
+            }
+        }
+
+        $state['lab_scheduled_for'] = $scheduledFor?->toDateTimeString();
+        $state['lab_when_label'] = $whenLabel;
+
+        $cart = $state['lab_cart'] ?? [];
+        $total = collect($cart)->sum('price');
+        $cartList = "";
+        foreach ($cart as $c) {
+            $cartList .= "\n• {$c['name']} — " . RegionService::formatMoney((float) $c['price']);
+        }
+
+        $state['step'] = 'lab_confirm';
+        return [
+            "📋 *Lab Booking Summary*{$cartList}\n\n🗓 {$whenLabel}\n*Total: " . RegionService::formatMoney((float) $total) . "*",
+            "Reply *Yes* to confirm or *No* to cancel.",
+        ];
+    }
+
+    /** Confirm and create the lab order(s). */
+    private function handleLabConfirm(string $msg, array &$state, string $lang, $hospital): array
+    {
+        $lower = strtolower(trim($msg));
+        if (in_array($lower, ['no', 'n', 'cancel', 'nahi', 'لا'])) {
+            $state['step'] = 'main_menu';
+            return [$this->t('cancelled', $lang), $this->t('main_menu', $lang)];
+        }
+        if (! in_array($lower, ['yes', 'y', 'ok', 'confirm', 'haan', 'ha', 'ji', 'نعم'])) {
+            return [$this->t('yes_or_no', $lang)];
+        }
+
+        $cart = $state['lab_cart'] ?? [];
+        if (empty($cart) || ! $state['patient_id']) {
+            $state['step'] = 'main_menu';
+            return ["Something went wrong with your lab booking. Please type *hi* to start over."];
+        }
+
+        $token = 'LAB-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4));
+        $scheduledFor = $state['lab_scheduled_for'] ?? null;
+
+        // One order per test type (lab / imaging / procedure) so each lands in the
+        // right workflow bucket.
+        $byType = collect($cart)->groupBy('type');
+        foreach ($byType as $type => $items) {
+            \App\Modules\Core\Models\Order::create([
+                'id'             => Str::uuid()->toString(),
+                'hospital_id'    => $hospital->id,
+                'patient_id'     => $state['patient_id'],
+                'encounter_id'   => null,
+                'ordered_by'     => null, // self-booked, no doctor
+                'type'           => $type,
+                'status'         => 'ordered',
+                'items'          => $items->map(fn ($c) => ['name' => $c['name'], 'price' => $c['price']])->values()->all(),
+                'priority'       => 'routine',
+                'scheduled_for'  => $scheduledFor,
+                'booking_source' => 'chat_lab',
+                'notes'          => $token,
+            ]);
+        }
+
+        $total = collect($cart)->sum('price');
+        $whenLabel = $state['lab_when_label'] ?? 'Walk-in today';
+
+        // reset cart
+        $state['lab_cart'] = [];
+        $state['step'] = 'main_menu';
+
+        return [
+            "✅ *Lab booking confirmed!*\n\n🎫 Token: *{$token}*\n🗓 {$whenLabel}\n*Total: " . RegionService::formatMoney((float) $total) . "*\n\nPlease visit the lab/sample-collection counter and show this token. No doctor appointment needed.",
+            $this->t('main_menu', $lang),
+        ];
     }
 
     // ---------------------------------------------------------------
@@ -1639,9 +1857,9 @@ class ChatController extends Controller
                 'ar' => "تشرفنا، *{name}*! 🙏",
             ],
             'main_menu' => [
-                'en' => "How can I help you today?\n\n*1.* 📅 Book new appointment\n*2.* 🔄 Reschedule appointment\n*3.* ❌ Cancel appointment\n*4.* 📋 Check my appointments\n\nReply with *1, 2, 3, or 4* — or just type what you need!",
-                'hi' => "आज मैं आपकी कैसे मदद कर सकता हूं?\n\n*1.* 📅 नया अपॉइंटमेंट बुक करें\n*2.* 🔄 अपॉइंटमेंट रीशेड्यूल करें\n*3.* ❌ अपॉइंटमेंट कैंसल करें\n*4.* 📋 मेरी अपॉइंटमेंट देखें\n\n*1, 2, 3, या 4* भेजें — या बस बताएं आपको क्या चाहिए!",
-                'ar' => "كيف يمكنني مساعدتك اليوم؟\n\n*1.* 📅 حجز موعد جديد\n*2.* 🔄 إعادة جدولة موعد\n*3.* ❌ إلغاء موعد\n*4.* 📋 التحقق من مواعيدي\n\nأرسل *1، 2، 3، أو 4* — أو اكتب ما تحتاجه!",
+                'en' => "How can I help you today?\n\n*1.* 📅 Book new appointment\n*2.* 🔄 Reschedule appointment\n*3.* ❌ Cancel appointment\n*4.* 📋 Check my appointments\n*5.* 🧪 Book a lab test / scan\n\nReply with *1–5* — or just type what you need!",
+                'hi' => "आज मैं आपकी कैसे मदद कर सकता हूं?\n\n*1.* 📅 नया अपॉइंटमेंट बुक करें\n*2.* 🔄 अपॉइंटमेंट रीशेड्यूल करें\n*3.* ❌ अपॉइंटमेंट कैंसल करें\n*4.* 📋 मेरी अपॉइंटमेंट देखें\n*5.* 🧪 लैब टेस्ट / स्कैन बुक करें\n\n*1–5* भेजें — या बस बताएं आपको क्या चाहिए!",
+                'ar' => "كيف يمكنني مساعدتك اليوم؟\n\n*1.* 📅 حجز موعد جديد\n*2.* 🔄 إعادة جدولة موعد\n*3.* ❌ إلغاء موعد\n*4.* 📋 التحقق من مواعيدي\n*5.* 🧪 حجز فحص مخبري / أشعة\n\nأرسل *1–5* — أو اكتب ما تحتاجه!",
             ],
             'ask_complaint' => [
                 'en' => "What problem are you facing? Please describe your symptoms.\n\n_For example: fever since 2 days, headache, stomach pain, etc._",

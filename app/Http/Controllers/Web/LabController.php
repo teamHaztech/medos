@@ -20,7 +20,7 @@ class LabController extends Controller
         $dateFilter = $request->get('date', 'today');
 
         $query = Order::where('hospital_id', $hospitalId)
-            ->whereIn('type', ['lab', 'imaging'])
+            ->whereIn('type', ['lab', 'imaging', 'procedure'])
             ->whereIn('status', ['ordered', 'accepted', 'in_progress', 'completed']);
 
         if ($dateFilter === 'today') {
@@ -45,7 +45,7 @@ class LabController extends Controller
 
         // Stats
         $todayBase = Order::where('hospital_id', $hospitalId)
-            ->whereIn('type', ['lab', 'imaging'])
+            ->whereIn('type', ['lab', 'imaging', 'procedure'])
             ->whereDate('created_at', today());
 
         $stats = [
@@ -61,7 +61,7 @@ class LabController extends Controller
 
         // Avg TAT for completed orders today
         $completedToday = Order::where('hospital_id', $hospitalId)
-            ->whereIn('type', ['lab', 'imaging'])
+            ->whereIn('type', ['lab', 'imaging', 'procedure'])
             ->where('status', 'completed')
             ->whereDate('created_at', today())
             ->whereNotNull('completed_at')
@@ -90,7 +90,7 @@ class LabController extends Controller
         $sampleId = 'LAB-' . now()->format('Ymd') . '-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
         if (\Schema::hasColumn('orders', 'sample_id')) {
             $todayCount = Order::where('hospital_id', $order->hospital_id)
-                ->whereIn('type', ['lab', 'imaging'])
+                ->whereIn('type', ['lab', 'imaging', 'procedure'])
                 ->whereNotNull('sample_id')
                 ->whereDate('created_at', today())
                 ->count();
@@ -167,7 +167,7 @@ class LabController extends Controller
 
         // Get patient's previous results for these tests (trend comparison)
         $previousOrders = Order::where('patient_id', $order->patient_id)
-            ->whereIn('type', ['lab', 'imaging'])
+            ->whereIn('type', ['lab', 'imaging', 'procedure'])
             ->where('status', 'completed')
             ->where('id', '!=', $order->id)
             ->whereNotNull('results')
