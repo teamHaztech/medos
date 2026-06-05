@@ -560,7 +560,15 @@ class DoctorWebController extends Controller
             ->orderByDesc('referrals.created_at')
             ->get();
 
-        return view('doctor.referrals', compact('incoming', 'outgoing'));
+        // Lab/imaging/procedure tests this doctor sent to the lab
+        $labReferrals = \App\Modules\Core\Models\Order::where('ordered_by', $doctorId)
+            ->whereIn('type', ['lab', 'imaging', 'procedure'])
+            ->with('patient')
+            ->latest()
+            ->limit(50)
+            ->get();
+
+        return view('doctor.referrals', compact('incoming', 'outgoing', 'labReferrals'));
     }
 
     public function acceptReferral(string $id)

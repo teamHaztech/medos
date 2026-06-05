@@ -94,7 +94,8 @@
 
                     {{-- Meta row --}}
                     <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400 mb-3">
-                        <span x-text="'Dr. ' + (order.ordered_by?.name ?? '-')"></span>
+                        <span x-show="order.ordered_by?.name" class="font-medium text-indigo-600" x-text="'👨‍⚕️ Referred by Dr. ' + (order.ordered_by?.name || '')"></span>
+                        <span x-show="!order.ordered_by?.name" class="font-medium text-slate-500">🧍 Self-booked</span>
                         <span x-text="formatTime(order.created_at) + ' · ' + formatDate(order.created_at)"></span>
                         <span :class="{'text-green-600': order.tat_color === 'green', 'text-yellow-600 font-semibold': order.tat_color === 'yellow', 'text-red-600 font-bold': order.tat_color === 'red'}"
                               x-text="'TAT: ' + order.tat_display"

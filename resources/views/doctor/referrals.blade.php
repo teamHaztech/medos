@@ -16,6 +16,12 @@
         <button @click="tab='outgoing'" :class="tab==='outgoing'?'bg-blue-500 text-white shadow-sm':'text-slate-600 hover:bg-slate-100'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all">
             Sent by Me
         </button>
+        <button @click="tab='lab'" :class="tab==='lab'?'bg-indigo-500 text-white shadow-sm':'text-slate-600 hover:bg-slate-100'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+            To Lab
+            @if($labReferrals->count())
+                <span class="ml-1 px-1.5 py-0.5 bg-indigo-600 text-white text-xs rounded-full">{{ $labReferrals->count() }}</span>
+            @endif
+        </button>
     </div>
 
     {{-- Incoming referrals --}}
@@ -139,6 +145,51 @@
             @empty
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
                 <p class="text-slate-400">No outgoing referrals</p>
+            </div>
+            @endforelse
+        </div>
+    </div>
+
+    {{-- Lab referrals (tests sent to lab) --}}
+    <div x-show="tab==='lab'" style="display:none">
+        <div class="space-y-3">
+            @forelse($labReferrals as $order)
+            @php
+                $items = is_array($order->items) ? $order->items : [];
+                $typeLabel = ['lab' => 'Lab Test', 'imaging' => 'Imaging', 'procedure' => 'Procedure'][$order->type] ?? 'Lab';
+                $statusMap = [
+                    'ordered'     => ['Ordered', 'bg-amber-100 text-amber-800'],
+                    'accepted'    => ['Accepted', 'bg-amber-100 text-amber-800'],
+                    'in_progress' => ['In Progress', 'bg-blue-100 text-blue-800'],
+                    'completed'   => ['Completed', 'bg-green-100 text-green-800'],
+                    'cancelled'   => ['Cancelled', 'bg-red-100 text-red-800'],
+                ];
+                [$stLabel, $stClass] = $statusMap[$order->status] ?? [ucfirst($order->status ?? 'Ordered'), 'bg-slate-100 text-slate-600'];
+            @endphp
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                <div class="flex items-start justify-between mb-2">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-semibold">🧪 {{ $typeLabel }}</span>
+                            <span class="text-xs text-slate-400">{{ \Carbon\Carbon::parse($order->created_at)->diffForHumans() }}</span>
+                        </div>
+                        <h3 class="text-sm font-bold text-slate-900">{{ $order->patient?->name ?? 'Patient' }}</h3>
+                        <p class="text-xs text-slate-500">Sent to Lab{{ $order->patient?->phone ? ' · ' . $order->patient->phone : '' }}</p>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ $stClass }}">{{ $stLabel }}</span>
+                </div>
+                @if(count($items))
+                <div class="flex flex-wrap gap-1 mt-2">
+                    @foreach($items as $item)
+                        <span class="inline-block bg-slate-50 border border-slate-200 text-slate-700 text-xs px-2 py-0.5 rounded-full font-medium">{{ $item['name'] ?? '' }}</span>
+                    @endforeach
+                </div>
+                @endif
+            </div>
+            @empty
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+                <p class="text-slate-400">You haven't sent any patients to the lab yet</p>
+                <p class="text-xs text-slate-400 mt-1">Use "Refer to Lab" from the queue or during a consultation</p>
             </div>
             @endforelse
         </div>
