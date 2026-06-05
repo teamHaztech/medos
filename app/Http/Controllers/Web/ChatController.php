@@ -526,7 +526,19 @@ class ChatController extends Controller
             $query->where('type', $catMap[$trimmed]);
             $heading = "🧪 " . ucfirst($catMap[$trimmed] === 'lab' ? 'Lab tests' : ($catMap[$trimmed] === 'imaging' ? 'Imaging / Scans' : 'Procedures'));
         } elseif (strlen($trimmed) >= 2) {
-            $query->where('name', 'like', '%' . $trimmed . '%');
+            // Search name + code, expanding common abbreviations patients type
+            // (e.g. CBC -> Complete Blood Count) since the catalog stores full names.
+            $terms = [$trimmed];
+            $expansion = $this->labAbbreviation($trimmed);
+            if ($expansion) {
+                $terms[] = $expansion;
+            }
+            $query->where(function ($q) use ($terms) {
+                foreach ($terms as $t) {
+                    $q->orWhere('name', 'like', '%' . $t . '%')
+                      ->orWhere('code', 'like', '%' . $t . '%');
+                }
+            });
             $heading = "🔍 Results for \"{$trimmed}\"";
         } else {
             return ["Please reply *1*, *2*, *3*, or type a test name to search."];
@@ -553,6 +565,48 @@ class ChatController extends Controller
             "{$heading}:" . $list,
             "Reply with the *number(s)* you want — e.g. *1* or *1,3,5* for several. Type *back* to change category.",
         ];
+    }
+
+    /** Expand a common test abbreviation to a word in its full catalog name. */
+    private function labAbbreviation(string $input): ?string
+    {
+        $map = [
+            'cbc'   => 'Complete Blood Count',
+            'lft'   => 'Liver Function Test',
+            'kft'   => 'Kidney Function Test',
+            'rft'   => 'Renal Function',
+            'ecg'   => 'Electrocardiogram',
+            'ekg'   => 'Electrocardiogram',
+            'eeg'   => 'Electroencephalogram',
+            'echo'  => 'Echocardiography',
+            'tmt'   => 'Treadmill',
+            'pft'   => 'Pulmonary Function',
+            'hba1c' => 'Glycated Hemoglobin',
+            'a1c'   => 'Glycated Hemoglobin',
+            'tsh'   => 'Thyroid Stimulating Hormone',
+            'esr'   => 'Erythrocyte Sedimentation',
+            'crp'   => 'C-Reactive Protein',
+            'psa'   => 'Prostate Specific Antigen',
+            'rbs'   => 'Random Blood Sugar',
+            'fbs'   => 'Blood Sugar Fasting',
+            'ppbs'  => 'Blood Sugar Post Prandial',
+            'bun'   => 'Blood Urea Nitrogen',
+            'lipid' => 'Lipid Profile',
+            'b12'   => 'Vitamin B12',
+            'vit d' => 'Vitamin D',
+            'vitd'  => 'Vitamin D',
+            'usg'   => 'USG',
+            'ultrasound' => 'USG',
+            'sonography' => 'USG',
+            'xray'  => 'X-Ray',
+            'x ray' => 'X-Ray',
+            'ct'    => 'CT Scan',
+            'urine' => 'Urine',
+            'pt'    => 'Prothrombin',
+            'inr'   => 'INR',
+        ];
+
+        return $map[strtolower(trim($input))] ?? null;
     }
 
     /** Patient selects one or more tests by number(s). */
