@@ -77,4 +77,65 @@ class LabSlotService
 
         return $slots;
     }
+
+    /**
+     * Check whether a specific datetime is a bookable lab slot: lab active, time
+     * in the future, within an open block that day, and under capacity.
+     * Returns the validated Carbon time, or null if not bookable.
+     */
+    public static function validateTime(string $hospitalId, Carbon $dt): ?Carbon
+    {
+        if ($dt->lte(now())) {
+            return null;
+        }
+
+        $avail = LabAvailability::where('hospital_id', $hospitalId)->first();
+        if ($avail && ! $avail->is_active) {
+            return null;
+        }
+
+        $schedule = $avail && ! empty($avail->schedule) ? $avail->schedule : LabAvailability::defaultSchedule();
+        $capacity = max(1, $avail->capacity ?? 4);
+
+        $blocks = $schedule[strtolower($dt->format('l'))] ?? [];
+        $inOpenBlock = false;
+        foreach ($blocks as $b) {
+            if (empty($b['start']) || empty($b['end'])) {
+                continue;
+            }
+            $start = Carbon::parse($dt->toDateString() . ' ' . $b['start']);
+            $end = Carbon::parse($dt->toDateString() . ' ' . $b['end']);
+            if ($dt->gte($start) && $dt->lt($end)) {
+                $inOpenBlock = true;
+                break;
+            }
+        }
+        if (! $inOpenBlock) {
+            return null;
+        }
+
+        $used = DB::table('orders')
+            ->where('hospital_id', $hospitalId)
+            ->whereIn('type', ['lab', 'imaging', 'procedure'])
+            ->whereNotIn('status', ['cancelled'])
+            ->where('scheduled_for', $dt->toDateTimeString())
+            ->count();
+
+        return $used < $capacity ? $dt : null;
+    }
+
+    /** Human-readable summary of the lab's open days/hours, for prompts. */
+    public static function hoursSummary(string $hospitalId): string
+    {
+        $avail = LabAvailability::where('hospital_id', $hospitalId)->first();
+        $schedule = $avail && ! empty($avail->schedule) ? $avail->schedule : LabAvailability::defaultSchedule();
+        $open = [];
+        foreach (['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as $day) {
+            if (! empty($schedule[$day])) {
+                $ranges = collect($schedule[$day])->map(fn ($b) => $b['start'] . '-' . $b['end'])->implode(', ');
+                $open[] = ucfirst(substr($day, 0, 3)) . ' ' . $ranges;
+            }
+        }
+        return implode(' · ', $open);
+    }
 }

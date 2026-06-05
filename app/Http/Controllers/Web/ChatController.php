@@ -647,12 +647,27 @@ class ChatController extends Controller
         if (in_array($trimmed, ['walk-in', 'walkin', 'walk in', 'now', 'today']) || (int) $trimmed === $walkNum) {
             $state['lab_scheduled_for'] = null;
             $state['lab_when_label'] = 'Walk-in today';
-        } elseif (is_numeric($trimmed) && (int) $trimmed >= 1 && (int) $trimmed <= count($slots)) {
+        } elseif (preg_match('/^\d+$/', $trimmed) && (int) $trimmed >= 1 && (int) $trimmed <= count($slots)) {
             $slot = $slots[(int) $trimmed - 1];
             $state['lab_scheduled_for'] = $slot['start'];
             $state['lab_when_label'] = $slot['label'];
         } else {
-            return ["Please reply with a *number* between 1 and {$walkNum} to pick a slot."];
+            // Try a typed date/time like "tomorrow 9 am", validated against lab hours.
+            $parsed = null;
+            try { $parsed = Carbon::parse($msg); } catch (\Throwable $e) {}
+            $valid = $parsed ? \App\Modules\Core\Services\LabSlotService::validateTime($hospital->id, $parsed) : null;
+
+            if (! $valid) {
+                $hours = \App\Modules\Core\Services\LabSlotService::hoursSummary($hospital->id);
+                $reply = ["Sorry, that time isn't available. Reply with a *number* (1-{$walkNum}) to pick a listed slot, or type a time within lab hours."];
+                if ($hours) {
+                    $reply[] = "🕐 Lab hours: {$hours}";
+                }
+                return $reply;
+            }
+
+            $state['lab_scheduled_for'] = $valid->toDateTimeString();
+            $state['lab_when_label'] = $valid->format('l, M d \a\t g:i A');
         }
 
         $state['step'] = 'lab_confirm';
