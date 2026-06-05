@@ -749,12 +749,12 @@ class ChatController extends Controller
     /** Confirm and create the lab order(s). */
     private function handleLabConfirm(string $msg, array &$state, string $lang, $hospital): array
     {
-        $lower = strtolower(trim($msg));
-        if (in_array($lower, ['no', 'n', 'cancel', 'nahi', 'لا'])) {
+        $decision = $this->interpretYesNo($msg);
+        if ($decision === false) {
             $state['step'] = 'main_menu';
             return [$this->t('cancelled', $lang), $this->t('main_menu', $lang)];
         }
-        if (! in_array($lower, ['yes', 'y', 'ok', 'confirm', 'haan', 'ha', 'ji', 'نعم'])) {
+        if ($decision === null) {
             return [$this->t('yes_or_no', $lang)];
         }
 
@@ -1067,16 +1067,14 @@ class ChatController extends Controller
 
     private function handleCancelConfirm(string $msg, array &$state, string $lang, $hospital): array
     {
-        $lower = strtolower(trim($msg));
-        $yesWords = ['yes', 'y', 'ok', 'confirm', 'haan', 'ha', 'ji', 'theek', 'نعم'];
-        $noWords = ['no', 'n', 'nahi', 'nhi', 'لا'];
+        $decision = $this->interpretYesNo($msg);
 
-        if (in_array($lower, $noWords)) {
+        if ($decision === false) {
             $state['step'] = 'main_menu';
             return [$this->t('cancel_aborted', $lang), $this->t('main_menu', $lang)];
         }
 
-        if (!in_array($lower, $yesWords)) {
+        if ($decision === null) {
             return [$this->t('yes_or_no', $lang)];
         }
 
@@ -1335,7 +1333,7 @@ class ChatController extends Controller
             $state['step'] = 'pick_package';
 
             return [
-                "Dr. {$doc['name']} offers these treatment packages:" . $list,
+                "{$this->drName($doc['name'])} offers these treatment packages:" . $list,
                 "Reply with a *number* (1-{$consultNum}) to choose.",
             ];
         }
@@ -1353,8 +1351,13 @@ class ChatController extends Controller
         $trimmed = trim($msg);
         $consultNum = count($packages) + 1;
 
+        // Let the patient back out to pick a different doctor.
+        if ($this->wantsDifferentDoctor($trimmed)) {
+            return $this->reshowDoctors($state, $lang);
+        }
+
         if (! is_numeric($trimmed)) {
-            return ["Please reply with a *number* between 1 and {$consultNum} to choose a package."];
+            return ["Please reply with a *number* between 1 and {$consultNum} to choose a package, or type *different doctor* to go back."];
         }
 
         $choice = (int) $trimmed;
@@ -1434,7 +1437,7 @@ class ChatController extends Controller
             : "";
 
         return [
-            "Great! Dr. {$doctorName}" . ($dept ? " ({$dept})" : "") . " is available at these times{$pkgLine}:" . $slotList,
+            "Great! {$this->drName($doctorName)}" . ($dept ? " ({$dept})" : "") . " is available at these times{$pkgLine}:" . $slotList,
             "Reply with a *number* (1-" . count($availableSlots) . ") or type your preferred time (e.g. *3pm*, *tomorrow 10am*, *4:30 PM*).",
         ];
     }
@@ -1444,6 +1447,12 @@ class ChatController extends Controller
         $trimmed = trim($msg);
         $slots = $state['available_slots'] ?? [];
         $chosen = null;
+        $understoodTime = false; // a time was parsed but may not match a slot
+
+        // 0. Let the patient back out to pick a different doctor.
+        if ($this->wantsDifferentDoctor($trimmed)) {
+            return $this->reshowDoctors($state, $lang);
+        }
 
         // 1. Try number selection
         if (is_numeric($trimmed)) {
@@ -1469,6 +1478,7 @@ class ChatController extends Controller
                 if (!$ampm && $hour >= 1 && $hour <= 7) $hour += 12;
 
                 $timeMatch = sprintf('%02d:%02d', $hour, $min);
+                $understoodTime = true;
             }
 
             // Detect day preference
@@ -1536,6 +1546,10 @@ class ChatController extends Controller
         }
 
         if (!$chosen) {
+            if ($understoodTime) {
+                // We parsed a time, but no listed slot is close to it.
+                return ["That time isn't available with this doctor. Please pick a *number* (1-" . count($slots) . ") from the list above, type *earliest* for the first open slot, or type *different doctor* to choose someone else."];
+            }
             return ["I couldn't understand that time. Please reply with:\n• A *number* (1-" . count($slots) . ") from the list\n• A *time* like *3pm* or *tomorrow 10am*\n• Or type *earliest* for the first available slot."];
         }
 
@@ -1568,18 +1582,85 @@ class ChatController extends Controller
         ];
     }
 
+    /**
+     * Lenient yes/no interpreter. Tolerates casing, punctuation, and stretched
+     * letters ("Nope", "Yaaaa", "YYYEEESSS", "NNNOOO"). Returns true for yes,
+     * false for no, null when it can't tell.
+     */
+    private function interpretYesNo(string $msg): ?bool
+    {
+        // letters only (keep Arabic range), lowercased
+        $clean = preg_replace('/[^\p{L}]/u', '', mb_strtolower(trim($msg)));
+        if ($clean === '') return null;
+        // collapse any run of the same letter to one ("yesss" -> "yes", "yaaa" -> "ya")
+        $collapsed = preg_replace('/(\p{L})\1+/u', '$1', $clean);
+
+        $yes = ['yes', 'y', 'ya', 'yah', 'yeah', 'yea', 'yep', 'yup', 'yess', 'ok', 'okay', 'okk', 'sure', 'confirm', 'confirmed', 'book', 'done', 'haan', 'ha', 'han', 'ji', 'theek', 'thik', 'نعم'];
+        $no  = ['no', 'n', 'nope', 'nopes', 'nah', 'naa', 'na', 'cancel', 'dont', 'nahi', 'nhi', 'لا'];
+
+        if (in_array($clean, $no, true) || in_array($collapsed, $no, true)) return false;
+        if (in_array($clean, $yes, true) || in_array($collapsed, $yes, true)) return true;
+        return null;
+    }
+
+    /**
+     * Ensure a doctor name has exactly one "Dr." prefix (names in the DB already
+     * include it, so blindly prepending produced "Dr. Dr. Rajesh Kumar").
+     */
+    private function drName(?string $name): string
+    {
+        $n = trim((string) $name);
+        if ($n === '') return 'Doctor';
+        return preg_match('/^dr\.?\s/i', $n) ? $n : 'Dr. ' . $n;
+    }
+
+    /**
+     * Did the patient ask to switch to a different doctor mid-flow?
+     */
+    private function wantsDifferentDoctor(string $msg): bool
+    {
+        $l = strtolower(trim($msg));
+        foreach (['different doctor', 'change doctor', 'another doctor', 'other doctor', 'different dr', 'change dr', 'switch doctor'] as $phrase) {
+            if (str_contains($l, $phrase)) return true;
+        }
+        return in_array($l, ['different', 'change', 'other'], true);
+    }
+
+    /**
+     * Re-show the previously matched doctor list and return to selection.
+     */
+    private function reshowDoctors(array &$state, string $lang): array
+    {
+        $doctors = $state['available_doctors'] ?? [];
+        if (empty($doctors)) {
+            $state['step'] = 'ask_complaint';
+            return ["Sure — what problem are you facing? Please describe your symptoms."];
+        }
+
+        $state['step'] = 'show_doctors';
+        $doctorList = "";
+        foreach ($doctors as $i => $doc) {
+            $num = $i + 1;
+            $waitText = ($doc['wait'] ?? 0) == 0 ? $this->t('no_wait', $lang) : $doc['wait'] . ' min wait';
+            $doctorList .= "\n*{$num}.* {$doc['name']} ({$doc['dept']}) — {$waitText}";
+        }
+
+        return [
+            $this->t('choose_doctor', $lang) . $doctorList,
+            $this->t('type_number', $lang),
+        ];
+    }
+
     private function handleConfirmation(string $msg, array &$state, string $lang, $hospital): array
     {
-        $lower = strtolower(trim($msg));
-        $yesWords = ['yes', 'y', 'ok', 'confirm', 'haan', 'ha', 'ji', 'theek', 'book', 'نعم'];
-        $noWords = ['no', 'n', 'cancel', 'nahi', 'nhi', 'لا'];
+        $decision = $this->interpretYesNo($msg);
 
-        if (in_array($lower, $noWords)) {
+        if ($decision === false) {
             $state['step'] = 'main_menu';
             return [$this->t('cancelled', $lang), $this->t('main_menu', $lang)];
         }
 
-        if (!in_array($lower, $yesWords)) {
+        if ($decision === null) {
             return [$this->t('yes_or_no', $lang)];
         }
 
