@@ -1102,8 +1102,74 @@ class ChatController extends Controller
     // Book Flow (existing)
     // ---------------------------------------------------------------
 
+    /**
+     * Lightweight gibberish guard for a typed complaint. Lenient — known health
+     * keywords always pass; otherwise it checks vowel ratio, consonant runs, and
+     * that at least one token is word-like. Multilingual (Devanagari/Arabic) passes.
+     */
+    private function complaintLooksValid(string $text): bool
+    {
+        $t = strtolower(trim($text));
+        if ($t === '') {
+            return false;
+        }
+
+        // Non-Latin scripts (Hindi, Marathi, Arabic, etc.) — accept as-is.
+        if (preg_match('/[^\x00-\x7F]/u', $t)) {
+            return true;
+        }
+
+        // Known health/symptom words always pass.
+        $keywords = ['fever', 'pain', 'ache', 'cough', 'cold', 'flu', 'stomach', 'vomit', 'nausea',
+            'diarrhea', 'loose', 'skin', 'rash', 'itch', 'eye', 'ear', 'nose', 'throat', 'tooth', 'dental',
+            'chest', 'heart', 'bp', 'pressure', 'breath', 'asthma', 'diabetes', 'sugar', 'head', 'migraine',
+            'back', 'joint', 'knee', 'bone', 'fracture', 'swelling', 'swollen', 'wound', 'cut', 'burn', 'bleed',
+            'pregnan', 'period', 'urine', 'urinat', 'kidney', 'liver', 'weak', 'tired', 'fatigue', 'dizzy',
+            'allerg', 'infection', 'checkup', 'check up', 'follow', 'vaccin', 'sick', 'unwell', 'hurt', 'sore',
+            'cancer', 'tumor', 'thyroid', 'anxiety', 'stress', 'depress', 'sleep', 'appetite', 'weight'];
+        foreach ($keywords as $k) {
+            if (str_contains($t, $k)) {
+                return true;
+            }
+        }
+
+        $letters = preg_replace('/[^a-z]/', '', $t);
+        if (strlen($letters) < 3) {
+            return false;
+        }
+
+        // Too few vowels -> likely random typing (e.g. "bujsvf ds").
+        $vowels = preg_match_all('/[aeiou]/', $letters);
+        if ($vowels / strlen($letters) < 0.2) {
+            return false;
+        }
+
+        // Improbable consonant run.
+        if (preg_match('/[bcdfghjklmnpqrstvwxyz]{5,}/', $letters)) {
+            return false;
+        }
+
+        // At least one pronounceable token (>=3 chars, has a vowel, no 4+ consonant run).
+        foreach (preg_split('/\s+/', $t) as $tok) {
+            $tl = preg_replace('/[^a-z]/', '', $tok);
+            if (strlen($tl) >= 3 && preg_match('/[aeiou]/', $tl) && ! preg_match('/[bcdfghjklmnpqrstvwxyz]{4,}/', $tl)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function handleComplaint(string $msg, array &$state, string $lang, $hospital): array
     {
+        // Reject gibberish so we don't match a doctor to nonsense.
+        if (! $this->complaintLooksValid($msg)) {
+            $state['step'] = 'ask_complaint';
+            return [
+                "Sorry, I didn't catch that. Please describe your symptom in a few words.\n\n_For example: fever since 2 days, headache, stomach pain, chest pain._",
+            ];
+        }
+
         $state['complaint'] = $msg;
 
         // Map to specialty
