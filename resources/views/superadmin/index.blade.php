@@ -3,6 +3,7 @@
 @section('page-title', 'Multi-Hospital Dashboard')
 
 @section('content')
+<div x-data="superAdminHospitals()">
 {{-- Top KPI row --}}
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -99,7 +100,9 @@
         {{-- Actions --}}
         <div class="px-5 py-3 border-t border-slate-100 flex items-center gap-2">
             <a href="{{ route('web.superadmin.hospitals.show', $h->id) }}" class="btn-primary text-xs px-3 py-1.5">Manage</a>
-            <a href="{{ route('web.superadmin.hospitals.edit', $h->id) }}" class="btn-secondary text-xs px-3 py-1.5">Edit</a>
+            <button type="button"
+                @click="openEdit({ id:'{{ $h->id }}', name: @js($h->name), slug: @js($h->slug), country: @js($h->country ?? 'IN'), city: @js($h->city ?? ''), state: @js($h->state ?? ''), address: @js($h->address ?? ''), phone: @js($h->phone ?? ''), email: @js($h->email ?? ''), is_active: {{ $h->is_active ? 'true' : 'false' }} })"
+                class="btn-secondary text-xs px-3 py-1.5">Edit</button>
             @if(!$isCurrentHospital)
             <form method="POST" action="{{ route('switch-hospital') }}" class="inline">
                 @csrf
@@ -117,4 +120,76 @@
     </div>
     @endforeach
 </div>
+
+{{-- Edit Hospital modal --}}
+<div x-show="editOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="editOpen = false">
+    <div @click.away="editOpen = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[88vh] overflow-y-auto">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+            <h3 class="text-lg font-bold text-slate-900">Edit Hospital</h3>
+            <button type="button" @click="editOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+        </div>
+        <form method="POST" :action="editAction" class="p-6 grid grid-cols-2 gap-4">
+            @csrf @method('PUT')
+            <div class="col-span-2">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Hospital name *</label>
+                <input type="text" name="name" required x-model="edit.name" class="input-field">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Slug *</label>
+                <input type="text" name="slug" required x-model="edit.slug" class="input-field">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Country *</label>
+                <select name="country" x-model="edit.country" class="input-field">
+                    <option value="IN">India</option>
+                    <option value="AE">UAE</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">City *</label>
+                <input type="text" name="city" required x-model="edit.city" class="input-field">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">State</label>
+                <input type="text" name="state" x-model="edit.state" class="input-field">
+            </div>
+            <div class="col-span-2">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Address</label>
+                <input type="text" name="address" x-model="edit.address" class="input-field">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Phone</label>
+                <input type="text" name="phone" x-model="edit.phone" class="input-field">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                <input type="email" name="email" x-model="edit.email" class="input-field">
+            </div>
+            <div class="col-span-2">
+                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" name="is_active" value="1" x-model="edit.is_active" class="rounded border-slate-300">
+                    Active
+                </label>
+            </div>
+            <div class="col-span-2 flex items-center gap-3 pt-2">
+                <button type="submit" class="btn-primary px-5 py-2.5">Save Changes</button>
+                <button type="button" @click="editOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+function superAdminHospitals() {
+    return {
+        editOpen: false,
+        edit: { id:'', name:'', slug:'', country:'IN', city:'', state:'', address:'', phone:'', email:'', is_active:true },
+        openEdit(h) { this.edit = Object.assign({}, h); this.editOpen = true; },
+        get editAction() { return '{{ url('super-admin/hospitals') }}/' + this.edit.id; },
+    };
+}
+</script>
+@endpush
