@@ -55,36 +55,31 @@
                 Welcome, <span x-text="result.patientName"></span>!
             </h2>
 
-            {{-- Lab booking result --}}
-            <template x-if="result.type === 'lab'">
-                <div>
-                    <div class="space-y-2 text-xl text-slate-700">
-                        <p class="text-sm text-slate-500 uppercase font-bold">Lab Token</p>
-                        <p class="text-3xl font-black text-indigo-600" x-text="result.token"></p>
-                        <p class="text-base text-slate-600" x-text="'🗓 ' + result.when"></p>
-                    </div>
-                    <template x-if="result.tests && result.tests.length">
-                        <div class="mt-4 flex flex-wrap justify-center gap-1.5">
-                            <template x-for="t in result.tests" :key="t">
-                                <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-sm text-slate-700" x-text="t"></span>
-                            </template>
-                        </div>
+            {{-- Lab booking result (x-show, not nested template, for reliable rendering) --}}
+            <div x-show="result.type === 'lab'">
+                <div class="space-y-1 text-slate-700">
+                    <p class="text-sm text-slate-500 uppercase font-bold">Your Lab Token</p>
+                    <p class="text-4xl font-black text-indigo-600" x-text="result.token"></p>
+                    <p class="text-base text-slate-600" x-text="'🗓 ' + result.when"></p>
+                </div>
+                <div class="mt-3 flex flex-wrap justify-center gap-1.5" x-show="result.tests && result.tests.length">
+                    <template x-for="t in (result.tests || [])" :key="t">
+                        <span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-sm text-slate-700" x-text="t"></span>
                     </template>
                 </div>
-            </template>
+            </div>
 
             {{-- Doctor appointment result --}}
-            <template x-if="result.type !== 'lab'">
-                <div class="space-y-3 text-xl text-slate-700">
-                    <p>You're <span class="font-bold text-green-700">#<span x-text="result.queuePosition"></span></span> in line</p>
-                    <p>for <span class="font-bold" x-text="result.doctorName"></span></p>
-                    <p>Estimated wait: <span class="font-bold text-blue-600" x-text="result.estimatedWait"></span></p>
-                </div>
-            </template>
+            <div x-show="result.type !== 'lab'" class="space-y-3 text-xl text-slate-700">
+                <p>You're <span class="font-bold text-green-700">#<span x-text="result.queuePosition"></span></span> in line</p>
+                <p>for <span class="font-bold" x-text="result.doctorName"></span></p>
+                <p>Estimated wait: <span class="font-bold text-blue-600" x-text="result.estimatedWait"></span></p>
+            </div>
 
-            <div class="mt-6 p-4 bg-white rounded-xl text-lg">
-                <p class="text-slate-500">Please proceed to</p>
+            <div class="mt-6 p-5 rounded-xl text-lg" :class="result.type === 'lab' ? 'bg-indigo-50 border border-indigo-200' : 'bg-white'">
+                <p class="text-slate-500" x-text="result.type === 'lab' ? '🧪 Please go to the' : 'Please proceed to'"></p>
                 <p class="text-2xl font-bold text-slate-800" x-text="result.room || 'Waiting Area'"></p>
+                <p x-show="result.type === 'lab'" class="text-sm text-slate-500 mt-1">Show your token at the counter for sample collection.</p>
             </div>
 
             <div class="mt-6">
