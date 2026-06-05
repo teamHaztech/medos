@@ -3,13 +3,130 @@
 @section('title', 'Admin Dashboard')
 @section('page-title', 'Dashboard')
 
+@php
+    $cur = \App\Modules\Core\Services\RegionService::currency();
+    $statusMeta = [
+        'scheduled'   => ['label' => 'Scheduled',   'bar' => 'bg-slate-400',  'text' => 'text-slate-600'],
+        'confirmed'   => ['label' => 'Confirmed',    'bar' => 'bg-blue-500',   'text' => 'text-blue-600'],
+        'checked_in'  => ['label' => 'Checked In',   'bar' => 'bg-green-500',  'text' => 'text-green-600'],
+        'in_progress' => ['label' => 'In Progress',  'bar' => 'bg-amber-500',  'text' => 'text-amber-600'],
+        'completed'   => ['label' => 'Completed',    'bar' => 'bg-purple-500', 'text' => 'text-purple-600'],
+        'cancelled'   => ['label' => 'Cancelled',    'bar' => 'bg-red-500',    'text' => 'text-red-600'],
+        'no_show'     => ['label' => 'No-show',      'bar' => 'bg-slate-300',  'text' => 'text-slate-500'],
+    ];
+    $totalStatus = max(1, $statusBreakdown->sum());
+@endphp
+
 @section('content')
-    {{-- KPI Cards --}}
+    {{-- Greeting header --}}
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div>
+            <h2 class="text-xl font-bold text-slate-800">Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 17 ? 'afternoon' : 'evening') }}, {{ \Illuminate\Support\Str::of(auth()->user()->name)->explode(' ')->first() }}</h2>
+            <p class="text-sm text-slate-500">{{ now()->format('l, F j, Y') }} · Here's what's happening today</p>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-600">
+                <span class="w-2 h-2 rounded-full bg-green-500"></span>{{ $activeDoctors }} doctors active
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-600">
+                {{ $newPatientsToday }} new patients today
+            </span>
+        </div>
+    </div>
+
+    {{-- KPI Cards with deltas --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <x-stat-card title="Patients Today" :value="$patientsToday" icon="users" color="blue" />
-        <x-stat-card title="Avg Wait Time" :value="$avgWaitTime . ' min'" icon="clock" color="yellow" />
-        <x-stat-card title="AI Automation" :value="$aiRate . '%'" icon="cpu" color="purple" />
-        <x-stat-card title="Revenue Today" :value="\App\Modules\Core\Services\RegionService::currency() . number_format($revenueToday)" icon="currency" color="green" />
+        @php
+            $kpis = [
+                ['label' => 'Patients Today',  'value' => $patientsToday,                    'delta' => $deltas['patients'], 'accent' => 'blue',   'icon' => 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-4a4 4 0 11-8 0 4 4 0 018 0zm6 0a4 4 0 11-8 0 4 4 0 018 0z'],
+                ['label' => 'Revenue Today',   'value' => $cur . number_format($revenueToday), 'delta' => $deltas['revenue'],  'accent' => 'green',  'icon' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1'],
+                ['label' => 'Appointments',    'value' => $totalAppointmentsToday,           'delta' => null,                'accent' => 'purple', 'icon' => 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
+                ['label' => 'AI Automation',   'value' => $aiRate . '%',                      'delta' => null,                'accent' => 'amber',  'icon' => 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
+            ];
+        @endphp
+        @foreach($kpis as $kpi)
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <div class="flex items-start justify-between">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-{{ $kpi['accent'] }}-100 text-{{ $kpi['accent'] }}-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $kpi['icon'] }}"/></svg>
+                    </div>
+                    @if($kpi['delta'] && $kpi['delta']['dir'] !== 'flat')
+                        <span class="inline-flex items-center gap-0.5 text-xs font-semibold {{ $kpi['delta']['dir'] === 'up' ? 'text-green-600' : 'text-red-500' }}">
+                            {{ $kpi['delta']['dir'] === 'up' ? '▲' : '▼' }} {{ $kpi['delta']['pct'] }}%
+                        </span>
+                    @elseif($kpi['delta'])
+                        <span class="text-xs font-medium text-slate-400">—</span>
+                    @endif
+                </div>
+                <p class="text-2xl font-bold text-slate-800 mt-3">{{ $kpi['value'] }}</p>
+                <p class="text-xs text-slate-500 mt-0.5">{{ $kpi['label'] }}
+                    @if($kpi['delta']) <span class="text-slate-400">vs yesterday</span>@endif
+                </p>
+            </div>
+        @endforeach
+    </div>
+
+    {{-- Charts row --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {{-- 7-day appointments trend --}}
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-sm font-semibold text-slate-700">7-Day Trend</h3>
+                <div class="flex items-center gap-4 text-xs text-slate-400">
+                    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-blue-500"></span>Appointments</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-green-400"></span>Revenue</span>
+                </div>
+            </div>
+            <div class="flex items-end justify-between gap-2 sm:gap-3 h-48">
+                @foreach($weeklyTrend as $day)
+                    <div class="flex-1 flex flex-col items-center justify-end h-full group">
+                        <div class="flex items-end justify-center gap-1 w-full h-full">
+                            <div class="w-1/2 max-w-[18px] rounded-t bg-blue-500 hover:bg-blue-600 transition-all relative"
+                                 style="height: {{ max(2, round(($day['appointments'] / $maxAppts) * 100)) }}%"
+                                 title="{{ $day['appointments'] }} appointments">
+                                <span class="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-slate-600 opacity-0 group-hover:opacity-100 transition">{{ $day['appointments'] }}</span>
+                            </div>
+                            <div class="w-1/2 max-w-[18px] rounded-t bg-green-400 hover:bg-green-500 transition-all"
+                                 style="height: {{ max(2, round(($day['revenue'] / $maxRevenue) * 100)) }}%"
+                                 title="{{ $cur }}{{ number_format($day['revenue']) }} revenue"></div>
+                        </div>
+                        <p class="text-[11px] mt-2 {{ $day['isToday'] ? 'font-bold text-blue-600' : 'text-slate-400' }}">{{ $day['label'] }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Today's status breakdown --}}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 class="text-sm font-semibold text-slate-700 mb-4">Today's Appointments</h3>
+            @if($statusBreakdown->sum() > 0)
+                {{-- stacked bar --}}
+                <div class="flex h-3 rounded-full overflow-hidden mb-4 bg-slate-100">
+                    @foreach($statusMeta as $key => $meta)
+                        @php $c = $statusBreakdown[$key] ?? 0; @endphp
+                        @if($c > 0)
+                            <div class="{{ $meta['bar'] }}" style="width: {{ round(($c / $totalStatus) * 100) }}%" title="{{ $meta['label'] }}: {{ $c }}"></div>
+                        @endif
+                    @endforeach
+                </div>
+                <div class="space-y-2">
+                    @foreach($statusMeta as $key => $meta)
+                        @php $c = $statusBreakdown[$key] ?? 0; @endphp
+                        @if($c > 0)
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-sm {{ $meta['bar'] }}"></span>
+                                    <span class="text-slate-600">{{ $meta['label'] }}</span>
+                                </span>
+                                <span class="font-semibold {{ $meta['text'] }}">{{ $c }}</span>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            @else
+                <p class="text-sm text-slate-400 text-center py-8">No appointments today yet</p>
+            @endif
+        </div>
     </div>
 
     {{-- Main grid --}}
@@ -67,27 +184,54 @@
         </div>
     </div>
 
-    {{-- Quick Stats --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
-            <p class="text-2xl font-bold text-blue-600">{{ $quickStats['pendingAppointments'] }}</p>
-            <p class="text-xs text-slate-500 mt-1">Pending Appointments</p>
+    {{-- Department load + Quick Stats --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        {{-- Department load --}}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 class="text-sm font-semibold text-slate-700 mb-4">Department Load (Today)</h3>
+            @if($departmentLoad->count() > 0)
+                <div class="space-y-3">
+                    @foreach($departmentLoad as $dept => $count)
+                        <div>
+                            <div class="flex items-center justify-between text-sm mb-1">
+                                <span class="text-slate-600">{{ $dept }}</span>
+                                <span class="font-semibold text-slate-700">{{ $count }}</span>
+                            </div>
+                            <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500 rounded-full" style="width: {{ round(($count / $maxDeptLoad) * 100) }}%"></div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-sm text-slate-400 text-center py-6">No appointments today</p>
+            @endif
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
-            <p class="text-2xl font-bold text-yellow-600">{{ $quickStats['insurancePending'] }}</p>
-            <p class="text-xs text-slate-500 mt-1">Insurance Pending</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
-            <p class="text-2xl font-bold text-red-600">{{ $quickStats['billsUnpaid'] }}</p>
-            <p class="text-xs text-slate-500 mt-1">Bills Unpaid</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
-            <p class="text-2xl font-bold text-green-600">{{ $quickStats['consultationsDone'] }}</p>
-            <p class="text-xs text-slate-500 mt-1">Consultations Done</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
-            <p class="text-2xl font-bold text-slate-500">{{ $quickStats['noShows'] }}</p>
-            <p class="text-xs text-slate-500 mt-1">No-shows</p>
+
+        {{-- Quick Stats --}}
+        <div class="lg:col-span-2">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 h-full">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center flex flex-col justify-center">
+                    <p class="text-2xl font-bold text-blue-600">{{ $quickStats['pendingAppointments'] }}</p>
+                    <p class="text-xs text-slate-500 mt-1">Pending Appointments</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center flex flex-col justify-center">
+                    <p class="text-2xl font-bold text-yellow-600">{{ $quickStats['insurancePending'] }}</p>
+                    <p class="text-xs text-slate-500 mt-1">Insurance Pending</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center flex flex-col justify-center">
+                    <p class="text-2xl font-bold text-red-600">{{ $quickStats['billsUnpaid'] }}</p>
+                    <p class="text-xs text-slate-500 mt-1">Bills Unpaid</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center flex flex-col justify-center">
+                    <p class="text-2xl font-bold text-green-600">{{ $quickStats['consultationsDone'] }}</p>
+                    <p class="text-xs text-slate-500 mt-1">Consultations Done</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center flex flex-col justify-center">
+                    <p class="text-2xl font-bold text-slate-500">{{ $quickStats['noShows'] }}</p>
+                    <p class="text-xs text-slate-500 mt-1">No-shows</p>
+                </div>
+            </div>
         </div>
     </div>
 @endsection

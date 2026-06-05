@@ -109,10 +109,81 @@ class AdminWebController extends Controller
                 'time'    => $apt->updated_at?->diffForHumans() ?? '',
             ]);
 
+        // --- Advanced metrics ---
+
+        // 7-day trend (appointments + revenue per day)
+        $weeklyTrend = collect(range(6, 0))->map(function ($daysAgo) use ($hospitalId) {
+            $date = today()->subDays($daysAgo);
+            return [
+                'label'        => $date->format('D'),
+                'date'         => $date->format('M j'),
+                'isToday'      => $date->isToday(),
+                'appointments' => Appointment::where('hospital_id', $hospitalId)
+                    ->whereDate('slot_start', $date)->count(),
+                'revenue'      => (float) (Bill::where('hospital_id', $hospitalId)
+                    ->whereDate('created_at', $date)->sum('total_amount') ?? 0),
+            ];
+        });
+        $maxAppts   = max(1, (int) $weeklyTrend->max('appointments'));
+        $maxRevenue = max(1, (float) $weeklyTrend->max('revenue'));
+
+        // Day-over-day deltas
+        $yesterday = today()->subDay();
+        $patientsYesterday = Appointment::where('hospital_id', $hospitalId)
+            ->whereDate('slot_start', $yesterday)
+            ->distinct('patient_id')->count('patient_id');
+        $revenueYesterday = (float) (Bill::where('hospital_id', $hospitalId)
+            ->whereDate('created_at', $yesterday)->sum('total_amount') ?? 0);
+
+        $deltas = [
+            'patients' => $this->pctDelta($patientsToday, $patientsYesterday),
+            'revenue'  => $this->pctDelta($revenueToday, $revenueYesterday),
+        ];
+
+        // Today's appointment status breakdown
+        $todayAppts = Appointment::where('hospital_id', $hospitalId)
+            ->whereDate('slot_start', today())
+            ->with('doctor')
+            ->get();
+
+        $statusBreakdown = $todayAppts
+            ->groupBy(fn ($a) => $a->getRawOriginal('status') ?? 'scheduled')
+            ->map->count();
+
+        // Department load (appointments per department today)
+        $departmentLoad = $todayAppts
+            ->groupBy(fn ($a) => $a->doctor?->department ?: 'General')
+            ->map->count()
+            ->sortDesc();
+        $maxDeptLoad = max(1, (int) ($departmentLoad->max() ?? 0));
+
+        // Headline counters
+        $newPatientsToday = Patient::where('hospital_id', $hospitalId)
+            ->whereDate('created_at', today())->count();
+        $activeDoctors = Staff::where('hospital_id', $hospitalId)
+            ->where('is_active', true)
+            ->whereIn('role', ['doctor', 'hospital_admin'])->count();
+        $totalAppointmentsToday = $totalToday;
+
         return view('admin.dashboard', compact(
             'patientsToday', 'avgWaitTime', 'aiRate', 'revenueToday',
             'queues', 'recentActivity', 'quickStats',
+            'weeklyTrend', 'maxAppts', 'maxRevenue', 'deltas',
+            'statusBreakdown', 'departmentLoad', 'maxDeptLoad',
+            'newPatientsToday', 'activeDoctors', 'totalAppointmentsToday',
         ));
+    }
+
+    /**
+     * Percentage change vs a previous value. Returns [value, direction].
+     */
+    private function pctDelta($current, $previous): array
+    {
+        if ($previous <= 0) {
+            return ['pct' => $current > 0 ? 100 : 0, 'dir' => $current > 0 ? 'up' : 'flat'];
+        }
+        $pct = round((($current - $previous) / $previous) * 100);
+        return ['pct' => abs($pct), 'dir' => $pct > 0 ? 'up' : ($pct < 0 ? 'down' : 'flat')];
     }
 
     public function patients(Request $request)
