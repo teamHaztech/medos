@@ -134,31 +134,43 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-base font-semibold text-slate-800">Departments</h3>
-            <button @click="if(!departments.some(d => d.editing)) departments.push({ name: '', active: true, editing: true })" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add Department</button>
+            <button type="button" @click="openDept(-1)" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add Department</button>
         </div>
         <div class="space-y-2">
             <template x-for="(dept, index) in departments" :key="index">
                 <div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-                    <template x-if="dept.editing">
-                        <input type="text" x-model="dept.name"
-                               @keydown.enter="dept.name = dept.name.replace(/[^a-zA-Z\s\-&(),]/g, '').trim().substring(0, 100); dept.editing = dept.name.length >= 2"
-                               maxlength="100"
-                               pattern="^[a-zA-Z\s\-&(),]+$"
-                               class="input-field flex-1" placeholder="e.g. Cardiology">
-                    </template>
-                    <template x-if="!dept.editing">
-                        <span class="flex-1 text-sm text-slate-700" x-text="dept.name"></span>
-                    </template>
-                    <label class="flex items-center gap-1">
-                        <input type="checkbox" x-model="dept.active" class="rounded border-slate-300 text-blue-600">
-                        <span class="text-xs text-slate-500">Active</span>
-                    </label>
-                    <button @click="if(dept.editing) { dept.name = dept.name.replace(/[^a-zA-Z\s\-&(),]/g, '').trim().substring(0, 100); if(dept.name.length < 2) return; } dept.editing = !dept.editing" class="text-xs text-blue-600 hover:text-blue-800">
-                        <span x-text="dept.editing ? 'Save' : 'Edit'"></span>
-                    </button>
-                    <button @click="departments.splice(index, 1)" class="text-xs text-red-500 hover:text-red-700">Remove</button>
+                    <span class="flex-1 text-sm text-slate-700" x-text="dept.name"></span>
+                    <span class="text-xs px-2 py-0.5 rounded-full" :class="dept.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'" x-text="dept.active ? 'Active' : 'Inactive'"></span>
+                    <button type="button" @click="openDept(index)" class="text-xs text-blue-600 hover:text-blue-800">Edit</button>
+                    <button type="button" @click="departments.splice(index, 1)" class="text-xs text-red-500 hover:text-red-700">Remove</button>
                 </div>
             </template>
+            <p x-show="!departments.length" class="text-sm text-slate-400 py-2">No departments yet — add one.</p>
+        </div>
+    </div>
+
+    {{-- Department Add/Edit modal --}}
+    <div x-show="deptModal" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="deptModal = false">
+        <div @click.away="deptModal = false" class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <h3 class="text-lg font-bold text-slate-900" x-text="deptIndex === -1 ? 'Add Department' : 'Edit Department'"></h3>
+                <button type="button" @click="deptModal = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Department name *</label>
+                    <input type="text" x-model="deptDraft.name" maxlength="100" @keydown.enter="saveDept()" class="input-field" placeholder="e.g. Cardiology">
+                    <p x-show="deptError" x-text="deptError" class="text-red-500 text-xs mt-1"></p>
+                </div>
+                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" x-model="deptDraft.active" class="rounded border-slate-300 text-blue-600">
+                    Active
+                </label>
+                <div class="flex items-center gap-3 pt-1">
+                    <button type="button" @click="saveDept()" class="btn-primary px-5 py-2.5">Save</button>
+                    <button type="button" @click="deptModal = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -283,11 +295,33 @@ function settingsPage() {
             }));
         })(),
         departments: [
-            { name: 'General Medicine', active: true, editing: false },
-            { name: 'Cardiology', active: true, editing: false },
-            { name: 'Pediatrics', active: true, editing: false },
-            { name: 'Orthopedics', active: true, editing: false },
+            { name: 'General Medicine', active: true },
+            { name: 'Cardiology', active: true },
+            { name: 'Pediatrics', active: true },
+            { name: 'Orthopedics', active: true },
         ],
+        deptModal: false,
+        deptIndex: -1,
+        deptDraft: { name: '', active: true },
+        deptError: '',
+        openDept(index) {
+            this.deptIndex = index;
+            this.deptError = '';
+            this.deptDraft = index === -1
+                ? { name: '', active: true }
+                : Object.assign({}, this.departments[index]);
+            this.deptModal = true;
+        },
+        saveDept() {
+            const name = (this.deptDraft.name || '').replace(/[^a-zA-Z\s\-&(),]/g, '').trim().substring(0, 100);
+            if (name.length < 2) { this.deptError = 'Enter a valid department name (min 2 letters).'; return; }
+            const dupe = this.departments.some((d, i) => i !== this.deptIndex && d.name.toLowerCase() === name.toLowerCase());
+            if (dupe) { this.deptError = 'That department already exists.'; return; }
+            const dept = { name, active: !!this.deptDraft.active };
+            if (this.deptIndex === -1) { this.departments.push(dept); }
+            else { this.departments[this.deptIndex] = dept; }
+            this.deptModal = false;
+        },
         modules: [
             { key: 'ai_receptionist', name: 'AI Receptionist', description: 'Automated patient intake via WhatsApp', enabled: true },
             { key: 'triage', name: 'AI Triage', description: 'Automatic urgency classification', enabled: true },
