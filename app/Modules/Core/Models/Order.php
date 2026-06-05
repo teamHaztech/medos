@@ -43,6 +43,27 @@ class Order extends Model
         'critical_acknowledged' => 'boolean',
     ];
 
+    /**
+     * Lab/imaging/procedure bookings for a hospital on a given date — scheduled
+     * for that day, or walk-ins created that day. Newest scheduled first.
+     */
+    public static function labBookingsForDate(string $hospitalId, string $date)
+    {
+        return static::where('hospital_id', $hospitalId)
+            ->whereIn('type', ['lab', 'imaging', 'procedure'])
+            ->where(function ($q) use ($date) {
+                $q->whereDate('scheduled_for', $date)
+                  ->orWhere(function ($w) use ($date) {
+                      $w->whereNull('scheduled_for')->whereDate('created_at', $date);
+                  });
+            })
+            ->with(['patient', 'orderedBy'])
+            ->orderByRaw('scheduled_for is null')
+            ->orderBy('scheduled_for')
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
     public function encounter(): BelongsTo { return $this->belongsTo(Encounter::class); }
     public function patient(): BelongsTo { return $this->belongsTo(Patient::class); }
     public function orderedBy(): BelongsTo { return $this->belongsTo(Staff::class, 'ordered_by'); }

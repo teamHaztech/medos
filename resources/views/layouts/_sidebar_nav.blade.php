@@ -173,6 +173,10 @@
         <span class="ml-auto px-1.5 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">{{ $pendingLabOrders }}</span>
     @endif
 </a>
+<a href="{{ route('web.lab.bookings') }}" class="sidebar-link {{ request()->routeIs('web.lab.bookings') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+    Lab Appointments
+</a>
 <a href="{{ route('web.lab.slots') }}" class="sidebar-link {{ request()->routeIs('web.lab.slots') ? 'active' : '' }}">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
     Lab Slots

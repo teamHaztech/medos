@@ -139,6 +139,17 @@ class LabController extends Controller
         return redirect()->route('web.lab.slots')->with('success', 'Lab availability saved.');
     }
 
+    /**
+     * Lab bookings list (scheduled tests/scans) for the Lab Technician.
+     */
+    public function bookings(Request $request)
+    {
+        $date = $request->get('date', today()->toDateString());
+        $labBookings = Order::labBookingsForDate(Auth::user()->hospital_id, $date);
+
+        return view('lab.bookings', compact('labBookings', 'date'));
+    }
+
     public function collectSample(Request $request, string $id)
     {
         $order = Order::findOrFail($id);

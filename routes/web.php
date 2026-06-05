@@ -87,6 +87,7 @@ Route::middleware('auth')->prefix('doctor')->name('web.doctor.')->group(function
 
 Route::middleware('auth')->prefix('lab')->name('web.lab.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\LabController::class, 'dashboard'])->name('dashboard');
+    Route::get('bookings', [\App\Http\Controllers\Web\LabController::class, 'bookings'])->name('bookings');
     Route::get('slots', [\App\Http\Controllers\Web\LabController::class, 'slots'])->name('slots');
     Route::post('slots', [\App\Http\Controllers\Web\LabController::class, 'saveSlots'])->name('slots.save');
     Route::post('{id}/collect', [\App\Http\Controllers\Web\LabController::class, 'collectSample'])->name('collect');

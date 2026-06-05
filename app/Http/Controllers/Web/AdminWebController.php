@@ -288,7 +288,10 @@ class AdminWebController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.appointments', compact('appointments', 'doctors'));
+        // Lab bookings (orders) for the same date — direct bookings and referrals.
+        $labBookings = \App\Modules\Core\Models\Order::labBookingsForDate(Auth::user()->hospital_id, $date);
+
+        return view('admin.appointments', compact('appointments', 'doctors', 'labBookings'));
     }
 
     public function staff()
