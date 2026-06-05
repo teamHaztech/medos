@@ -91,14 +91,22 @@ class ChatController extends Controller
 
         $replies = [];
 
-        // Detect language
+        // Detect language — but only AUTO-switch on an UNAMBIGUOUS signal: the
+        // message actually contains Devanagari or Arabic script. Romanized text
+        // ("other doctor", "head pain") is too ambiguous and was wrongly flipping
+        // the whole conversation to Hindi.
         try {
-            $detector = app(LanguageDetector::class);
-            $langResult = $detector->detect($message);
-            if ($langResult['confidence'] > 0.7) {
-                $state['language'] = $langResult['language'];
+            if (preg_match('/[\x{0900}-\x{097F}]/u', $message)) {
+                $state['language'] = 'hi';
+            } elseif (preg_match('/[\x{0600}-\x{06FF}]/u', $message)) {
+                $state['language'] = 'ar';
             }
         } catch (\Throwable $e) {}
+
+        // An explicit request always wins ("in english", "hindi", "arabic").
+        if ($explicitLang = $this->explicitLanguage($message)) {
+            $state['language'] = $explicitLang;
+        }
 
         $lang = $state['language'];
 
@@ -1237,6 +1245,12 @@ class ChatController extends Controller
         $doctors = $state['available_doctors'] ?? [];
         $doc = null;
 
+        // 0. "different doctor" / a language request just re-shows the list (in the
+        // current language) instead of being mistaken for a doctor name.
+        if (!is_numeric($trimmed) && ($this->wantsDifferentDoctor($trimmed) || $this->explicitLanguage($trimmed))) {
+            return $this->reshowDoctors($state, $lang);
+        }
+
         // 1. Try number selection
         if (is_numeric($trimmed)) {
             $choice = intval($trimmed);
@@ -1245,17 +1259,25 @@ class ChatController extends Controller
             }
         }
 
-        // 2. Try exact/partial name match
+        // 2. Try name match — works even when the name is embedded in a sentence
+        // like "can i get Dr. Meera Nair" or "i want meera".
         if (!$doc) {
-            $search = strtolower($trimmed);
-            // Remove common prefixes like "dr", "dr.", "doctor"
-            $search = preg_replace('/^(dr\.?\s*|doctor\s*)/i', '', $search);
-            $search = trim($search);
+            $search = trim(preg_replace('/^(dr\.?\s*|doctor\s*)/i', '', strtolower($trimmed)));
+            // distinctive words the patient typed (letters only, 3+ chars)
+            $msgWords = array_filter(preg_split('/[^a-z]+/', strtolower($trimmed)), fn ($w) => strlen($w) >= 3);
 
             foreach ($doctors as $d) {
                 $dName = strtolower($d['name']);
-                $dNameClean = preg_replace('/^(dr\.?\s*)/i', '', $dName);
-                if (str_contains($dNameClean, $search) || str_contains($dName, $search) || str_contains(strtolower($d['dept']), $search)) {
+                $dNameClean = trim(preg_replace('/^(dr\.?\s*)/i', '', $dName));
+
+                // a) name contained in the message, or message contained in the name
+                if ($search !== '' && (str_contains($dNameClean, $search) || str_contains($search, $dNameClean) || str_contains($dName, $search))) {
+                    $doc = $d;
+                    break;
+                }
+                // b) any name word the patient actually typed (e.g. "meera", "nair")
+                $nameWords = array_filter(explode(' ', $dNameClean), fn ($w) => strlen($w) >= 3);
+                if (array_intersect($nameWords, $msgWords)) {
                     $doc = $d;
                     break;
                 }
@@ -1612,6 +1634,18 @@ class ChatController extends Controller
         $n = trim((string) $name);
         if ($n === '') return 'Doctor';
         return preg_match('/^dr\.?\s/i', $n) ? $n : 'Dr. ' . $n;
+    }
+
+    /**
+     * Detect an explicit "speak X" language request. Returns 'en'/'hi'/'ar' or null.
+     */
+    private function explicitLanguage(string $msg): ?string
+    {
+        $l = strtolower(trim($msg));
+        if (str_contains($l, 'english') || str_contains($l, 'angrezi') || str_contains($l, 'inglish')) return 'en';
+        if (str_contains($l, 'hindi') || preg_match('/[\x{0900}-\x{097F}]/u', $msg) && str_contains($msg, 'हिंदी')) return 'hi';
+        if (str_contains($l, 'arabic') || str_contains($msg, 'عربي') || str_contains($msg, 'العربية')) return 'ar';
+        return null;
     }
 
     /**
