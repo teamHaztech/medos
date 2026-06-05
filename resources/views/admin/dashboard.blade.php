@@ -81,13 +81,13 @@
                 @foreach($weeklyTrend as $day)
                     <div class="flex-1 flex flex-col items-center justify-end h-full group">
                         <div class="flex items-end justify-center gap-1 w-full h-full">
-                            <div class="w-1/2 max-w-[18px] rounded-t bg-blue-500 hover:bg-blue-600 transition-all relative"
-                                 style="height: {{ max(2, round(($day['appointments'] / $maxAppts) * 100)) }}%"
+                            <div class="w-1/2 rounded-t bg-blue-500 hover:bg-blue-600 transition-all relative"
+                                 style="max-width:18px; height: {{ max(2, round(($day['appointments'] / $maxAppts) * 100)) }}%"
                                  title="{{ $day['appointments'] }} appointments">
-                                <span class="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-slate-600 opacity-0 group-hover:opacity-100 transition">{{ $day['appointments'] }}</span>
+                                <span class="absolute left-1/2 -translate-x-1/2 text-[10px] font-semibold text-slate-600 opacity-0 group-hover:opacity-100 transition" style="top:-1.25rem">{{ $day['appointments'] }}</span>
                             </div>
-                            <div class="w-1/2 max-w-[18px] rounded-t bg-green-400 hover:bg-green-500 transition-all"
-                                 style="height: {{ max(2, round(($day['revenue'] / $maxRevenue) * 100)) }}%"
+                            <div class="w-1/2 rounded-t bg-green-400 hover:bg-green-500 transition-all"
+                                 style="max-width:18px; height: {{ max(2, round(($day['revenue'] / $maxRevenue) * 100)) }}%"
                                  title="{{ $cur }}{{ number_format($day['revenue']) }} revenue"></div>
                         </div>
                         <p class="text-[11px] mt-2 {{ $day['isToday'] ? 'font-bold text-blue-600' : 'text-slate-400' }}">{{ $day['label'] }}</p>

@@ -173,7 +173,7 @@
     <div x-show="showReferLab" x-transition.opacity style="display:none"
          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
          @keydown.escape.window="showReferLab = false">
-        <div @click.away="showReferLab = false" class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+        <div @click.away="showReferLab = false" style="max-height:85vh" class="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
                 <div>
                     <h3 class="text-lg font-bold text-slate-900">Refer to Lab</h3>

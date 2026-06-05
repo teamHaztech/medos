@@ -123,7 +123,7 @@
 
 {{-- Edit Hospital modal --}}
 <div x-show="editOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="editOpen = false">
-    <div @click.away="editOpen = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[88vh] overflow-y-auto">
+    <div @click.away="editOpen = false" style="max-height:88vh" class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-y-auto">
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
             <h3 class="text-lg font-bold text-slate-900">Edit Hospital</h3>
             <button type="button" @click="editOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>

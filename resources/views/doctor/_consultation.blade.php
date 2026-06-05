@@ -12,6 +12,7 @@
             <template x-if="selectedPatient.allergies?.length">
                 <span class="px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs font-medium" x-text="'⚠ ' + selectedPatient.allergies.join(', ')"></span>
             </template>
+            <button @click="openReferLab()" class="px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 text-xs" title="Send this patient to the lab now">Refer to Lab</button>
             <span class="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">In Progress</span>
         </div>
     </div>
@@ -71,7 +72,7 @@
                     <button @click="testFilter='imaging'" :class="testFilter==='imaging'?'bg-purple-500 text-white':'bg-purple-50 text-purple-700'" class="px-3 py-1 rounded text-xs font-semibold">Imaging</button>
                     <button @click="testFilter='procedure'" :class="testFilter==='procedure'?'bg-amber-500 text-white':'bg-amber-50 text-amber-700'" class="px-3 py-1 rounded text-xs font-semibold">Procedures</button>
                 </div>
-                <div class="flex flex-wrap gap-1 max-h-[200px] overflow-y-auto">
+                <div class="flex flex-wrap gap-1 overflow-y-auto" style="max-height:200px">
                     <template x-for="t in filteredTests" :key="t.id">
                         <button @click="toggleTest(t)" :class="orders.find(o=>o.id===t.id)?getTestActiveClass(t.type):getTestClass(t.type)" class="px-2 py-1 rounded text-xs font-medium transition-all">
                             <span x-text="t.name"></span>
@@ -98,7 +99,7 @@
             <div x-show="cTab==='rx'">
                 <div class="relative mb-3">
                     <input type="text" x-model="medSearch" @input.debounce.300ms="searchMedicines()" class="input-field text-sm pr-8" placeholder="Search medicines... (type 2+ chars)">
-                    <div x-show="medSearch.length >= 2 && medResults.length" class="absolute z-20 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-[200px] overflow-y-auto">
+                    <div x-show="medSearch.length >= 2 && medResults.length" style="max-height:200px" class="absolute z-20 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-y-auto">
                         <template x-for="med in medResults" :key="med.id">
                             <button @click="addMedicineFromDB(med); medSearch=''; medResults=[];" class="w-full flex items-center justify-between p-2.5 hover:bg-blue-50 text-left border-b border-slate-100 last:border-0">
                                 <div>
@@ -206,7 +207,7 @@
                             <template x-for="day in referralDays" :key="day.date">
                                 <button @click="referralSelectedDay = day"
                                     :class="referralSelectedDay?.date===day.date ? 'bg-blue-500 text-white shadow-sm' : day.available > 0 ? 'bg-white text-slate-700 hover:bg-blue-100' : 'bg-slate-100 text-slate-400'"
-                                    class="flex flex-col items-center px-3 py-2 rounded-lg text-center min-w-[60px] transition-all flex-shrink-0">
+                                    style="min-width:60px" class="flex flex-col items-center px-3 py-2 rounded-lg text-center transition-all flex-shrink-0">
                                     <span class="text-[10px] font-semibold" x-text="day.day"></span>
                                     <span class="text-sm font-bold" x-text="day.dateFmt.split(' ')[1]"></span>
                                     <span class="text-[10px]" :class="day.available > 0 ? 'text-green-600' : 'text-red-400'" x-text="day.available + ' free'"></span>
