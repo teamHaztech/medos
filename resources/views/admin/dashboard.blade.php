@@ -109,17 +109,21 @@
                         @endif
                     @endforeach
                 </div>
-                <div class="space-y-2">
+                <div class="space-y-1">
                     @foreach($statusMeta as $key => $meta)
                         @php $c = $statusBreakdown[$key] ?? 0; @endphp
                         @if($c > 0)
-                            <div class="flex items-center justify-between text-sm">
+                            <a href="{{ route('web.admin.appointments', ['date' => today()->toDateString(), 'status' => $key]) }}"
+                               class="flex items-center justify-between text-sm rounded-lg px-2 py-1.5 -mx-2 hover:bg-slate-50 transition-colors group">
                                 <span class="flex items-center gap-2">
                                     <span class="w-2.5 h-2.5 rounded-sm {{ $meta['bar'] }}"></span>
-                                    <span class="text-slate-600">{{ $meta['label'] }}</span>
+                                    <span class="text-slate-600 group-hover:text-slate-900">{{ $meta['label'] }}</span>
                                 </span>
-                                <span class="font-semibold {{ $meta['text'] }}">{{ $c }}</span>
-                            </div>
+                                <span class="flex items-center gap-1.5">
+                                    <span class="font-semibold {{ $meta['text'] }}">{{ $c }}</span>
+                                    <span class="text-slate-300 group-hover:text-slate-400">›</span>
+                                </span>
+                            </a>
                         @endif
                     @endforeach
                 </div>
