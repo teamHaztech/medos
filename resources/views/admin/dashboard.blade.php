@@ -70,29 +70,32 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {{-- 7-day appointments trend --}}
         <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center justify-between mb-1">
                 <h3 class="text-sm font-semibold text-slate-700">7-Day Trend</h3>
                 <div class="flex items-center gap-4 text-xs text-slate-400">
                     <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-blue-500"></span>Appointments</span>
                     <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-green-400"></span>Revenue</span>
                 </div>
             </div>
-            <div class="flex items-end justify-between gap-2 sm:gap-3 h-48">
+            <p class="text-xs text-slate-400 mb-5">Each day shows appointments booked (blue) and revenue billed (green). Hover a bar for exact figures.</p>
+            <div class="flex items-end justify-between gap-2 sm:gap-3 h-44">
                 @foreach($weeklyTrend as $day)
-                    <div class="flex-1 flex flex-col items-center justify-end h-full group">
-                        <div class="flex items-end justify-center gap-1 w-full h-full">
-                            <div class="w-1/2 rounded-t bg-blue-500 hover:bg-blue-600 transition-all relative"
-                                 style="max-width:18px; height: {{ max(2, round(($day['appointments'] / $maxAppts) * 100)) }}%"
-                                 title="{{ $day['appointments'] }} appointments">
-                                <span class="absolute left-1/2 -translate-x-1/2 text-[10px] font-semibold text-slate-600 opacity-0 group-hover:opacity-100 transition" style="top:-1.25rem">{{ $day['appointments'] }}</span>
-                            </div>
-                            <div class="w-1/2 rounded-t bg-green-400 hover:bg-green-500 transition-all"
-                                 style="max-width:18px; height: {{ max(2, round(($day['revenue'] / $maxRevenue) * 100)) }}%"
-                                 title="{{ $cur }}{{ number_format($day['revenue']) }} revenue"></div>
+                    <div class="flex-1 flex flex-col items-center justify-end h-full group" title="{{ $day['date'] }} — {{ $day['appointments'] }} appointment{{ $day['appointments'] == 1 ? '' : 's' }}, {{ $cur }}{{ number_format($day['revenue']) }} revenue">
+                        {{-- always-visible appointment count --}}
+                        <span class="text-[11px] font-bold {{ $day['isToday'] ? 'text-blue-600' : 'text-slate-500' }} mb-1">{{ $day['appointments'] }}</span>
+                        <div class="flex items-end justify-center gap-1 w-full" style="height: 100%">
+                            <div class="w-1/2 rounded-t bg-blue-500 group-hover:bg-blue-600 transition-all"
+                                 style="max-width:18px; height: {{ max(3, round(($day['appointments'] / $maxAppts) * 100)) }}%"></div>
+                            <div class="w-1/2 rounded-t bg-green-400 group-hover:bg-green-500 transition-all"
+                                 style="max-width:18px; height: {{ max(3, round(($day['revenue'] / $maxRevenue) * 100)) }}%"></div>
                         </div>
-                        <p class="text-[11px] mt-2 {{ $day['isToday'] ? 'font-bold text-blue-600' : 'text-slate-400' }}">{{ $day['label'] }}</p>
+                        <p class="text-[11px] mt-2 {{ $day['isToday'] ? 'font-bold text-blue-600' : 'text-slate-400' }}">{{ $day['isToday'] ? 'Today' : $day['label'] }}</p>
                     </div>
                 @endforeach
+            </div>
+            <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 text-xs">
+                <span class="text-slate-500">Last 7 days: <span class="font-semibold text-slate-700">{{ $weeklyTrend->sum('appointments') }}</span> appointments</span>
+                <span class="text-slate-500">Revenue: <span class="font-semibold text-green-600">{{ $cur }}{{ number_format($weeklyTrend->sum('revenue')) }}</span></span>
             </div>
         </div>
 
