@@ -714,6 +714,32 @@ class ChatController extends Controller
             $state['lab_scheduled_for'] = $slot['start'];
             $state['lab_when_label'] = $slot['label'];
         } else {
+            // A day with no specific time ("tomorrow", "Wednesday") → show that day's slots.
+            $hasTime = (bool) preg_match('/\d/', $trimmed);
+            $dayDate = $this->resolveLabDay($trimmed);
+            if ($dayDate && ! $hasTime) {
+                $all = \App\Modules\Core\Services\LabSlotService::availableSlots($hospital->id, 14, 500);
+                $daySlots = array_values(array_filter($all, fn ($s) => Carbon::parse($s['start'])->isSameDay($dayDate)));
+
+                if (! empty($daySlots)) {
+                    $state['lab_slots'] = $daySlots;
+                    $list = "";
+                    foreach ($daySlots as $i => $s) {
+                        $list .= "\n*" . ($i + 1) . ".* " . Carbon::parse($s['start'])->format('g:i A');
+                    }
+                    $wn = count($daySlots) + 1;
+                    $list .= "\n*{$wn}.* Walk-in (anytime today)";
+                    return ["🗓 *Slots for " . $dayDate->format('l, M d') . ":*" . $list . "\n\nReply with a *number* (1-{$wn})."];
+                }
+
+                $hours = \App\Modules\Core\Services\LabSlotService::hoursSummary($hospital->id);
+                $reply = ["No lab slots are open on " . $dayDate->format('l, M d') . ". Please try another day, pick a *number* (1-{$walkNum}) from the earlier list, or choose Walk-in."];
+                if ($hours) {
+                    $reply[] = "🕐 Lab hours: {$hours}";
+                }
+                return $reply;
+            }
+
             // Try a typed date/time like "tomorrow 9 am", validated against lab hours.
             $parsed = null;
             try { $parsed = Carbon::parse($msg); } catch (\Throwable $e) {}
@@ -721,7 +747,7 @@ class ChatController extends Controller
 
             if (! $valid) {
                 $hours = \App\Modules\Core\Services\LabSlotService::hoursSummary($hospital->id);
-                $reply = ["Sorry, that time isn't available. Reply with a *number* (1-{$walkNum}) to pick a listed slot, or type a time within lab hours."];
+                $reply = ["Sorry, that time isn't available. Reply with a *number* (1-{$walkNum}) to pick a listed slot, type a day like *Wednesday*, or a time within lab hours."];
                 if ($hours) {
                     $reply[] = "🕐 Lab hours: {$hours}";
                 }
@@ -1645,6 +1671,38 @@ class ChatController extends Controller
         if (str_contains($l, 'english') || str_contains($l, 'angrezi') || str_contains($l, 'inglish')) return 'en';
         if (str_contains($l, 'hindi') || preg_match('/[\x{0900}-\x{097F}]/u', $msg) && str_contains($msg, 'हिंदी')) return 'hi';
         if (str_contains($l, 'arabic') || str_contains($msg, 'عربي') || str_contains($msg, 'العربية')) return 'ar';
+        return null;
+    }
+
+    /**
+     * Resolve a day-only reference ("today", "tomorrow", "wed", "Wednesday") to a
+     * Carbon date, or null if the message names no day. Ignores any time portion.
+     */
+    private function resolveLabDay(string $msg): ?Carbon
+    {
+        $l = strtolower(trim(preg_replace('/[^a-z ]/i', ' ', $msg)));
+        $l = trim(preg_replace('/\s+/', ' ', $l));
+        if ($l === '') return null;
+
+        if (str_contains($l, 'today') || str_contains($l, 'tonight') || str_contains($l, 'aaj')) return Carbon::today();
+        if (str_contains($l, 'tomorrow') || str_contains($l, 'tmrw') || str_contains($l, 'tmr') || str_contains($l, 'kal')) return Carbon::tomorrow();
+
+        $words = explode(' ', $l);
+        $full = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        $short = ['mon' => 'monday', 'tue' => 'tuesday', 'tues' => 'tuesday', 'wed' => 'wednesday', 'weds' => 'wednesday', 'thu' => 'thursday', 'thur' => 'thursday', 'thurs' => 'thursday', 'fri' => 'friday', 'sat' => 'saturday', 'sun' => 'sunday'];
+
+        foreach ($full as $d) {
+            if (in_array($d, $words, true)) {
+                $date = Carbon::parse($d)->startOfDay();
+                return $date->isPast() && ! $date->isToday() ? $date->addWeek() : $date;
+            }
+        }
+        foreach ($short as $abbr => $name) {
+            if (in_array($abbr, $words, true)) {
+                $date = Carbon::parse($name)->startOfDay();
+                return $date->isPast() && ! $date->isToday() ? $date->addWeek() : $date;
+            }
+        }
         return null;
     }
 
