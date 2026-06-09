@@ -749,7 +749,7 @@ class ChatController extends Controller
 
             if (! $valid) {
                 $hours = \App\Modules\Core\Services\LabSlotService::hoursSummary($hospital->id);
-                $reply = ["Sorry, that time isn't available. Reply with a *number* (1-{$walkNum}) to pick a listed slot, type a day like *Wednesday*, or a time within lab hours."];
+                $reply = ["No problem! You can tell me a day in your own words — like *tomorrow*, *next Monday*, *this weekend*, *in 3 days*, or a date like *12 June*. Or reply with a *number* (1-{$walkNum}) from the list, or a time like *10 am*."];
                 if ($hours) {
                     $reply[] = "🕐 Lab hours: {$hours}";
                 }
@@ -1683,29 +1683,41 @@ class ChatController extends Controller
      */
     private function resolveLabDay(string $msg): ?Carbon
     {
-        $l = strtolower(trim(preg_replace('/[^a-z ]/i', ' ', $msg)));
-        $l = trim(preg_replace('/\s+/', ' ', $l));
+        $raw = strtolower(trim($msg));                                   // keeps digits, for "in 3 days"
+        $l = trim(preg_replace('/\s+/', ' ', preg_replace('/[^a-z ]/i', ' ', $raw))); // letters only
 
+        // --- relative phrases (order matters) ---
         // "day after tomorrow" MUST be checked before "tomorrow".
-        if ($l !== '' && (preg_match('/\bday\s+after\s+(tomorrow|tmrw|tmr)\b/', $l) || str_contains($l, 'overmorrow') || str_contains($l, 'parso'))) {
+        if ($l !== '' && (preg_match('/\bday\s+after\s+(tomorrow|tmrw|tmr|tom)\b/', $l) || str_contains($l, 'overmorrow') || str_contains($l, 'parso'))) {
             return Carbon::today()->addDays(2);
         }
-        if ($l !== '' && (str_contains($l, 'today') || str_contains($l, 'tonight') || str_contains($l, 'aaj'))) return Carbon::today();
+        if ($l !== '' && (str_contains($l, 'today') || str_contains($l, 'tonight') || str_contains($l, 'right now') || str_contains($l, 'asap') || str_contains($l, 'earliest') || str_contains($l, 'aaj'))) return Carbon::today();
         if ($l !== '' && (str_contains($l, 'tomorrow') || str_contains($l, 'tmrw') || str_contains($l, 'tmr') || str_contains($l, 'kal'))) return Carbon::tomorrow();
 
+        // "in 3 days", "after 2 days", "5 days later" (digits live in $raw, not $l)
+        if (preg_match('/\b(\d{1,2})\s*days?\b/', $raw, $m)) {
+            $n = (int) $m[1];
+            if ($n >= 1 && $n <= 90) return Carbon::today()->addDays($n);
+        }
+
+        // "this weekend" / "weekend" → the upcoming Saturday
+        if (str_contains($l, 'weekend')) return Carbon::parse('saturday')->startOfDay();
+
+        // "next week" → next Monday · "in a week" / "a week" → +7 days · "next month" → 1st of next month
+        if (str_contains($l, 'next week')) return Carbon::parse('next monday')->startOfDay();
+        if (preg_match('/\b(in\s+)?a\s+week\b/', $l) || str_contains($l, 'one week') || str_contains($l, 'week later')) return Carbon::today()->addWeek();
+        if (str_contains($l, 'next month')) return Carbon::today()->startOfMonth()->addMonthNoOverflow()->startOfDay();
+
+        // --- weekday names ("monday", "next fri", "coming wed") ---
+        $hasNext = str_contains($l, 'next');
         $words = explode(' ', $l);
         $full = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
         $short = ['mon' => 'monday', 'tue' => 'tuesday', 'tues' => 'tuesday', 'wed' => 'wednesday', 'weds' => 'wednesday', 'thu' => 'thursday', 'thur' => 'thursday', 'thurs' => 'thursday', 'fri' => 'friday', 'sat' => 'saturday', 'sun' => 'sunday'];
 
-        foreach ($full as $d) {
-            if (in_array($d, $words, true)) {
-                $date = Carbon::parse($d)->startOfDay();
-                return $date->isPast() && ! $date->isToday() ? $date->addWeek() : $date;
-            }
-        }
-        foreach ($short as $abbr => $name) {
-            if (in_array($abbr, $words, true)) {
-                $date = Carbon::parse($name)->startOfDay();
+        foreach (array_merge($full, array_keys($short)) as $token) {
+            if (in_array($token, $words, true)) {
+                $name = in_array($token, $full, true) ? $token : $short[$token];
+                $date = Carbon::parse(($hasNext ? 'next ' : '') . $name)->startOfDay();
                 return $date->isPast() && ! $date->isToday() ? $date->addWeek() : $date;
             }
         }
