@@ -714,8 +714,10 @@ class ChatController extends Controller
             $state['lab_scheduled_for'] = $slot['start'];
             $state['lab_when_label'] = $slot['label'];
         } else {
-            // A day with no specific time ("tomorrow", "Wednesday") → show that day's slots.
-            $hasTime = (bool) preg_match('/\d/', $trimmed);
+            // A day with no clock time ("tomorrow", "Wednesday", "12 June 2026") →
+            // show that day's slots. A clock time ("9am", "2:30 pm") books directly.
+            $hasTime = (bool) preg_match('/\d{1,2}\s*[:.]\s*\d{2}/', $trimmed)
+                || (bool) preg_match("/\d{1,2}\s*(a\.?m\.?|p\.?m\.?|o'?clock)/i", $trimmed);
             $dayDate = $this->resolveLabDay($trimmed);
             if ($dayDate && ! $hasTime) {
                 $all = \App\Modules\Core\Services\LabSlotService::availableSlots($hospital->id, 14, 500);
@@ -1675,17 +1677,21 @@ class ChatController extends Controller
     }
 
     /**
-     * Resolve a day-only reference ("today", "tomorrow", "wed", "Wednesday") to a
-     * Carbon date, or null if the message names no day. Ignores any time portion.
+     * Resolve a day reference ("today", "tomorrow", "day after tomorrow", "wed",
+     * "Wednesday", or an explicit date like "12 June 2026" / "16/06") to a Carbon
+     * date, or null if the message names no day. Ignores any clock time.
      */
     private function resolveLabDay(string $msg): ?Carbon
     {
         $l = strtolower(trim(preg_replace('/[^a-z ]/i', ' ', $msg)));
         $l = trim(preg_replace('/\s+/', ' ', $l));
-        if ($l === '') return null;
 
-        if (str_contains($l, 'today') || str_contains($l, 'tonight') || str_contains($l, 'aaj')) return Carbon::today();
-        if (str_contains($l, 'tomorrow') || str_contains($l, 'tmrw') || str_contains($l, 'tmr') || str_contains($l, 'kal')) return Carbon::tomorrow();
+        // "day after tomorrow" MUST be checked before "tomorrow".
+        if ($l !== '' && (preg_match('/\bday\s+after\s+(tomorrow|tmrw|tmr)\b/', $l) || str_contains($l, 'overmorrow') || str_contains($l, 'parso'))) {
+            return Carbon::today()->addDays(2);
+        }
+        if ($l !== '' && (str_contains($l, 'today') || str_contains($l, 'tonight') || str_contains($l, 'aaj'))) return Carbon::today();
+        if ($l !== '' && (str_contains($l, 'tomorrow') || str_contains($l, 'tmrw') || str_contains($l, 'tmr') || str_contains($l, 'kal'))) return Carbon::tomorrow();
 
         $words = explode(' ', $l);
         $full = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -1703,7 +1709,49 @@ class ChatController extends Controller
                 return $date->isPast() && ! $date->isToday() ? $date->addWeek() : $date;
             }
         }
-        return null;
+
+        // Explicit calendar date — "12 June 2026", "June 12", "12th jun", "16/06/2026".
+        return $this->parseExplicitDate($msg);
+    }
+
+    /**
+     * Best-effort parse of an explicit calendar date (no clock time). Returns a
+     * Carbon date today-or-later within a year, or null.
+     */
+    private function parseExplicitDate(string $msg): ?Carbon
+    {
+        $l = strtolower($msg);
+        $months = 'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?';
+        $candidate = null;
+
+        if (preg_match('/\b(\d{1,2})(?:st|nd|rd|th)?\s+(' . $months . ')\b\s*(\d{4})?/i', $l, $m)) {
+            $candidate = $m[1] . ' ' . $m[2] . ' ' . ($m[3] ?? '');      // 12 June [2026]
+        } elseif (preg_match('/\b(' . $months . ')\s+(\d{1,2})(?:st|nd|rd|th)?\b\s*(\d{4})?/i', $l, $m)) {
+            $candidate = $m[2] . ' ' . $m[1] . ' ' . ($m[3] ?? '');      // June 12 [2026]
+        } elseif (preg_match('#\b(\d{1,2})\s*[/\-.]\s*(\d{1,2})(?:\s*[/\-.]\s*(\d{2,4}))?\b#', $l, $m)) {
+            // numeric, day-first (Indian convention): dd/mm[/yyyy]
+            $day = (int) $m[1]; $mon = (int) $m[2];
+            $year = isset($m[3]) ? (int) (strlen($m[3]) === 2 ? '20' . $m[3] : $m[3]) : (int) now()->year;
+            if ($day >= 1 && $day <= 31 && $mon >= 1 && $mon <= 12) {
+                $candidate = sprintf('%04d-%02d-%02d', $year, $mon, $day);
+            }
+        }
+
+        if (! $candidate) return null;
+
+        try {
+            $dt = Carbon::parse(trim($candidate))->startOfDay();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        // No explicit year given and the date already passed → assume next year.
+        if (! preg_match('/\d{4}/', $candidate) && $dt->isPast() && ! $dt->isToday()) {
+            $dt->addYear();
+        }
+        if ($dt->lt(Carbon::today()) || $dt->gt(Carbon::today()->addYear())) return null;
+
+        return $dt;
     }
 
     /**
