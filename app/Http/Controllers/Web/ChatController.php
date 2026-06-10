@@ -617,7 +617,44 @@ class ChatController extends Controller
         return $map[strtolower(trim($input))] ?? null;
     }
 
-    /** Patient selects one or more tests by number(s). */
+    /**
+     * Match a typed test name against the offered options. Returns matching
+     * options (each with a 1-based '_num'), best matches first. Empty if none.
+     */
+    private function matchLabOptionsByName(string $msg, array $options): array
+    {
+        $norm = fn ($s) => trim(preg_replace('/\s+/', ' ', preg_replace('/[^a-z0-9 ]/', ' ', strtolower($s))));
+        $q = $norm($msg);
+        // Expand a known abbreviation typed on its own (e.g. "cbc").
+        if (($exp = $this->labAbbreviation(trim(strtolower($msg)))) !== null) {
+            $q = $norm($exp);
+        }
+        if (mb_strlen($q) < 3) return [];
+
+        $qWords = array_values(array_filter(explode(' ', $q), fn ($w) => strlen($w) >= 3));
+        $exact = []; $contains = []; $word = [];
+
+        foreach ($options as $i => $o) {
+            $o['_num'] = $i + 1;
+            $n = $norm($o['name']);
+            if ($n === $q) { $exact[] = $o; continue; }
+            if (str_contains($n, $q) || str_contains($q, $n)) { $contains[] = $o; continue; }
+            if ($qWords) {
+                $nWords = explode(' ', $n);
+                $allPresent = true;
+                foreach ($qWords as $w) {
+                    if (! in_array($w, $nWords, true)) { $allPresent = false; break; }
+                }
+                if ($allPresent) $word[] = $o;
+            }
+        }
+
+        if ($exact) return $exact;
+        if ($contains) return $contains;
+        return $word;
+    }
+
+    /** Patient selects one or more tests by number(s) or by name. */
     private function handleLabSelect(string $msg, array &$state, string $lang, $hospital): array
     {
         $trimmed = strtolower(trim($msg));
@@ -630,25 +667,43 @@ class ChatController extends Controller
         preg_match_all('/\d+/', $trimmed, $m);
         $nums = array_unique(array_map('intval', $m[0] ?? []));
 
-        if (empty($nums)) {
-            return ["Please reply with the *number(s)* of the test(s) you want — e.g. *2* or *1,4*."];
-        }
-
         $cart = $state['lab_cart'] ?? [];
         $added = [];
-        foreach ($nums as $n) {
-            if ($n >= 1 && $n <= count($options)) {
-                $pick = $options[$n - 1];
-                // avoid duplicates by name
-                if (! collect($cart)->contains(fn ($c) => $c['name'] === $pick['name'])) {
-                    $cart[] = $pick;
-                    $added[] = $pick['name'];
+
+        if (! empty($nums)) {
+            foreach ($nums as $n) {
+                if ($n >= 1 && $n <= count($options)) {
+                    $pick = $options[$n - 1];
+                    if (! collect($cart)->contains(fn ($c) => $c['name'] === $pick['name'])) {
+                        $cart[] = $pick;
+                        $added[] = $pick['name'];
+                    }
                 }
             }
-        }
+            if (empty($added)) {
+                return ["Those numbers aren't in the list. Please reply with a number between 1 and " . count($options) . "."];
+            }
+        } else {
+            // No number — try to match the test by name ("CT Scan Chest").
+            $matches = $this->matchLabOptionsByName($trimmed, $options);
 
-        if (empty($added)) {
-            return ["Those numbers aren't in the list. Please reply with a number between 1 and " . count($options) . "."];
+            if (empty($matches)) {
+                return ["I couldn't find that test in the list. Reply with a *number* (1-" . count($options) . ") or type the test name as shown above."];
+            }
+            if (count($matches) > 1) {
+                $list = "";
+                foreach ($matches as $opt) {
+                    $list .= "\n*" . ($opt['_num']) . ".* {$opt['name']} — " . RegionService::formatMoney((float) $opt['price']);
+                }
+                return ["A few tests match that — which one?" . $list . "\n\nReply with the *number*."];
+            }
+            $pick = $matches[0];
+            if (! collect($cart)->contains(fn ($c) => $c['name'] === $pick['name'])) {
+                $cart[] = ['name' => $pick['name'], 'price' => $pick['price'], 'type' => $pick['type'] ?? 'lab'];
+                $added[] = $pick['name'];
+            } else {
+                return ["{$pick['name']} is already in your list. Reply *done* or pick another, then choose a slot."];
+            }
         }
 
         $state['lab_cart'] = $cart;
