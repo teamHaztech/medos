@@ -6,11 +6,13 @@
 
 @section('content')
 <div x-data="{
-        showAdd: false,
         editOpen: false,
-        edit: { id:'', asset_name:'', asset_type:'', serial_number:'', model:'', manufacturer:'', department:'', location:'', purchase_date:'', purchase_cost:'', vendor_id:'', status:'active', notes:'' },
-        openEdit(a) { this.edit = Object.assign({}, a); this.editOpen = true; },
-        get editAction() { return '{{ url('admin/assets') }}/' + this.edit.id; }
+        mode: 'add',
+        blank: { id:'', asset_name:'', asset_type:'', serial_number:'', model:'', manufacturer:'', department:'', location:'', purchase_date:'', purchase_cost:'', vendor_id:'', status:'active', notes:'' },
+        edit: {},
+        openAdd() { this.edit = Object.assign({}, this.blank); this.mode = 'add'; this.editOpen = true; },
+        openEdit(a) { this.edit = Object.assign({}, a); this.mode = 'edit'; this.editOpen = true; },
+        get formAction() { return this.mode === 'edit' ? '{{ url('admin/assets') }}/' + this.edit.id : '{{ url('admin/assets') }}'; }
     }">
 
     {{-- Sub-nav --}}
@@ -20,7 +22,7 @@
         <a href="{{ route('web.admin.vendors.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Vendors</a>
         <div class="ml-auto flex gap-2">
             <a href="{{ route('web.admin.assets.export') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Export CSV</a>
-            <button @click="showAdd = !showAdd" class="btn-primary">+ Add Asset</button>
+            <button @click="openAdd()" class="btn-primary">+ Add Asset</button>
         </div>
     </div>
 
@@ -56,34 +58,6 @@
             <span class="ml-auto self-center text-sm text-slate-500">{{ $assets->count() }} assets</span>
         </div>
     </form>
-
-    {{-- Add form --}}
-    <div x-show="showAdd" style="display:none" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
-        <form method="POST" action="{{ route('web.admin.assets.store') }}" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            @csrf
-            <input type="text" name="asset_name" required class="input-field" placeholder="Asset name *">
-            <input list="asset-types" name="asset_type" class="input-field" placeholder="Type (e.g. Ventilator)">
-            <datalist id="asset-types">@foreach($types as $t)<option value="{{ $t }}">@endforeach</datalist>
-            <input type="text" name="serial_number" class="input-field" placeholder="Serial number">
-            <input type="text" name="model" class="input-field" placeholder="Model">
-            <input type="text" name="manufacturer" class="input-field" placeholder="Manufacturer">
-            <select name="department" class="input-field">
-                <option value="">Department</option>
-                @foreach($departments as $d)<option value="{{ $d }}">{{ $d }}</option>@endforeach
-            </select>
-            <input type="text" name="location" class="input-field" placeholder="Location (e.g. OT-1)">
-            <select name="vendor_id" class="input-field">
-                <option value="">Vendor</option>
-                @foreach($vendors as $v)<option value="{{ $v->id }}">{{ $v->name }}</option>@endforeach
-            </select>
-            <input type="date" name="purchase_date" class="input-field" placeholder="Purchase date">
-            <input type="number" step="0.01" name="purchase_cost" class="input-field" placeholder="Purchase cost ({{ $cur }})">
-            <select name="status" class="input-field">
-                @foreach($statuses as $k => $label)<option value="{{ $k }}">{{ $label }}</option>@endforeach
-            </select>
-            <button type="submit" class="btn-success">Save Asset</button>
-        </form>
-    </div>
 
     {{-- Table --}}
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -148,11 +122,12 @@
     <div x-show="editOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="editOpen = false">
         <div @click.away="editOpen = false" style="max-height:88vh" class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-y-auto">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900">Edit Asset</h3>
+                <h3 class="text-lg font-bold text-slate-900" x-text="mode === 'edit' ? 'Edit Asset' : 'Add Asset'"></h3>
                 <button type="button" @click="editOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
             </div>
-            <form method="POST" :action="editAction" class="p-6 grid grid-cols-2 gap-4">
-                @csrf @method('PUT')
+            <form method="POST" :action="formAction" class="p-6 grid grid-cols-2 gap-4">
+                @csrf
+                <input type="hidden" name="_method" :value="mode === 'edit' ? 'PUT' : 'POST'">
                 <div class="col-span-2">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Asset name *</label>
                     <input type="text" name="asset_name" required x-model="edit.asset_name" class="input-field">
@@ -186,7 +161,7 @@
                 </div>
                 <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Notes</label><textarea name="notes" x-model="edit.notes" rows="2" class="input-field"></textarea></div>
                 <div class="col-span-2 flex items-center gap-3 pt-2">
-                    <button type="submit" class="btn-primary px-5 py-2.5">Save Changes</button>
+                    <button type="submit" class="btn-primary px-5 py-2.5" x-text="mode === 'edit' ? 'Save Changes' : 'Add Asset'"></button>
                     <button type="button" @click="editOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>

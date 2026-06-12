@@ -4,11 +4,13 @@
 
 @section('content')
 <div x-data="{
-        showAdd: false,
         editOpen: false,
-        edit: { id:'', name:'', contact_person:'', phone:'', email:'', address:'', service_type:'' },
-        openEdit(v) { this.edit = Object.assign({}, v); this.editOpen = true; },
-        get editAction() { return '{{ url('admin/vendors') }}/' + this.edit.id; }
+        mode: 'add',
+        blank: { id:'', name:'', contact_person:'', phone:'', email:'', address:'', service_type:'' },
+        edit: {},
+        openAdd() { this.edit = Object.assign({}, this.blank); this.mode = 'add'; this.editOpen = true; },
+        openEdit(v) { this.edit = Object.assign({}, v); this.mode = 'edit'; this.editOpen = true; },
+        get formAction() { return this.mode === 'edit' ? '{{ url('admin/vendors') }}/' + this.edit.id : '{{ url('admin/vendors') }}'; }
     }">
 
     {{-- Sub-nav --}}
@@ -16,25 +18,12 @@
         <a href="{{ route('web.admin.assets.dashboard') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Dashboard</a>
         <a href="{{ route('web.admin.assets.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Asset Register</a>
         <a href="{{ route('web.admin.vendors.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 text-white">Vendors</a>
-        <button @click="showAdd = !showAdd" class="ml-auto btn-primary">+ Add Vendor</button>
+        <button @click="openAdd()" class="ml-auto btn-primary">+ Add Vendor</button>
     </div>
 
     @if(session('success'))
         <div class="mb-4 px-4 py-2.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">{{ session('success') }}</div>
     @endif
-
-    <div x-show="showAdd" style="display:none" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
-        <form method="POST" action="{{ route('web.admin.vendors.store') }}" class="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            @csrf
-            <input type="text" name="name" required class="input-field" placeholder="Vendor name *">
-            <input type="text" name="contact_person" class="input-field" placeholder="Contact person">
-            <input type="text" name="service_type" class="input-field" placeholder="Service type (Biomedical...)">
-            <input type="text" name="phone" class="input-field" placeholder="Phone">
-            <input type="email" name="email" class="input-field" placeholder="Email">
-            <input type="text" name="address" class="input-field" placeholder="Address">
-            <button type="submit" class="btn-success">Save Vendor</button>
-        </form>
-    </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table class="w-full">
@@ -78,11 +67,12 @@
     <div x-show="editOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="editOpen = false">
         <div @click.away="editOpen = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900">Edit Vendor</h3>
+                <h3 class="text-lg font-bold text-slate-900" x-text="mode === 'edit' ? 'Edit Vendor' : 'Add Vendor'"></h3>
                 <button type="button" @click="editOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
             </div>
-            <form method="POST" :action="editAction" class="p-6 grid grid-cols-2 gap-4">
-                @csrf @method('PUT')
+            <form method="POST" :action="formAction" class="p-6 grid grid-cols-2 gap-4">
+                @csrf
+                <input type="hidden" name="_method" :value="mode === 'edit' ? 'PUT' : 'POST'">
                 <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Name *</label><input type="text" name="name" required x-model="edit.name" class="input-field"></div>
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Contact person</label><input type="text" name="contact_person" x-model="edit.contact_person" class="input-field"></div>
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Service type</label><input type="text" name="service_type" x-model="edit.service_type" class="input-field"></div>
@@ -90,7 +80,7 @@
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Email</label><input type="email" name="email" x-model="edit.email" class="input-field"></div>
                 <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Address</label><input type="text" name="address" x-model="edit.address" class="input-field"></div>
                 <div class="col-span-2 flex items-center gap-3 pt-2">
-                    <button type="submit" class="btn-primary px-5 py-2.5">Save Changes</button>
+                    <button type="submit" class="btn-primary px-5 py-2.5" x-text="mode === 'edit' ? 'Save Changes' : 'Add Vendor'"></button>
                     <button type="button" @click="editOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
