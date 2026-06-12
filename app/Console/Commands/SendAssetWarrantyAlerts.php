@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Modules\Asset\Models\AssetCalibration;
+use App\Modules\Asset\Models\AssetMaintenanceLog;
 use App\Modules\Asset\Models\AssetWarranty;
 use App\Modules\Core\Models\NotificationLog;
 use App\Notifications\AssetWarrantyExpiring;
@@ -15,7 +17,7 @@ class SendAssetWarrantyAlerts extends Command
 {
     protected $signature = 'medos:asset-warranty-alerts';
 
-    protected $description = 'Alert hospitals about asset warranties/AMC/CMC expiring within their reminder window';
+    protected $description = 'Alert hospitals about asset warranties, maintenance and calibrations coming due';
 
     public function handle(): int
     {
@@ -62,6 +64,62 @@ class SendAssetWarrantyAlerts extends Command
                 ]);
 
                 $byHospital[$w->hospital_id][] = $w;
+                $logged++;
+            }
+
+            // Maintenance coming due (overdue or within 14 days).
+            $maintenance = AssetMaintenanceLog::whereNotNull('next_due_date')
+                ->whereDate('next_due_date', '<=', now()->addDays(14)->toDateString())
+                ->with('asset')
+                ->get();
+            foreach ($maintenance as $m) {
+                $stamp = 'asset_maintenance:' . $m->id . ':' . now()->format('Ymd');
+                if (NotificationLog::withoutHospitalScope()->where('external_id', $stamp)->exists()) {
+                    continue;
+                }
+                NotificationLog::create([
+                    'id'          => (string) Str::uuid(),
+                    'hospital_id' => $m->hospital_id,
+                    'channel'     => 'web',
+                    'type'        => 'asset_maintenance_due',
+                    'status'      => 'logged',
+                    'external_id' => $stamp,
+                    'content'     => [
+                        'asset_id'      => $m->asset_id,
+                        'asset_name'    => $m->asset?->asset_name,
+                        'next_due_date' => optional($m->next_due_date)->toDateString(),
+                    ],
+                    'sent_at'     => now(),
+                ]);
+                $logged++;
+            }
+
+            // Calibrations due within each record's own reminder window.
+            $calibrations = AssetCalibration::where('is_active', true)
+                ->whereNotNull('next_due_date')
+                ->whereDate('next_due_date', '<=', now()->addDays(365)->toDateString())
+                ->with('asset')
+                ->get()
+                ->filter(fn (AssetCalibration $c) => $c->isDueWithin($c->reminder_days_before_due ?: 30));
+            foreach ($calibrations as $c) {
+                $stamp = 'asset_calibration:' . $c->id . ':' . now()->format('Ymd');
+                if (NotificationLog::withoutHospitalScope()->where('external_id', $stamp)->exists()) {
+                    continue;
+                }
+                NotificationLog::create([
+                    'id'          => (string) Str::uuid(),
+                    'hospital_id' => $c->hospital_id,
+                    'channel'     => 'web',
+                    'type'        => 'asset_calibration_due',
+                    'status'      => 'logged',
+                    'external_id' => $stamp,
+                    'content'     => [
+                        'asset_id'      => $c->asset_id,
+                        'asset_name'    => $c->asset?->asset_name,
+                        'next_due_date' => optional($c->next_due_date)->toDateString(),
+                    ],
+                    'sent_at'     => now(),
+                ]);
                 $logged++;
             }
 

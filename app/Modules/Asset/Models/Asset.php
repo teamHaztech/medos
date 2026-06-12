@@ -19,12 +19,14 @@ class Asset extends Model
         'id', 'hospital_id', 'asset_name', 'asset_type', 'serial_number',
         'model', 'manufacturer', 'department', 'location', 'purchase_date',
         'purchase_cost', 'vendor_id', 'status', 'notes', 'is_active',
+        'decommissioned_on', 'decommission_reason', 'disposal_method',
     ];
 
     protected $casts = [
-        'purchase_date' => 'date',
-        'purchase_cost' => 'decimal:2',
-        'is_active'     => 'boolean',
+        'purchase_date'     => 'date',
+        'purchase_cost'     => 'decimal:2',
+        'decommissioned_on' => 'date',
+        'is_active'         => 'boolean',
     ];
 
     /** Canonical status values + human labels. */
@@ -60,6 +62,23 @@ class Asset extends Model
     public function maintenanceLogs(): HasMany
     {
         return $this->hasMany(AssetMaintenanceLog::class)->orderByDesc('date');
+    }
+
+    public function calibrations(): HasMany
+    {
+        return $this->hasMany(AssetCalibration::class)->orderByDesc('next_due_date');
+    }
+
+    public function serviceRequests(): HasMany
+    {
+        return $this->hasMany(AssetServiceRequest::class)->orderByDesc('reported_at');
+    }
+
+    /** Total downtime (hours) across resolved service requests. */
+    public function downtimeHours(): int
+    {
+        return (int) $this->serviceRequests
+            ->sum(fn (AssetServiceRequest $r) => $r->downtimeHours() ?? 0);
     }
 
     // ---------------------------------------------------------------

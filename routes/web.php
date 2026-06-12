@@ -4,6 +4,7 @@ use App\Http\Controllers\Web\AdminWebController;
 use App\Http\Controllers\Web\AssetController;
 use App\Http\Controllers\Web\DoctorWebController;
 use App\Http\Controllers\Web\KioskController;
+use App\Http\Controllers\Web\ServiceRequestController;
 use App\Http\Controllers\Web\VendorController;
 use App\Http\Controllers\Web\WebAuthController;
 use Illuminate\Support\Facades\Route;
@@ -63,14 +64,24 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::get('assets/{id}', [AssetController::class, 'show'])->name('assets.show');
         Route::put('assets/{id}', [AssetController::class, 'update'])->name('assets.update');
         Route::delete('assets/{id}', [AssetController::class, 'destroy'])->name('assets.destroy');
+        Route::post('assets/{id}/decommission', [AssetController::class, 'decommission'])->name('assets.decommission');
         // Warranties
         Route::post('assets/{assetId}/warranties', [AssetController::class, 'storeWarranty'])->name('assets.warranties.store');
         Route::put('warranties/{id}', [AssetController::class, 'updateWarranty'])->name('assets.warranties.update');
+        Route::post('warranties/{id}/renew', [AssetController::class, 'renewWarranty'])->name('assets.warranties.renew');
         Route::delete('warranties/{id}', [AssetController::class, 'destroyWarranty'])->name('assets.warranties.destroy');
         Route::get('warranties/{id}/document', [AssetController::class, 'downloadDocument'])->name('assets.warranties.document');
         // Maintenance logs
         Route::post('assets/{assetId}/maintenance', [AssetController::class, 'storeMaintenance'])->name('assets.maintenance.store');
         Route::delete('maintenance/{id}', [AssetController::class, 'destroyMaintenance'])->name('assets.maintenance.destroy');
+        // Calibrations
+        Route::post('assets/{assetId}/calibrations', [AssetController::class, 'storeCalibration'])->name('assets.calibrations.store');
+        Route::delete('calibrations/{id}', [AssetController::class, 'destroyCalibration'])->name('assets.calibrations.destroy');
+        Route::get('calibrations/{id}/certificate', [AssetController::class, 'downloadCertificate'])->name('assets.calibrations.certificate');
+        // Service requests / breakdown tickets
+        Route::get('service-requests', [ServiceRequestController::class, 'index'])->name('tickets.index');
+        Route::post('assets/{assetId}/service-requests', [ServiceRequestController::class, 'store'])->name('tickets.store');
+        Route::put('service-requests/{id}', [ServiceRequestController::class, 'update'])->name('tickets.update');
         // Vendors
         Route::get('vendors', [VendorController::class, 'index'])->name('vendors.index');
         Route::post('vendors', [VendorController::class, 'store'])->name('vendors.store');

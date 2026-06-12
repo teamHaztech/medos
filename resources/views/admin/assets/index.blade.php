@@ -20,6 +20,7 @@
         <a href="{{ route('web.admin.assets.dashboard') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Dashboard</a>
         <a href="{{ route('web.admin.assets.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 text-white">Asset Register</a>
         <a href="{{ route('web.admin.vendors.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Vendors</a>
+        <a href="{{ route('web.admin.tickets.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Service Requests</a>
         <div class="ml-auto flex gap-2">
             <a href="{{ route('web.admin.assets.export') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Export CSV</a>
             <button @click="openAdd()" class="btn-primary">+ Add Asset</button>

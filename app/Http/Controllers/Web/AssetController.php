@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Asset\Models\Asset;
+use App\Modules\Asset\Models\AssetCalibration;
 use App\Modules\Asset\Models\AssetMaintenanceLog;
+use App\Modules\Asset\Models\AssetServiceRequest;
 use App\Modules\Asset\Models\AssetWarranty;
 use App\Modules\Asset\Models\Vendor;
 use Illuminate\Http\Request;
@@ -69,16 +71,34 @@ class AssetController extends Controller
             ->limit(25)
             ->get();
 
+        // Calibrations due (next 60 days + overdue).
+        $calibrationDue = AssetCalibration::dueWithin(60)
+            ->with('asset')
+            ->orderBy('next_due_date')
+            ->limit(25)
+            ->get();
+
+        // Open service requests / breakdowns.
+        $openTickets = AssetServiceRequest::whereIn('status', ['open', 'in_progress'])
+            ->with('asset')
+            ->orderByRaw("CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END")
+            ->orderByDesc('reported_at')
+            ->limit(25)
+            ->get();
+
         $stats = [
             'total_assets'      => Asset::where('is_active', true)->count(),
             'under_maintenance' => Asset::where('is_active', true)->where('status', 'under_maintenance')->count(),
             'decommissioned'    => Asset::where('is_active', true)->where('status', 'decommissioned')->count(),
             'no_warranty'       => $withoutWarranty->count(),
             'vendors'           => Vendor::where('is_active', true)->count(),
+            'calibration_due'   => AssetCalibration::dueWithin(30)->count(),
+            'open_tickets'      => $openTickets->count(),
         ];
 
         return view('admin.assets.dashboard', compact(
-            'expiring', 'contractOverview', 'expiringList', 'maintenanceDue', 'withoutWarranty', 'stats'
+            'expiring', 'contractOverview', 'expiringList', 'maintenanceDue',
+            'calibrationDue', 'openTickets', 'withoutWarranty', 'stats'
         ));
     }
 
@@ -141,7 +161,7 @@ class AssetController extends Controller
     {
         $this->hid();
 
-        $asset = Asset::with(['vendor', 'warranties', 'maintenanceLogs'])->findOrFail($id);
+        $asset = Asset::with(['vendor', 'warranties', 'maintenanceLogs', 'calibrations', 'serviceRequests'])->findOrFail($id);
         $vendors = Vendor::where('is_active', true)->orderBy('name')->get();
 
         return view('admin.assets.show', compact('asset', 'vendors'));
@@ -177,6 +197,28 @@ class AssetController extends Controller
         Asset::where('id', $id)->update(['is_active' => false]);
 
         return redirect()->route('web.admin.assets.index')->with('success', 'Asset removed from the register.');
+    }
+
+    /** Decommission an asset (keeps it in the register with reason/date/disposal). */
+    public function decommission(Request $request, string $id)
+    {
+        $this->hid();
+        $asset = Asset::findOrFail($id);
+
+        $v = $request->validate([
+            'decommissioned_on'   => 'required|date',
+            'decommission_reason' => 'required|string|max:500',
+            'disposal_method'     => 'nullable|string|max:255',
+        ]);
+
+        $asset->update([
+            'status'              => 'decommissioned',
+            'decommissioned_on'   => $v['decommissioned_on'],
+            'decommission_reason' => $v['decommission_reason'],
+            'disposal_method'     => $v['disposal_method'] ?? null,
+        ]);
+
+        return redirect()->route('web.admin.assets.show', $asset->id)->with('success', 'Asset decommissioned.');
     }
 
     private function validateAsset(Request $request): array
@@ -249,6 +291,105 @@ class AssetController extends Controller
         $warranty->delete();
 
         return redirect()->route('web.admin.assets.show', $assetId)->with('success', 'Warranty removed.');
+    }
+
+    /** Renew a warranty: create a fresh record continuing from the old one, retire the old. */
+    public function renewWarranty(Request $request, string $id)
+    {
+        $hid = $this->hid();
+        $old = AssetWarranty::findOrFail($id);
+
+        $v = $request->validate([
+            'end_date'                    => 'required|date|after:today',
+            'vendor_contact'              => 'nullable|string|max:255',
+            'terms'                       => 'nullable|string|max:2000',
+            'reminder_days_before_expiry' => 'nullable|integer|min:1|max:365',
+        ]);
+
+        // New term starts the day after the old one ends (or today if already expired).
+        $start = $old->end_date && $old->end_date->isFuture() ? $old->end_date->copy()->addDay() : now();
+
+        AssetWarranty::create([
+            'hospital_id'                 => $hid,
+            'asset_id'                    => $old->asset_id,
+            'warranty_type'               => $old->warranty_type,
+            'start_date'                  => $start->toDateString(),
+            'end_date'                    => $v['end_date'],
+            'vendor_contact'              => $v['vendor_contact'] ?? $old->vendor_contact,
+            'terms'                       => $v['terms'] ?? $old->terms,
+            'reminder_days_before_expiry' => $v['reminder_days_before_expiry'] ?? $old->reminder_days_before_expiry,
+            'is_active'                   => true,
+        ]);
+
+        $old->update(['is_active' => false]); // keep as history, no longer the active cover
+
+        return redirect()->route('web.admin.assets.show', $old->asset_id)->with('success', 'Warranty renewed.');
+    }
+
+    // ---------------------------------------------------------------
+    // Calibrations
+    // ---------------------------------------------------------------
+
+    public function storeCalibration(Request $request, string $assetId)
+    {
+        $hid = $this->hid();
+        $asset = Asset::findOrFail($assetId);
+
+        $v = $request->validate([
+            'calibrated_on'            => 'nullable|date',
+            'next_due_date'            => 'nullable|date',
+            'performed_by'             => 'nullable|string|max:255',
+            'result'                   => 'required|in:pass,fail,adjusted',
+            'reminder_days_before_due' => 'nullable|integer|min:1|max:365',
+            'notes'                    => 'nullable|string|max:1000',
+            'certificate'              => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096',
+        ]);
+
+        $data = [
+            'hospital_id'              => $hid,
+            'asset_id'                 => $asset->id,
+            'calibrated_on'            => $v['calibrated_on'] ?? null,
+            'next_due_date'            => $v['next_due_date'] ?? null,
+            'performed_by'             => $v['performed_by'] ?? null,
+            'result'                   => $v['result'],
+            'reminder_days_before_due' => $v['reminder_days_before_due'] ?? 30,
+            'notes'                    => $v['notes'] ?? null,
+            'is_active'                => true,
+        ];
+
+        if ($request->hasFile('certificate')) {
+            $data['certificate_path'] = $request->file('certificate')->store("asset-calibrations/{$hid}", 'local');
+        }
+
+        AssetCalibration::create($data);
+
+        return redirect()->route('web.admin.assets.show', $asset->id)->with('success', 'Calibration record added.');
+    }
+
+    public function destroyCalibration(string $id)
+    {
+        $this->hid();
+        $cal = AssetCalibration::findOrFail($id);
+        $assetId = $cal->asset_id;
+        if ($cal->certificate_path) {
+            Storage::disk('local')->delete($cal->certificate_path);
+        }
+        $cal->delete();
+
+        return redirect()->route('web.admin.assets.show', $assetId)->with('success', 'Calibration record removed.');
+    }
+
+    public function downloadCertificate(string $id)
+    {
+        $this->hid();
+        $cal = AssetCalibration::with('asset')->findOrFail($id);
+
+        abort_if(! $cal->certificate_path || ! Storage::disk('local')->exists($cal->certificate_path), 404);
+
+        $ext = pathinfo($cal->certificate_path, PATHINFO_EXTENSION);
+        $name = 'calibration-' . str($cal->asset?->asset_name ?? 'asset')->slug() . '.' . $ext;
+
+        return Storage::disk('local')->download($cal->certificate_path, $name);
     }
 
     /** Stream a warranty document, scoped to the current hospital. */

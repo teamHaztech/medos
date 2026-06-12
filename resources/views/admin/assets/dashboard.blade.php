@@ -10,6 +10,7 @@
         <a href="{{ route('web.admin.assets.dashboard') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 text-white">Dashboard</a>
         <a href="{{ route('web.admin.assets.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Asset Register</a>
         <a href="{{ route('web.admin.vendors.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Vendors</a>
+        <a href="{{ route('web.admin.tickets.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Service Requests</a>
         <div class="ml-auto flex gap-2">
             <a href="{{ route('web.admin.assets.export') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Export CSV</a>
             <a href="{{ route('web.admin.assets.report') }}" target="_blank" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Print Report</a>
@@ -32,6 +33,16 @@
             <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Expiring ≤30 days</p>
             <p class="text-3xl font-bold text-amber-600 mt-1">{{ $expiring[30] }}</p>
             <p class="text-xs text-slate-400 mt-1">{{ $expiring[60] }} within 60 · {{ $expiring[90] }} within 90</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Calibration Due ≤30d</p>
+            <p class="text-3xl font-bold {{ $stats['calibration_due'] ? 'text-amber-600' : 'text-slate-800' }} mt-1">{{ $stats['calibration_due'] }}</p>
+            <p class="text-xs text-slate-400 mt-1">incl. overdue</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Open Service Requests</p>
+            <p class="text-3xl font-bold {{ $stats['open_tickets'] ? 'text-red-600' : 'text-slate-800' }} mt-1">{{ $stats['open_tickets'] }}</p>
+            <p class="text-xs text-slate-400 mt-1">breakdowns / faults</p>
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
             <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Vendors</p>
@@ -89,6 +100,51 @@
                     </a>
                 @empty
                     <p class="text-sm text-slate-400 text-center py-6">Nothing due in the next 30 days</p>
+                @endforelse
+            </div>
+        </div>
+    </div>
+
+    {{-- Calibrations + service requests --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 class="text-sm font-semibold text-slate-700 mb-4">Calibrations Due (next 60 days / overdue)</h3>
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+                @forelse($calibrationDue as $c)
+                    @php $days = $c->daysToDue(); @endphp
+                    <a href="{{ route('web.admin.assets.show', $c->asset_id) }}" class="flex items-center justify-between py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 rounded-lg px-2 -mx-2">
+                        <div>
+                            <p class="text-sm font-medium text-slate-800">{{ $c->asset?->asset_name ?? 'Asset' }}</p>
+                            <p class="text-xs text-slate-500">due {{ optional($c->next_due_date)->format('M d, Y') }}</p>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold {{ $days < 0 ? 'bg-red-100 text-red-700' : ($days <= 30 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600') }}">
+                            {{ $days < 0 ? 'Overdue' : $days . ' days' }}
+                        </span>
+                    </a>
+                @empty
+                    <p class="text-sm text-slate-400 text-center py-6">No calibrations due soon</p>
+                @endforelse
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-slate-700">Open Service Requests</h3>
+                <a href="{{ route('web.admin.tickets.index') }}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">View all</a>
+            </div>
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+                @forelse($openTickets as $t)
+                    <a href="{{ route('web.admin.assets.show', $t->asset_id) }}" class="flex items-center justify-between py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 rounded-lg px-2 -mx-2">
+                        <div>
+                            <p class="text-sm font-medium text-slate-800">{{ $t->asset?->asset_name ?? 'Asset' }}</p>
+                            <p class="text-xs text-slate-500">{{ \Illuminate\Support\Str::limit($t->issue, 48) }}</p>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold {{ in_array($t->priority, ['critical','high']) ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600' }}">
+                            {{ $t->priorityLabel() }}
+                        </span>
+                    </a>
+                @empty
+                    <p class="text-sm text-slate-400 text-center py-6">No open service requests 🎉</p>
                 @endforelse
             </div>
         </div>
