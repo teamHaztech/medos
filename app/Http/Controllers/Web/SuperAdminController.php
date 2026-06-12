@@ -282,20 +282,24 @@ class SuperAdminController extends Controller
     public function storeHospital(Request $request)
     {
         $v = $request->validate([
-            'name'    => 'required|string|max:255',
-            'slug'    => 'required|string|max:100|alpha_dash|unique:hospitals,slug',
-            'country' => 'required|in:IN,AE',
-            'city'    => 'required|string|max:100',
-            'state'   => 'nullable|string|max:100',
-            'address' => 'nullable|string|max:500',
-            'phone'   => 'nullable|string|max:20',
-            'email'   => 'nullable|email|max:255',
+            'name'           => 'required|string|max:255',
+            'slug'           => 'required|string|max:100|alpha_dash|unique:hospitals,slug',
+            'country'        => 'required|in:IN,AE',
+            'city'           => 'required|string|max:100',
+            'state'          => 'nullable|string|max:100',
+            'address'        => 'nullable|string|max:500',
+            'phone'          => 'nullable|string|max:20',
+            'email'          => 'nullable|email|max:255',
+            // Hospital Admin login created alongside the hospital.
+            'admin_name'     => 'required|string|max:255',
+            'admin_email'    => 'required|email|max:255|unique:users,email',
+            'admin_password' => 'nullable|string|min:6',
         ]);
 
-        $region = RegionService::get($v['country']);
+        $hospitalId = Str::uuid()->toString();
 
         Hospital::create([
-            'id'                  => Str::uuid()->toString(),
+            'id'                  => $hospitalId,
             'name'                => $v['name'],
             'slug'                => $v['slug'],
             'country'             => $v['country'],
@@ -314,7 +318,34 @@ class SuperAdminController extends Controller
             'is_active'           => true,
         ]);
 
-        return redirect()->route('web.superadmin.index')->with('success', 'Hospital "' . $v['name'] . '" created.');
+        // Create the Hospital Admin login. They then create their own staff.
+        $plainPassword = $request->filled('admin_password') ? $v['admin_password'] : Str::random(10);
+        $userId = Str::uuid()->toString();
+
+        User::create([
+            'id'          => $userId,
+            'name'        => $v['admin_name'],
+            'email'       => $v['admin_email'],
+            'password'    => Hash::make($plainPassword),
+            'hospital_id' => $hospitalId,
+            'role'        => 'hospital_admin',
+            'is_active'   => true,
+        ]);
+
+        if (Schema::hasTable('user_hospital')) {
+            DB::table('user_hospital')->insert([
+                'id'          => Str::uuid()->toString(),
+                'user_id'     => $userId,
+                'hospital_id' => $hospitalId,
+                'role'        => 'hospital_admin',
+                'is_active'   => true,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
+
+        return redirect()->route('web.superadmin.index')->with('success',
+            'Hospital "' . $v['name'] . '" created. Admin login → ' . $v['admin_email'] . ' / ' . $plainPassword . ' (share securely; ask them to change it).');
     }
 
     public function editHospital(string $id)

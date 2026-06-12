@@ -103,6 +103,27 @@
                 <input type="checkbox" name="is_active" value="1" {{ $hospital->is_active ? 'checked' : '' }} class="rounded border-slate-300 text-blue-500">
                 <label class="text-sm text-slate-700">Hospital is active</label>
             </div>
+            @else
+            {{-- Hospital Admin account — created with the hospital --}}
+            <div class="pt-4 border-t border-slate-200">
+                <p class="text-sm font-bold text-slate-800">Hospital Admin Account</p>
+                <p class="text-xs text-slate-500 mb-3">This is the only account you create. The Hospital Admin logs in and creates their own staff (doctors, nurses, lab, billing…).</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Admin name *</label>
+                        <input type="text" name="admin_name" value="{{ old('admin_name') }}" required class="input-field" placeholder="Dr. / Mr. Full Name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Admin email (login) *</label>
+                        <input type="email" name="admin_email" value="{{ old('admin_email') }}" required class="input-field" placeholder="admin@hospital.com">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Temporary password</label>
+                    <input type="text" name="admin_password" class="input-field" placeholder="Leave blank to auto-generate (shown after creation)">
+                    <p class="text-xs text-slate-400 mt-1">You'll see the login + password to hand over after creating. They should change it on first login.</p>
+                </div>
+            </div>
             @endif
 
             <div class="flex items-center gap-3 pt-2">
