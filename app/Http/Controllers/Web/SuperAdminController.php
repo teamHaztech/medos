@@ -408,4 +408,30 @@ class SuperAdminController extends Controller
         $hospital->update(['is_active' => false]);
         return redirect()->route('web.superadmin.index')->with('success', 'Hospital deactivated.');
     }
+
+    /**
+     * Permanently delete a hospital and its data. Guarded against deleting the
+     * hospital the super admin is currently operating in; falls back to a
+     * deactivate if linked records block the delete.
+     */
+    public function destroyHospital(string $id)
+    {
+        $hospital = Hospital::findOrFail($id);
+
+        if (auth()->user()?->hospital_id === $hospital->id) {
+            return redirect()->route('web.superadmin.index')
+                ->with('error', 'You cannot delete the hospital you are currently operating in. Switch to another hospital first.');
+        }
+
+        $name = $hospital->name;
+
+        try {
+            DB::transaction(fn () => $hospital->delete()); // cascades via FKs
+            return redirect()->route('web.superadmin.index')->with('success', 'Hospital "' . $name . '" permanently deleted.');
+        } catch (\Throwable $e) {
+            $hospital->update(['is_active' => false]);
+            return redirect()->route('web.superadmin.index')
+                ->with('error', 'Could not fully delete "' . $name . '" because it has linked records — it has been deactivated instead.');
+        }
+    }
 }

@@ -706,11 +706,13 @@ class AdminWebController extends Controller
             'specialization'                => 'nullable|string|max:100',
             'qualification'                 => 'nullable|string|max:255',
             'consultation_duration_default' => 'nullable|integer|min:5|max:120',
+            'password'                      => 'nullable|string|min:6',
         ]);
 
         $hospitalId = Auth::user()->hospital_id;
         $staffId = Str::uuid()->toString();
         $userId = Str::uuid()->toString();
+        $plain = $request->filled('password') ? $v['password'] : Str::random(10);
 
         \DB::table('staff')->insert([
             'id'                            => $staffId,
@@ -732,7 +734,7 @@ class AdminWebController extends Controller
             'id'          => $userId,
             'name'        => $v['name'],
             'email'       => $v['email'],
-            'password'    => \Illuminate\Support\Facades\Hash::make('password123'),
+            'password'    => \Illuminate\Support\Facades\Hash::make($plain),
             'phone'       => $v['phone'] ?? null,
             'role'        => $v['role'],
             'hospital_id' => $hospitalId,
@@ -745,7 +747,8 @@ class AdminWebController extends Controller
         // Link user_id back to staff
         \DB::table('staff')->where('id', $staffId)->update(['user_id' => $userId]);
 
-        return redirect()->route('web.admin.staff')->with('success', 'Staff member added successfully.');
+        return redirect()->route('web.admin.staff')->with('success',
+            "Staff \"{$v['name']}\" added. Login → {$v['email']} / {$plain}  (share securely; they should change it).");
     }
 
     public function updateStaff(Request $request, string $id)

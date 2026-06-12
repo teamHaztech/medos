@@ -228,9 +228,16 @@
                         <input type="text" name="qualification" class="input-field" placeholder="e.g. MBBS, MD">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Consultation Duration (minutes)</label>
-                    <input type="number" name="consultation_duration_default" class="input-field" value="15" min="5" max="120">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Consultation Duration (minutes)</label>
+                        <input type="number" name="consultation_duration_default" class="input-field" value="15" min="5" max="120">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Temporary password</label>
+                        <input type="text" name="password" class="input-field" placeholder="Blank = auto-generate">
+                        <p class="text-xs text-slate-400 mt-1">You'll see the login + password to share after saving.</p>
+                    </div>
                 </div>
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" @click="showAddModal = false" class="btn-secondary">Cancel</button>

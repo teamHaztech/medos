@@ -333,6 +333,7 @@ Route::middleware(['auth', 'super_admin'])->prefix('super-admin')->name('web.sup
     Route::get('hospitals/{id}/edit', [\App\Http\Controllers\Web\SuperAdminController::class, 'editHospital'])->name('hospitals.edit');
     Route::put('hospitals/{id}', [\App\Http\Controllers\Web\SuperAdminController::class, 'updateHospital'])->name('hospitals.update');
     Route::delete('hospitals/{id}', [\App\Http\Controllers\Web\SuperAdminController::class, 'deleteHospital'])->name('hospitals.delete');
+    Route::delete('hospitals/{id}/force', [\App\Http\Controllers\Web\SuperAdminController::class, 'destroyHospital'])->name('hospitals.destroy');
     Route::post('hospitals/{id}/staff', [\App\Http\Controllers\Web\SuperAdminController::class, 'addStaffToHospital'])->name('hospitals.staff.add');
     Route::delete('hospitals/{hospitalId}/staff/{staffId}', [\App\Http\Controllers\Web\SuperAdminController::class, 'removeStaffFromHospital'])->name('hospitals.staff.remove');
     Route::post('hospitals/{id}/admin', [\App\Http\Controllers\Web\SuperAdminController::class, 'addAdminToHospital'])->name('hospitals.admin.add');

@@ -116,6 +116,12 @@
                 <button type="submit" class="text-xs px-3 py-1.5 text-red-600 hover:text-red-800 font-medium">Deactivate</button>
             </form>
             @endif
+            @if(!$isCurrentHospital)
+            <form method="POST" action="{{ route('web.superadmin.hospitals.destroy', $h->id) }}" class="inline" onsubmit="return confirm('PERMANENTLY delete {{ $h->name }} and ALL of its data? This cannot be undone.')">
+                @csrf @method('DELETE')
+                <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold">Delete</button>
+            </form>
+            @endif
         </div>
     </div>
     @endforeach
