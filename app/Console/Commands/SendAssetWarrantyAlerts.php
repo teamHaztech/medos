@@ -11,6 +11,7 @@ use App\Notifications\AssetWarrantyExpiring;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class SendAssetWarrantyAlerts extends Command
@@ -25,12 +26,14 @@ class SendAssetWarrantyAlerts extends Command
             // Runs globally (no hospital context in CLI -> scope is inert, spans all hospitals).
             // Pull active, not-yet-expired warranties within the widest possible window,
             // then keep those inside each row's own reminder window.
-            $candidates = AssetWarranty::where('is_active', true)
-                ->whereDate('end_date', '>=', now()->toDateString())
-                ->whereDate('end_date', '<=', now()->addDays(365)->toDateString())
-                ->with('asset')
-                ->get()
-                ->filter(fn (AssetWarranty $w) => $w->isExpiringWithin($w->reminder_days_before_expiry ?: 30));
+            $candidates = Schema::hasTable('asset_warranties')
+                ? AssetWarranty::where('is_active', true)
+                    ->whereDate('end_date', '>=', now()->toDateString())
+                    ->whereDate('end_date', '<=', now()->addDays(365)->toDateString())
+                    ->with('asset')
+                    ->get()
+                    ->filter(fn (AssetWarranty $w) => $w->isExpiringWithin($w->reminder_days_before_expiry ?: 30))
+                : collect();
 
             $logged = 0;
             $byHospital = [];
@@ -68,10 +71,12 @@ class SendAssetWarrantyAlerts extends Command
             }
 
             // Maintenance coming due (overdue or within 14 days).
-            $maintenance = AssetMaintenanceLog::whereNotNull('next_due_date')
-                ->whereDate('next_due_date', '<=', now()->addDays(14)->toDateString())
-                ->with('asset')
-                ->get();
+            $maintenance = Schema::hasTable('asset_maintenance_logs')
+                ? AssetMaintenanceLog::whereNotNull('next_due_date')
+                    ->whereDate('next_due_date', '<=', now()->addDays(14)->toDateString())
+                    ->with('asset')
+                    ->get()
+                : collect();
             foreach ($maintenance as $m) {
                 $stamp = 'asset_maintenance:' . $m->id . ':' . now()->format('Ymd');
                 if (NotificationLog::withoutHospitalScope()->where('external_id', $stamp)->exists()) {
@@ -95,12 +100,14 @@ class SendAssetWarrantyAlerts extends Command
             }
 
             // Calibrations due within each record's own reminder window.
-            $calibrations = AssetCalibration::where('is_active', true)
-                ->whereNotNull('next_due_date')
-                ->whereDate('next_due_date', '<=', now()->addDays(365)->toDateString())
-                ->with('asset')
-                ->get()
-                ->filter(fn (AssetCalibration $c) => $c->isDueWithin($c->reminder_days_before_due ?: 30));
+            $calibrations = Schema::hasTable('asset_calibrations')
+                ? AssetCalibration::where('is_active', true)
+                    ->whereNotNull('next_due_date')
+                    ->whereDate('next_due_date', '<=', now()->addDays(365)->toDateString())
+                    ->with('asset')
+                    ->get()
+                    ->filter(fn (AssetCalibration $c) => $c->isDueWithin($c->reminder_days_before_due ?: 30))
+                : collect();
             foreach ($calibrations as $c) {
                 $stamp = 'asset_calibration:' . $c->id . ':' . now()->format('Ymd');
                 if (NotificationLog::withoutHospitalScope()->where('external_id', $stamp)->exists()) {

@@ -8,6 +8,7 @@ use App\Modules\Asset\Models\AssetMaintenanceLog;
 use App\Modules\Asset\Models\AssetServiceRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class ServiceRequestController extends Controller
 {
@@ -23,6 +24,13 @@ class ServiceRequestController extends Controller
     public function index(Request $request)
     {
         $this->hid();
+
+        if (! Schema::hasTable('asset_service_requests')) {
+            return view('admin.assets.tickets', [
+                'tickets' => collect(), 'filters' => [],
+                'statuses' => AssetServiceRequest::STATUSES, 'priorities' => AssetServiceRequest::PRIORITIES,
+            ]);
+        }
 
         $query = AssetServiceRequest::with('asset');
         if ($status = $request->get('status')) {

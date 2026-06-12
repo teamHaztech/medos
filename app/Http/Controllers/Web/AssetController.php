@@ -11,6 +11,7 @@ use App\Modules\Asset\Models\AssetWarranty;
 use App\Modules\Asset\Models\Vendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class AssetController extends Controller
@@ -71,20 +72,23 @@ class AssetController extends Controller
             ->limit(25)
             ->get();
 
-        // Calibrations due (next 60 days + overdue).
-        $calibrationDue = AssetCalibration::dueWithin(60)
-            ->with('asset')
-            ->orderBy('next_due_date')
-            ->limit(25)
-            ->get();
+        // Calibrations due (next 60 days + overdue) — guarded for not-yet-migrated DBs.
+        $hasCalibrations = Schema::hasTable('asset_calibrations');
+        $hasTickets = Schema::hasTable('asset_service_requests');
+
+        $calibrationDue = $hasCalibrations
+            ? AssetCalibration::dueWithin(60)->with('asset')->orderBy('next_due_date')->limit(25)->get()
+            : collect();
 
         // Open service requests / breakdowns.
-        $openTickets = AssetServiceRequest::whereIn('status', ['open', 'in_progress'])
-            ->with('asset')
-            ->orderByRaw("CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END")
-            ->orderByDesc('reported_at')
-            ->limit(25)
-            ->get();
+        $openTickets = $hasTickets
+            ? AssetServiceRequest::whereIn('status', ['open', 'in_progress'])
+                ->with('asset')
+                ->orderByRaw("CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END")
+                ->orderByDesc('reported_at')
+                ->limit(25)
+                ->get()
+            : collect();
 
         $stats = [
             'total_assets'      => Asset::where('is_active', true)->count(),
@@ -92,7 +96,7 @@ class AssetController extends Controller
             'decommissioned'    => Asset::where('is_active', true)->where('status', 'decommissioned')->count(),
             'no_warranty'       => $withoutWarranty->count(),
             'vendors'           => Vendor::where('is_active', true)->count(),
-            'calibration_due'   => AssetCalibration::dueWithin(30)->count(),
+            'calibration_due'   => $hasCalibrations ? AssetCalibration::dueWithin(30)->count() : 0,
             'open_tickets'      => $openTickets->count(),
         ];
 
@@ -161,7 +165,26 @@ class AssetController extends Controller
     {
         $this->hid();
 
-        $asset = Asset::with(['vendor', 'warranties', 'maintenanceLogs', 'calibrations', 'serviceRequests'])->findOrFail($id);
+        $with = ['vendor', 'warranties', 'maintenanceLogs'];
+        $hasCalibrations = Schema::hasTable('asset_calibrations');
+        $hasTickets = Schema::hasTable('asset_service_requests');
+        if ($hasCalibrations) {
+            $with[] = 'calibrations';
+        }
+        if ($hasTickets) {
+            $with[] = 'serviceRequests';
+        }
+
+        $asset = Asset::with($with)->findOrFail($id);
+
+        // Avoid lazy-loading (and a query against a missing table) in the view.
+        if (! $hasCalibrations) {
+            $asset->setRelation('calibrations', collect());
+        }
+        if (! $hasTickets) {
+            $asset->setRelation('serviceRequests', collect());
+        }
+
         $vendors = Vendor::where('is_active', true)->orderBy('name')->get();
 
         return view('admin.assets.show', compact('asset', 'vendors'));
