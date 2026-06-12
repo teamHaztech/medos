@@ -35,6 +35,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
     Route::put('staff/{id}', [AdminWebController::class, 'updateStaff'])->name('staff.update');
     Route::delete('staff/{id}', [AdminWebController::class, 'deleteStaff'])->name('staff.delete');
     Route::post('staff/{id}/activate', [AdminWebController::class, 'activateStaff'])->name('staff.activate');
+    Route::post('staff/{id}/reset-password', [AdminWebController::class, 'resetStaffPassword'])->name('staff.reset-password');
     Route::post('appointments/{id}/check-in', [AdminWebController::class, 'checkInAppointment'])->name('appointments.checkin');
     Route::post('appointments/{id}/cancel', [AdminWebController::class, 'cancelAppointment'])->name('appointments.cancel');
     Route::get('analytics', [AdminWebController::class, 'analytics'])->name('analytics');
@@ -335,6 +336,7 @@ Route::middleware(['auth', 'super_admin'])->prefix('super-admin')->name('web.sup
     Route::post('hospitals/{id}/staff', [\App\Http\Controllers\Web\SuperAdminController::class, 'addStaffToHospital'])->name('hospitals.staff.add');
     Route::delete('hospitals/{hospitalId}/staff/{staffId}', [\App\Http\Controllers\Web\SuperAdminController::class, 'removeStaffFromHospital'])->name('hospitals.staff.remove');
     Route::post('hospitals/{id}/admin', [\App\Http\Controllers\Web\SuperAdminController::class, 'addAdminToHospital'])->name('hospitals.admin.add');
+    Route::post('hospitals/{hospitalId}/users/{userId}/reset-password', [\App\Http\Controllers\Web\SuperAdminController::class, 'resetUserPassword'])->name('hospitals.users.reset');
 });
 
 // Hospital switcher (super admin only)

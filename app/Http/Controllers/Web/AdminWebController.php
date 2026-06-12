@@ -794,6 +794,50 @@ class AdminWebController extends Controller
         return redirect()->route('web.admin.staff')->with('success', 'Staff member deactivated.');
     }
 
+    /**
+     * Reset a staff member's login password (generates a new temporary one and
+     * shows it). Creates the login account if the staff has none yet.
+     */
+    public function resetStaffPassword(string $id)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        $staff = \DB::table('staff')->where('id', $id)->where('hospital_id', $hospitalId)->first();
+        if (! $staff) {
+            abort(404);
+        }
+
+        $plain = \Illuminate\Support\Str::random(10);
+        $hash  = \Illuminate\Support\Facades\Hash::make($plain);
+
+        $userId = $staff->user_id ?: (\DB::table('users')->where('email', $staff->email)->value('id'));
+
+        if ($userId) {
+            \DB::table('users')->where('id', $userId)->update([
+                'password' => $hash, 'is_active' => true, 'updated_at' => now(),
+            ]);
+        } else {
+            // No login yet — create one so they can sign in.
+            $userId = \Illuminate\Support\Str::uuid()->toString();
+            \DB::table('users')->insert([
+                'id'          => $userId,
+                'name'        => $staff->name,
+                'email'       => $staff->email,
+                'password'    => $hash,
+                'phone'       => $staff->phone ?? null,
+                'role'        => $staff->role,
+                'hospital_id' => $hospitalId,
+                'staff_id'    => $staff->id,
+                'is_active'   => true,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
+        \DB::table('staff')->where('id', $staff->id)->update(['user_id' => $userId]);
+
+        return redirect()->route('web.admin.staff')->with('success',
+            "New password for {$staff->name} → {$staff->email} / {$plain}  (share securely; they should change it).");
+    }
+
     public function activateStaff(string $id)
     {
         $hospitalId = Auth::user()->hospital_id;

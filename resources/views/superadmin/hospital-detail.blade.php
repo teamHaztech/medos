@@ -151,6 +151,7 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Name</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Email</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Source</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -159,6 +160,12 @@
                         <td class="px-4 py-3 font-medium text-slate-900">{{ $a->name }}</td>
                         <td class="px-4 py-3 text-slate-500">{{ $a->email }}</td>
                         <td class="px-4 py-3"><span class="text-xs text-slate-400">Primary</span></td>
+                        <td class="px-4 py-3 text-right">
+                            <form method="POST" action="{{ route('web.superadmin.hospitals.users.reset', [$hospital->id, $a->id]) }}" class="inline" onsubmit="return confirm('Reset password for {{ $a->name }}? You will see the new password to share.')">
+                                @csrf
+                                <button type="submit" class="text-sm text-amber-600 hover:text-amber-800 font-medium">Reset password</button>
+                            </form>
+                        </td>
                     </tr>
                     @endforeach
                     @foreach($pivotAdmins as $a)
@@ -166,6 +173,12 @@
                         <td class="px-4 py-3 font-medium text-slate-900">{{ $a->name }}</td>
                         <td class="px-4 py-3 text-slate-500">{{ $a->email }}</td>
                         <td class="px-4 py-3"><span class="text-xs text-amber-600">Multi-hospital</span></td>
+                        <td class="px-4 py-3 text-right">
+                            <form method="POST" action="{{ route('web.superadmin.hospitals.users.reset', [$hospital->id, $a->id]) }}" class="inline" onsubmit="return confirm('Reset password for {{ $a->name }}?')">
+                                @csrf
+                                <button type="submit" class="text-sm text-amber-600 hover:text-amber-800 font-medium">Reset password</button>
+                            </form>
+                        </td>
                     </tr>
                     @endforeach
                 </tbody>

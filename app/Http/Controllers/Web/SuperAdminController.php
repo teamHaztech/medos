@@ -255,6 +255,22 @@ class SuperAdminController extends Controller
             ->with('success', 'Admin "' . $v['name'] . '" added to ' . $hospital->name);
     }
 
+    /**
+     * Reset a hospital user's (admin/staff) login password to a new temporary
+     * one and show it so it can be handed over.
+     */
+    public function resetUserPassword(string $hospitalId, string $userId)
+    {
+        $hospital = Hospital::findOrFail($hospitalId);
+        $user = User::where('id', $userId)->where('hospital_id', $hospitalId)->firstOrFail();
+
+        $plain = Str::random(10);
+        $user->update(['password' => Hash::make($plain), 'is_active' => true]);
+
+        return redirect()->route('web.superadmin.hospitals.show', $hospital->id)->with('success',
+            "New password for {$user->name} → {$user->email} / {$plain}  (share securely).");
+    }
+
     public function removeStaffFromHospital(string $hospitalId, string $staffId)
     {
         $hospital = Hospital::findOrFail($hospitalId);
