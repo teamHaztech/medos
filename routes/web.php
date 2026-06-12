@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Web\AdminWebController;
+use App\Http\Controllers\Web\AssetController;
 use App\Http\Controllers\Web\DoctorWebController;
 use App\Http\Controllers\Web\KioskController;
+use App\Http\Controllers\Web\VendorController;
 use App\Http\Controllers\Web\WebAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,6 +53,29 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::post('medicines', [AdminWebController::class, 'storeMedicine'])->name('medicines.store');
         Route::put('medicines/{id}', [AdminWebController::class, 'updateMedicine'])->name('medicines.update');
         Route::delete('medicines/{id}', [AdminWebController::class, 'deleteMedicine'])->name('medicines.delete');
+
+        // Asset Management (OT equipment + warranty tracking)
+        Route::get('assets', [AssetController::class, 'index'])->name('assets.index');
+        Route::get('assets/dashboard', [AssetController::class, 'dashboard'])->name('assets.dashboard');
+        Route::get('assets/export', [AssetController::class, 'exportCsv'])->name('assets.export');
+        Route::get('assets/report', [AssetController::class, 'report'])->name('assets.report');
+        Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
+        Route::get('assets/{id}', [AssetController::class, 'show'])->name('assets.show');
+        Route::put('assets/{id}', [AssetController::class, 'update'])->name('assets.update');
+        Route::delete('assets/{id}', [AssetController::class, 'destroy'])->name('assets.destroy');
+        // Warranties
+        Route::post('assets/{assetId}/warranties', [AssetController::class, 'storeWarranty'])->name('assets.warranties.store');
+        Route::put('warranties/{id}', [AssetController::class, 'updateWarranty'])->name('assets.warranties.update');
+        Route::delete('warranties/{id}', [AssetController::class, 'destroyWarranty'])->name('assets.warranties.destroy');
+        Route::get('warranties/{id}/document', [AssetController::class, 'downloadDocument'])->name('assets.warranties.document');
+        // Maintenance logs
+        Route::post('assets/{assetId}/maintenance', [AssetController::class, 'storeMaintenance'])->name('assets.maintenance.store');
+        Route::delete('maintenance/{id}', [AssetController::class, 'destroyMaintenance'])->name('assets.maintenance.destroy');
+        // Vendors
+        Route::get('vendors', [VendorController::class, 'index'])->name('vendors.index');
+        Route::post('vendors', [VendorController::class, 'store'])->name('vendors.store');
+        Route::put('vendors/{id}', [VendorController::class, 'update'])->name('vendors.update');
+        Route::delete('vendors/{id}', [VendorController::class, 'destroy'])->name('vendors.destroy');
     });
 });
 

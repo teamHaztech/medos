@@ -35,6 +35,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Re-engage patients weekly on Monday at 10 AM
         $schedule->command('medos:re-engage')->weeklyOn(1, '10:00');
 
+        // Alert on asset warranties / AMC / CMC expiring soon — daily at 8 AM
+        $schedule->command('medos:asset-warranty-alerts')->dailyAt('08:00');
+
         // Prune old Sanctum tokens daily
         $schedule->command('sanctum:prune-expired --hours=24')->daily();
     })
