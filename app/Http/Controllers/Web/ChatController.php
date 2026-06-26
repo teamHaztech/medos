@@ -453,6 +453,7 @@ class ChatController extends Controller
     private function showStatus(array &$state, string $lang): array
     {
         $upcoming = $this->getUpcomingAppointments($state['patient_id']);
+        $labBookings = $this->getUpcomingLabBookings($state['patient_id']);
         $missed = $this->getMissedAppointments($state['patient_id']);
         $replies = [];
 
@@ -497,7 +498,14 @@ class ChatController extends Controller
                 $list .= "\n*{$num}.* {$docName}\n   📅 {$date} at {$time}{$timeUntil}\n   🎫 Token: {$token} | Status: {$status}\n";
             }
             $replies[] = $this->t('your_appointments', $lang) . $list;
-        } elseif ($missed->isEmpty()) {
+        }
+
+        // Upcoming lab / scan bookings
+        if ($labBookings->isNotEmpty()) {
+            $replies[] = "🧪 *Your lab bookings:*" . $this->labBookingsList($labBookings);
+        }
+
+        if ($upcoming->isEmpty() && $labBookings->isEmpty() && $missed->isEmpty()) {
             $replies[] = $this->t('no_appointments', $lang);
         }
 
@@ -2032,20 +2040,28 @@ class ChatController extends Controller
 
         $greeting = $extraGreeting ?: $this->t('welcome_back', $lang, ['name' => $name]);
         $appointments = $this->getUpcomingAppointments($state['patient_id']);
+        $labBookings = $this->getUpcomingLabBookings($state['patient_id']);
 
-        if ($appointments->isNotEmpty()) {
-            $list = "";
-            foreach ($appointments as $i => $apt) {
-                $doctor = Staff::find($apt->doctor_id);
-                $doctorName = $doctor?->name ?? 'Doctor';
-                $date = Carbon::parse($apt->slot_start)->format('D, M d');
-                $time = Carbon::parse($apt->slot_start)->format('g:i A');
-                $token = $apt->notes ?? '-';
-                $list .= "\n" . ($i + 1) . ". {$doctorName} — {$date} at {$time} (Token: {$token})";
+        if ($appointments->isNotEmpty() || $labBookings->isNotEmpty()) {
+            $body = $greeting;
+            if ($appointments->isNotEmpty()) {
+                $list = "";
+                foreach ($appointments as $i => $apt) {
+                    $doctor = Staff::find($apt->doctor_id);
+                    $doctorName = $doctor?->name ?? 'Doctor';
+                    $date = Carbon::parse($apt->slot_start)->format('D, M d');
+                    $time = Carbon::parse($apt->slot_start)->format('g:i A');
+                    $token = $apt->notes ?? '-';
+                    $list .= "\n" . ($i + 1) . ". {$doctorName} — {$date} at {$time} (Token: {$token})";
+                }
+                $body .= "\n\n📋 *Your upcoming appointments:*" . $list;
             }
-            $replies[] = $greeting . "\n\n📋 *Your upcoming appointments:*" . $list;
+            if ($labBookings->isNotEmpty()) {
+                $body .= "\n\n🧪 *Your lab bookings:*" . $this->labBookingsList($labBookings);
+            }
+            $replies[] = $body;
         } else {
-            $replies[] = $greeting . "\n\nYou have no upcoming appointments.";
+            $replies[] = $greeting . "\n\nYou have no upcoming appointments or lab bookings.";
         }
 
         $state['step'] = 'main_menu';
@@ -2080,6 +2096,41 @@ class ChatController extends Controller
             ->where('slot_start', '>=', now()->subHours(24))
             ->orderByDesc('slot_start')
             ->get();
+    }
+
+    /** Upcoming lab/imaging/procedure bookings (future-scheduled or walk-in today). */
+    private function getUpcomingLabBookings(?string $patientId)
+    {
+        if (!$patientId) return collect();
+
+        return \App\Modules\Core\Models\Order::where('patient_id', $patientId)
+            ->whereIn('type', ['lab', 'imaging', 'procedure'])
+            ->whereNotIn('status', ['cancelled', 'completed'])
+            ->where(function ($q) {
+                $q->where('scheduled_for', '>=', now())
+                  ->orWhere(function ($w) {
+                      $w->whereNull('scheduled_for')->whereDate('created_at', today());
+                  });
+            })
+            ->orderByRaw('scheduled_for is null')
+            ->orderBy('scheduled_for')
+            ->get();
+    }
+
+    /** Format upcoming lab bookings into a chat list. */
+    private function labBookingsList($labBookings): string
+    {
+        $list = "";
+        foreach ($labBookings as $i => $o) {
+            $items = is_array($o->items) ? $o->items : [];
+            $names = implode(', ', array_filter(array_map(fn ($it) => $it['name'] ?? null, $items))) ?: 'Lab test';
+            $when = $o->scheduled_for
+                ? Carbon::parse($o->scheduled_for)->format('l, M d \a\t g:i A')
+                : 'Walk-in (anytime today)';
+            $token = $o->notes ?? '-';
+            $list .= "\n*" . ($i + 1) . ".* 🧪 {$names}\n   📅 {$when}\n   🎫 Token: {$token}\n";
+        }
+        return $list;
     }
 
     // ---------------------------------------------------------------
