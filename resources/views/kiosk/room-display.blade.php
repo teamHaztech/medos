@@ -51,7 +51,14 @@
                         </div>
                     </div>
                     <div class="flex-1">
-                        <p class="text-3xl font-bold text-white" x-text="currentPatient.name"></p>
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem">
+                            <p class="text-3xl font-bold text-white" x-text="currentPatient.name"></p>
+                            <button x-show="audioEnabled" @click="announce(currentPatient)" type="button"
+                                title="Announce again"
+                                style="flex-shrink:0;display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:.6rem;padding:.4rem .7rem;font-size:.8rem;font-weight:600;cursor:pointer">
+                                🔊 <span>Announce</span>
+                            </button>
+                        </div>
                         <div class="flex items-center gap-2 mt-2">
                             <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                             <span class="text-sm text-green-300">In Consultation</span>
@@ -169,7 +176,7 @@
     function roomDisplay() {
         return {
             allPatients: @json($appointments),
-            previousCurrent: null,
+            announcedTokens: [],
             audioEnabled: false,
             audioCtx: null,
             speechQueue: [],
@@ -190,8 +197,17 @@
             init() {
                 this.updateClock();
                 setInterval(() => this.updateClock(), 1000);
-                this.previousCurrent = this.currentPatient?.token || null;
+                // Seed the "already announced" set with everyone currently being
+                // served, so we don't re-announce them on every 10s poll — but we
+                // DO announce the current patient once, on tap (see enableAudio).
+                this.announcedTokens = this.allPatients.filter(p => p.status === 'in_progress').map(p => p.token);
                 this.lastUpdated = new Date().toLocaleTimeString();
+                // Voices load asynchronously in Chrome — warm them up so voice
+                // selection works on the first real announcement.
+                if ('speechSynthesis' in window) {
+                    speechSynthesis.getVoices();
+                    speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+                }
                 setInterval(() => this.refresh(), 10000);
             },
 
@@ -201,7 +217,13 @@
                 if ('speechSynthesis' in window) { const w = new SpeechSynthesisUtterance(''); w.volume = 0; speechSynthesis.speak(w); }
                 this.playBeep();
                 this.audioEnabled = true;
-                setTimeout(() => this.speak('Room display activated.', 'en-GB', 0.8, null), 1000);
+                // Announce whoever is currently being served right away, so tapping
+                // the screen reads out the real name + token (not just a chime).
+                setTimeout(() => {
+                    const cur = this.currentPatient;
+                    if (cur) this.announce(cur);
+                    else this.speak('Room display activated.', 'en-GB', 0.8, null);
+                }, 1000);
             },
 
             updateClock() {
@@ -217,17 +239,22 @@
                 try {
                     const res = await fetch(window.location.href);
                     const html = await res.text();
-                    const match = html.match(/allPatients:\s*(\[.*?\]),\s*previousCurrent/s);
+                    const match = html.match(/allPatients:\s*(\[.*?\]),\s*announcedTokens/s);
                     if (match) {
                         const newData = JSON.parse(match[1]);
-                        const newCurrent = newData.find(p => p.status === 'in_progress');
-                        if (newCurrent && newCurrent.token !== this.previousCurrent) {
-                            this.previousCurrent = newCurrent.token;
-                            this.allPatients = newData;
-                            if (this.audioEnabled) this.announce(newCurrent);
-                        } else {
-                            this.allPatients = newData;
+                        this.allPatients = newData;
+                        const nowServing = newData.filter(p => p.status === 'in_progress');
+                        // Announce any patient who just entered "in_progress" and
+                        // hasn't been announced yet. Handles multiple simultaneous
+                        // in_progress patients (doctor calling several at once).
+                        const fresh = nowServing.find(p => !this.announcedTokens.includes(p.token));
+                        if (fresh) {
+                            this.announcedTokens.push(fresh.token);
+                            if (this.audioEnabled) this.announce(fresh);
                         }
+                        // Forget tokens no longer being served, so if the same token
+                        // is called again later it will announce again.
+                        this.announcedTokens = this.announcedTokens.filter(t => nowServing.some(p => p.token === t));
                     }
                 } catch(e) {}
                 this.lastUpdated = new Date().toLocaleTimeString();
