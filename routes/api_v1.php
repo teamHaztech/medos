@@ -60,6 +60,14 @@ Route::middleware(['auth:sanctum', 'resolve.hospital'])->group(function () {
     Route::post('appointments/{appointment}/cancel', [\App\Modules\Appointment\Controllers\AppointmentController::class, 'cancel'])
         ->name('appointments.cancel');
 
+    // External integration (chatbot / CRM): customer lookup, doctor schedule, booking.
+    // Rate-limited to blunt patient enumeration / booking abuse (per authenticated token).
+    Route::middleware('throttle:30,1')->group(function () {
+        Route::get('customer', [\App\Http\Controllers\Api\IntegrationController::class, 'customer'])->name('customer');
+        Route::get('doctor-schedule', [\App\Http\Controllers\Api\IntegrationController::class, 'doctorSchedule'])->name('doctor-schedule');
+        Route::post('book-appointment', [\App\Http\Controllers\Api\IntegrationController::class, 'bookAppointment'])->name('book-appointment');
+    });
+
     // Queue
     Route::prefix('queue')->name('queue.')->group(function () {
         Route::get('doctor/{doctorId}', [\App\Modules\Queue\Controllers\QueueController::class, 'doctorQueue'])->name('doctor');
