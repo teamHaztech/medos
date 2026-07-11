@@ -117,9 +117,19 @@ class Appointment extends Model
         $prefix = strtoupper(substr(str_replace(' ', '', $department ?: 'GEN'), 0, 3));
         $date   = $slotStart->toDateString();
 
-        $base = static::where('doctor_id', $doctorId)->whereDate('slot_start', $date);
-        $seq  = (clone $base)->count() + 1;
+        // Scope the running number to hospital + department + day (not per-doctor):
+        // the prefix is department-wide, so every doctor in the same department must
+        // share one series or two patients would get the same token (e.g. GEN-001).
+        $hospitalId = \App\Modules\Core\Models\Staff::whereKey($doctorId)->value('hospital_id');
 
+        $base = static::query()
+            ->when($hospitalId, fn ($q) => $q->where('hospital_id', $hospitalId))
+            ->whereDate('slot_start', $date)
+            ->where('notes', 'like', $prefix . '-%');
+
+        $seq = (clone $base)->count() + 1;
+
+        // Walk past any already-issued number so the token is always unique in scope.
         do {
             $token = $prefix . '-' . str_pad((string) $seq, 3, '0', STR_PAD_LEFT);
             $taken = (clone $base)->where('notes', $token)->exists();
