@@ -117,6 +117,46 @@
                     </table>
                 </div>
             </div>
+
+            {{-- Charge-capture ledger --}}
+            @if($charges->isNotEmpty())
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-6">
+                <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Captured Charges</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Every charge captured for this visit. Refresh to fold newly captured charges into the bill.</p>
+                    </div>
+                    @if($pendingCharges->isNotEmpty())
+                    <form method="POST" action="{{ route('web.billing.compile', $bill->encounter_id) }}">@csrf
+                        <button type="submit" class="btn-primary text-sm whitespace-nowrap">Refresh bill ({{ $pendingCharges->count() }} new)</button>
+                    </form>
+                    @endif
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 border-b border-slate-200"><tr>
+                            <th class="table-header">Source</th><th class="table-header">Description</th><th class="table-header text-center">Qty</th><th class="table-header text-right">Rate</th><th class="table-header text-right">Amount</th><th class="table-header">Posted</th><th class="table-header text-center">Status</th>
+                        </tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach($charges as $ch)
+                            <tr class="{{ $ch->status === 'pending' ? 'bg-amber-50/40' : '' }}">
+                                <td class="px-4 py-2.5"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{{ $ch->sourceLabel() }}</span></td>
+                                <td class="px-4 py-2.5 text-sm text-slate-800">{{ $ch->description }}</td>
+                                <td class="px-4 py-2.5 text-sm text-slate-600 text-center">{{ rtrim(rtrim(number_format($ch->quantity, 2), '0'), '.') }}</td>
+                                <td class="px-4 py-2.5 text-sm text-slate-600 text-right">{{ $currency }}{{ number_format($ch->unit_price, 2) }}</td>
+                                <td class="px-4 py-2.5 text-sm font-medium text-slate-800 text-right">{{ $currency }}{{ number_format($ch->total, 2) }}</td>
+                                <td class="px-4 py-2.5 text-xs text-slate-400">{{ optional($ch->posted_at)->format('d M, H:i') }}<span class="block">{{ $ch->posted_by_name }}</span></td>
+                                <td class="px-4 py-2.5 text-center">
+                                    @if($ch->status === 'billed')<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">On bill</span>
+                                    @else<span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pending</span>@endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
         </div>
 
         {{-- Right: Totals + Payment --}}

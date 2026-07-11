@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Modules\Billing\Models\Bill;
 use App\Modules\Billing\Models\BillPayment;
+use App\Modules\Billing\Models\ChargeItem;
 use App\Modules\Billing\Services\BillingService;
+use App\Modules\Billing\Services\ChargeCapture;
 use App\Modules\Core\Models\Order;
 use App\Modules\Core\Models\Hospital;
 use App\Modules\Core\Services\RegionService;
@@ -74,7 +76,36 @@ class BillingWebController extends Controller
             ->with(['patient', 'encounter.doctor', 'payments'])
             ->findOrFail($id);
 
-        return view('billing.show', compact('bill'));
+        // Charge-capture ledger for this bill's encounter (pending + billed), so staff
+        // can see every captured charge and whether the bill is in sync with it.
+        $charges = collect();
+        if ($bill->encounter_id) {
+            $charges = ChargeItem::where('hospital_id', $bill->hospital_id)
+                ->where('encounter_id', $bill->encounter_id)
+                ->where('status', '!=', ChargeItem::STATUS_CANCELLED)
+                ->orderBy('posted_at')->get();
+        }
+        $pendingCharges = $charges->where('status', ChargeItem::STATUS_PENDING);
+
+        return view('billing.show', compact('bill', 'charges', 'pendingCharges'));
+    }
+
+    /**
+     * Compile an encounter's captured charges into its bill (create or refresh),
+     * marking the charges billed. This is the ledger → invoice step.
+     */
+    public function compileCharges(string $encounterId, ChargeCapture $charges)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        $encounter = Encounter::where('hospital_id', $hospitalId)->findOrFail($encounterId);
+
+        $bill = $charges->compileBill($encounter, Auth::user()->name);
+        if (! $bill) {
+            return back()->with('error', 'No captured charges to bill for this encounter.');
+        }
+
+        return redirect()->route('web.billing.show', $bill->id)
+            ->with('success', 'Bill ' . $bill->bill_number . ' compiled from captured charges.');
     }
 
     /**

@@ -210,6 +210,8 @@ Route::middleware(['auth', 'module:billing'])->prefix('billing')->name('web.bill
     Route::get('dashboard', [\App\Http\Controllers\Web\BillingWebController::class, 'dashboard'])->name('dashboard');
     Route::get('create/{encounterId}', [\App\Http\Controllers\Web\BillingWebController::class, 'create'])->name('create');
     Route::post('/', [\App\Http\Controllers\Web\BillingWebController::class, 'store'])->name('store');
+    // Compile captured charges (charge-capture ledger) into the encounter's bill
+    Route::post('compile/{encounterId}', [\App\Http\Controllers\Web\BillingWebController::class, 'compileCharges'])->name('compile');
     // Service / charge master
     Route::get('services', [\App\Http\Controllers\Web\BillingWebController::class, 'services'])->name('services');
     Route::post('services', [\App\Http\Controllers\Web\BillingWebController::class, 'storeService'])->name('services.store');
