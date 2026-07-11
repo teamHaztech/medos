@@ -92,6 +92,11 @@
                                     <span class="text-xs text-slate-400" x-text="entry.waitTime"></span>
                                 </template>
                             </div>
+
+                            {{-- Remove from queue (duplicates / wrongly-added) --}}
+                            <button type="button" x-show="entry.status !== 'done'" @click.stop="removeFromQueue(entry)"
+                                title="Remove from queue"
+                                class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded text-slate-300 hover:text-red-500 hover:bg-red-50 text-lg leading-none">&times;</button>
                         </div>
                     </template>
                     <p x-show="queue.length===0" class="text-sm text-slate-400 text-center py-8">No patients</p>
@@ -387,6 +392,20 @@ function doctorDashboard() {
             } catch(e) {}
             this.selectedPatient = null;
             this.showConsultation = false;
+            this.refreshQueue();
+        },
+
+        async removeFromQueue(p) {
+            if (!p) return;
+            if (!confirm('Remove ' + p.name + ' (' + p.token + ") from today's queue? Use this for duplicate or wrongly-added entries.")) return;
+            this.queue = this.queue.filter(e => e.id !== p.id);
+            if (this.selectedPatient?.id === p.id) { this.selectedPatient = null; this.showConsultation = false; }
+            try {
+                await fetch('/doctor/remove-queue/' + p.id, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+                });
+            } catch(e) {}
             this.refreshQueue();
         },
 

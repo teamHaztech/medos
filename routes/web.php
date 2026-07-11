@@ -168,6 +168,7 @@ Route::middleware('auth')->prefix('doctor')->name('web.doctor.')->group(function
     Route::post('refer-lab/{appointmentId}', [DoctorWebController::class, 'referToLab'])->name('refer-lab');
     Route::post('no-show/{appointmentId}', [DoctorWebController::class, 'markNoShow'])->name('no-show');
     Route::post('skip/{appointmentId}', [DoctorWebController::class, 'skipPatient'])->name('skip');
+    Route::post('remove-queue/{appointmentId}', [DoctorWebController::class, 'removeFromQueue'])->name('remove-queue');
     Route::get('queue-json', [DoctorWebController::class, 'queueJson'])->name('queue-json');
 });
 

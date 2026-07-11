@@ -418,6 +418,25 @@ class DoctorWebController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /** Remove an entry from today's queue (e.g. a duplicate token). Cancels the appointment. */
+    public function removeFromQueue(Request $request, string $appointmentId)
+    {
+        $apt = Appointment::where('doctor_id', $this->doctorId())->findOrFail($appointmentId);
+        $apt->update([
+            'status'              => 'cancelled',
+            'cancellation_reason' => $request->input('reason', 'Removed from queue by doctor'),
+        ]);
+
+        // Close out the linked, still-open encounter so it doesn't linger as active work.
+        Encounter::where('patient_id', $apt->patient_id)
+            ->where('doctor_id', $apt->doctor_id)
+            ->whereDate('created_at', today())
+            ->whereIn('status', ['checked_in', 'in_progress'])
+            ->update(['status' => 'cancelled']);
+
+        return response()->json(['success' => true]);
+    }
+
     public function completeConsultation(Request $request, string $appointmentId)
     {
         $apt = Appointment::where('doctor_id', $this->doctorId())->findOrFail($appointmentId);
