@@ -38,7 +38,7 @@ class LabController extends Controller
             ->get()
             ->map(function ($order) {
                 // Calculate TAT
-                $order->tat_minutes = $order->created_at ? now()->diffInMinutes($order->created_at) : 0;
+                $order->tat_minutes = $order->created_at ? max(0, (int) floor(abs(now()->diffInMinutes($order->created_at)))) : 0;
                 $order->tat_display = $this->formatTat($order->tat_minutes);
                 $order->tat_color = $this->tatColor($order);
                 return $order;

@@ -61,7 +61,7 @@ class DoctorWebController extends Controller
                     'name'          => $patient?->name ?? 'Unknown',
                     'complaint'     => $intake['chief_complaint'] ?? 'Not recorded',
                     'urgency'       => $triageStr,
-                    'waitTime'      => $apt->check_in_time ? now()->diffInMinutes($apt->check_in_time) . ' min' : $apt->slot_start?->format('h:i A'),
+                    'waitTime'      => $apt->check_in_time ? max(0, (int) floor(abs(now()->diffInMinutes($apt->check_in_time)))) . ' min' : $apt->slot_start?->format('h:i A'),
                     'status'        => match($aptStatus) {
                         'completed' => 'done',
                         'in_progress' => 'called',
@@ -292,7 +292,7 @@ class DoctorWebController extends Controller
                 'name'          => $patient?->name ?? 'Unknown',
                 'complaint'     => $intake['chief_complaint'] ?? 'Not recorded',
                 'urgency'       => $triageStr,
-                'waitTime'      => $apt->check_in_time ? now()->diffInMinutes($apt->check_in_time) . ' min' : $apt->slot_start?->format('h:i A'),
+                'waitTime'      => $apt->check_in_time ? max(0, (int) floor(abs(now()->diffInMinutes($apt->check_in_time)))) . ' min' : $apt->slot_start?->format('h:i A'),
                 'status'        => match($aptStatus) { 'completed' => 'done', 'in_progress' => 'called', default => 'waiting' },
                 'age'           => $age ?: 0,
                 'gender'        => ucfirst($patient?->gender ?? ''),
@@ -428,7 +428,7 @@ class DoctorWebController extends Controller
             'status' => 'completed',
             'consultation_end_time' => now(),
             'actual_duration_minutes' => $apt->consultation_start_time
-                ? now()->diffInMinutes($apt->consultation_start_time)
+                ? max(0, (int) round(abs(now()->diffInMinutes($apt->consultation_start_time))))
                 : null,
         ]);
 

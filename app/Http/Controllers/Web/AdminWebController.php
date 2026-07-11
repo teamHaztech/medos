@@ -1667,6 +1667,20 @@ class AdminWebController extends Controller
         $doctor = ! empty($v['doctor_id']) ? Staff::where('hospital_id', $hospitalId)->find($v['doctor_id']) : null;
         $now = now();
 
+        // Guard: don't double-queue the same patient with the same doctor on the same day.
+        if ($doctor) {
+            $existingApt = Appointment::where('hospital_id', $hospitalId)
+                ->where('patient_id', $patientId)
+                ->where('doctor_id', $doctor->id)
+                ->whereDate('slot_start', today())
+                ->whereIn('status', ['checked_in', 'in_progress'])
+                ->first();
+            if ($existingApt) {
+                return back()->withInput()->with('error',
+                    'This patient is already in ' . $doctor->name . "'s queue (token " . ($existingApt->notes ?: '—') . '). Complete or cancel that visit before issuing a new token.');
+            }
+        }
+
         $encounter = Encounter::create([
             'id'               => Str::uuid()->toString(),
             'hospital_id'      => $hospitalId,

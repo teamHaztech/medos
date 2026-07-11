@@ -13,7 +13,7 @@
 
     {{-- Staff-only quick action (hidden on public/TV view) --}}
     @auth
-    <a href="{{ url('/admin/queue') }}" class="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xl text-sm">+ Add to Queue</a>
+    <a href="{{ url('/admin/queue') }}" style="position:fixed; bottom:5rem; right:1.5rem;" class="z-50 px-5 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xl text-sm">+ Add to Queue</a>
     @endauth
 
     {{-- Hospital branding --}}
@@ -55,11 +55,8 @@
                         <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Now Serving</p>
                         <template x-if="doctor.current">
                             <div class="flex items-center gap-4 p-4 bg-green-500/20 border border-green-500/40 rounded-xl">
-                                <div class="w-16 h-16 bg-green-500 text-white rounded-xl flex items-center justify-center text-2xl font-black" x-text="doctor.current.token"></div>
-                                <div>
-                                    <p class="text-2xl font-bold text-green-400" x-text="doctor.current.token"></p>
-                                    <p class="text-sm text-slate-400" x-text="doctor.current.name"></p>
-                                </div>
+                                <div class="px-4 py-2 bg-green-500 text-white rounded-xl text-2xl font-black whitespace-nowrap flex-shrink-0" x-text="doctor.current.token"></div>
+                                <p class="text-lg font-medium text-slate-200 truncate min-w-0" x-text="doctor.current.name"></p>
                             </div>
                         </template>
                         <template x-if="!doctor.current">
@@ -75,11 +72,8 @@
                         <div class="space-y-2">
                             <template x-for="patient in doctor.waiting.slice(0, 3)" :key="patient.token">
                                 <div class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg">
-                                    <div class="w-12 h-12 bg-slate-600 text-white rounded-lg flex items-center justify-center text-lg font-bold" x-text="patient.token"></div>
-                                    <div>
-                                        <p class="text-base font-medium text-slate-300" x-text="patient.token"></p>
-                                        <p class="text-sm text-slate-500" x-text="patient.name"></p>
-                                    </div>
+                                    <div class="px-3 py-2 bg-slate-600 text-white rounded-lg text-base font-bold whitespace-nowrap flex-shrink-0" x-text="patient.token"></div>
+                                    <p class="text-base font-medium text-slate-300 truncate min-w-0" x-text="patient.name"></p>
                                 </div>
                             </template>
                             <template x-if="doctor.waiting.length === 0">
