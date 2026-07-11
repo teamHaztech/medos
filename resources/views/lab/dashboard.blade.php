@@ -240,12 +240,15 @@ function labDashboard() {
         },
 
         async updateStatus(id, status) {
-            const res = await fetch('/lab/' + id + '/status', {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ lab_status: status })
-            });
-            if (res.ok) this.refreshData();
+            try {
+                const res = await fetch('/lab/' + id + '/status', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ lab_status: status })
+                });
+                if (res.ok) { this.refreshData(); }
+                else { const d = await res.json().catch(() => ({})); alert(d.error || d.message || 'Failed to update status'); }
+            } catch(e) { alert('Network error'); }
         },
 
         async verify(id, hasCriticalUnacknowledged) {

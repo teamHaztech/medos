@@ -21,6 +21,16 @@ Route::prefix('whatsapp')->group(function () {
 });
 
 // -----------------------------------------------------------------
+// Voice AI Webhooks (unauthenticated — verified by provider signature)
+// -----------------------------------------------------------------
+Route::prefix('voice')->group(function () {
+    Route::post('webhook', [\App\Http\Controllers\Web\VoiceCallController::class, 'handleWebhook'])
+        ->name('voice.webhook');
+    Route::post('ai-response', [\App\Http\Controllers\Web\VoiceCallController::class, 'processAiResponse'])
+        ->name('voice.ai-response');
+});
+
+// -----------------------------------------------------------------
 // Authentication routes
 // -----------------------------------------------------------------
 Route::prefix('auth')->name('auth.')->group(function () {

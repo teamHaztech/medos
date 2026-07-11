@@ -366,6 +366,22 @@ Route::middleware(['auth', 'module:dental'])->prefix('dental')->name('web.dental
 });
 
 // ---------------------------------------------------------------
+// Voice AI Calls
+// ---------------------------------------------------------------
+Route::middleware(['auth', 'module:voice_calls'])->prefix('voice-calls')->name('web.voice-calls.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\VoiceCallController::class, 'dashboard'])->name('dashboard');
+    Route::get('calls', [\App\Http\Controllers\Web\VoiceCallController::class, 'callLog'])->name('calls');
+    Route::get('calls/{id}', [\App\Http\Controllers\Web\VoiceCallController::class, 'callDetail'])->name('calls.show');
+    Route::get('settings', [\App\Http\Controllers\Web\VoiceCallController::class, 'settings'])->name('settings');
+    Route::post('settings', [\App\Http\Controllers\Web\VoiceCallController::class, 'settings'])->name('settings.save');
+    Route::post('toggle', [\App\Http\Controllers\Web\VoiceCallController::class, 'toggleEnabled'])->name('toggle');
+    Route::get('live-calls', [\App\Http\Controllers\Web\VoiceCallController::class, 'liveCallsJson'])->name('live-calls');
+    Route::get('calls/{id}/transcript', [\App\Http\Controllers\Web\VoiceCallController::class, 'callTranscriptJson'])->name('calls.transcript');
+    Route::post('callbacks/{id}/initiate', [\App\Http\Controllers\Web\VoiceCallController::class, 'initiateCallback'])->name('callbacks.initiate');
+    Route::get('analytics', [\App\Http\Controllers\Web\VoiceCallController::class, 'analyticsJson'])->name('analytics');
+});
+
+// ---------------------------------------------------------------
 // Test Routes (dev only)
 // ---------------------------------------------------------------
 

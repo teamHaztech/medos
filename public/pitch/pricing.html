@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedOS Pricing — Haztech</title>
+<link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700,800,900" rel="stylesheet" />
+<style>
+@page { size: A4; margin: 0; }
+@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #ffffff; color: #0f172a; width: 210mm; min-height: 297mm; margin: 0 auto; position: relative; overflow: hidden; }
+
+.page { width: 210mm; min-height: 297mm; padding: 28px 32px 20px; position: relative; background: #ffffff; }
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #e2e8f0; }
+.logo-area { display: flex; align-items: center; gap: 12px; }
+.logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #2563eb, #3b82f6); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.logo-icon svg { width: 22px; height: 22px; color: white; }
+.logo-text h1 { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+.logo-text h1 span { color: #2563eb; }
+.logo-text p { font-size: 9px; color: #94a3b8; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+.header-right { text-align: right; }
+.header-right p { font-size: 9px; color: #64748b; line-height: 1.6; }
+.header-right strong { color: #f59e0b; }
+
+/* Tagline */
+.tagline { text-align: center; margin-bottom: 22px; }
+.tagline h2 { font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.01em; }
+.tagline h2 span { background: linear-gradient(135deg, #2563eb, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.tagline p { font-size: 11px; color: #64748b; margin-top: 4px; }
+
+/* Pricing Grid */
+.pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.plan { border-radius: 14px; padding: 18px 16px; position: relative; border: 1.5px solid #e2e8f0; background: #fff; }
+.plan.popular { border-color: #2563eb; background: linear-gradient(180deg, #eff6ff 0%, #ffffff 40%); box-shadow: 0 4px 24px rgba(37,99,235,0.12); }
+.plan.enterprise { border-color: #7c3aed; background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 40%); }
+.popular-badge { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-size: 8px; font-weight: 700; padding: 3px 14px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.08em; }
+.plan-name { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+.plan.popular .plan-name { color: #2563eb; }
+.plan.enterprise .plan-name { color: #7c3aed; }
+.plan-desc { font-size: 9px; color: #94a3b8; margin-bottom: 10px; }
+.plan-price { margin-bottom: 12px; }
+.plan-price .amount { font-size: 32px; font-weight: 900; letter-spacing: -0.03em; color: #0f172a; }
+.plan-price .currency { font-size: 16px; font-weight: 700; vertical-align: top; color: #64748b; }
+.plan-price .period { font-size: 10px; color: #94a3b8; font-weight: 500; }
+.plan-price .annual { font-size: 9px; color: #64748b; display: block; margin-top: 2px; }
+
+.features { list-style: none; margin-bottom: 14px; }
+.features li { font-size: 9.5px; color: #334155; padding: 3px 0; display: flex; align-items: flex-start; gap: 6px; line-height: 1.4; }
+.features li::before { content: ''; width: 14px; height: 14px; min-width: 14px; border-radius: 50%; background: #dcfce7; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.features li.yes::before { background: #dcfce7; }
+.features li.no { color: #94a3b8; }
+.features li.no::before { background: #f1f5f9; }
+.check { color: #16a34a; font-weight: 700; font-size: 10px; }
+.cross { color: #cbd5e1; font-size: 10px; }
+
+.plan-cta { display: block; width: 100%; text-align: center; padding: 8px; border-radius: 8px; font-size: 10px; font-weight: 700; text-decoration: none; border: none; cursor: pointer; letter-spacing: 0.02em; }
+.plan-cta.outline { background: #f8fafc; border: 1.5px solid #e2e8f0; color: #475569; }
+.plan-cta.primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; }
+.plan-cta.purple { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; }
+
+/* Add-ons */
+.addons { background: #f8fafc; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; border: 1px solid #e2e8f0; }
+.addons h3 { font-size: 11px; font-weight: 700; color: #334155; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+.addon-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+.addon-item { display: flex; align-items: center; gap: 8px; }
+.addon-icon { font-size: 16px; }
+.addon-info { font-size: 9px; }
+.addon-info strong { display: block; color: #0f172a; font-size: 9.5px; }
+.addon-info span { color: #64748b; }
+
+/* Why MedOS strip */
+.why-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+.why-item { text-align: center; padding: 10px 4px; background: #f0f9ff; border-radius: 8px; border: 1px solid #e0f2fe; }
+.why-item .icon { font-size: 18px; margin-bottom: 3px; }
+.why-item p { font-size: 8.5px; font-weight: 600; color: #1e40af; line-height: 1.3; }
+
+/* Footer */
+.footer { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1.5px solid #e2e8f0; }
+.footer-left p { font-size: 9px; color: #64748b; line-height: 1.5; }
+.footer-left strong { color: #0f172a; }
+.footer-right { text-align: right; }
+.footer-right .site { font-size: 11px; font-weight: 700; color: #2563eb; }
+.footer-right p { font-size: 8px; color: #94a3b8; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="logo-area">
+            <div class="logo-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+            </div>
+            <div class="logo-text">
+                <h1>Med<span>OS</span></h1>
+                <p>AI-First Hospital Operating System</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <p>Powered by <strong>Haztech</strong> Digital Innovation Agency<br>9+ Years &middot; Margao, Goa, India</p>
+        </div>
+    </div>
+
+    <!-- Tagline -->
+    <div class="tagline">
+        <h2>Choose the plan that fits <span>your hospital</span></h2>
+        <p>All plans include setup, training, and dedicated support. No hidden charges.</p>
+    </div>
+
+    <!-- Pricing Grid -->
+    <div class="pricing-grid">
+
+        <!-- Starter -->
+        <div class="plan">
+            <div class="plan-name">Starter</div>
+            <div class="plan-desc">For clinics & small hospitals</div>
+            <div class="plan-price">
+                <span class="currency">&#8377;</span><span class="amount">9,999</span>
+                <span class="period">/month</span>
+                <span class="annual">&#8377;99,990/year (save 17%)</span>
+            </div>
+            <ul class="features">
+                <li class="yes"><span class="check">&#10003;</span> Up to 5 doctors</li>
+                <li class="yes"><span class="check">&#10003;</span> WhatsApp booking bot</li>
+                <li class="yes"><span class="check">&#10003;</span> Patient registration</li>
+                <li class="yes"><span class="check">&#10003;</span> Queue management</li>
+                <li class="yes"><span class="check">&#10003;</span> Appointment scheduling</li>
+                <li class="yes"><span class="check">&#10003;</span> Doctor dashboard</li>
+                <li class="yes"><span class="check">&#10003;</span> Basic billing</li>
+                <li class="no"><span class="cross">&#10005;</span> Lab / Pathology module</li>
+                <li class="no"><span class="cross">&#10005;</span> Pharmacy module</li>
+                <li class="no"><span class="cross">&#10005;</span> Insurance integration</li>
+                <li class="no"><span class="cross">&#10005;</span> Multi-branch support</li>
+            </ul>
+            <div class="plan-cta outline">Get Started</div>
+        </div>
+
+        <!-- Premium (Popular) -->
+        <div class="plan popular">
+            <div class="popular-badge">Most Popular</div>
+            <div class="plan-name">Premium</div>
+            <div class="plan-desc">For growing hospitals</div>
+            <div class="plan-price">
+                <span class="currency">&#8377;</span><span class="amount">24,999</span>
+                <span class="period">/month</span>
+                <span class="annual">&#8377;2,49,990/year (save 17%)</span>
+            </div>
+            <ul class="features">
+                <li class="yes"><span class="check">&#10003;</span> Up to 20 doctors</li>
+                <li class="yes"><span class="check">&#10003;</span> Everything in Starter</li>
+                <li class="yes"><span class="check">&#10003;</span> Pathology / Lab LIS</li>
+                <li class="yes"><span class="check">&#10003;</span> Pharmacy + stock mgmt</li>
+                <li class="yes"><span class="check">&#10003;</span> AI triage & routing</li>
+                <li class="yes"><span class="check">&#10003;</span> Kiosk check-in + room display</li>
+                <li class="yes"><span class="check">&#10003;</span> Discharge summaries</li>
+                <li class="yes"><span class="check">&#10003;</span> Analytics dashboard</li>
+                <li class="yes"><span class="check">&#10003;</span> ABHA / health ID integration</li>
+                <li class="yes"><span class="check">&#10003;</span> WhatsApp notifications</li>
+                <li class="no"><span class="cross">&#10005;</span> Multi-branch support</li>
+            </ul>
+            <div class="plan-cta primary">Start Free Trial</div>
+        </div>
+
+        <!-- Enterprise -->
+        <div class="plan enterprise">
+            <div class="plan-name">Enterprise</div>
+            <div class="plan-desc">For hospital chains & groups</div>
+            <div class="plan-price">
+                <span class="currency">&#8377;</span><span class="amount">49,999</span>
+                <span class="period">/month</span>
+                <span class="annual">Custom annual pricing available</span>
+            </div>
+            <ul class="features">
+                <li class="yes"><span class="check">&#10003;</span> Unlimited doctors</li>
+                <li class="yes"><span class="check">&#10003;</span> Everything in Premium</li>
+                <li class="yes"><span class="check">&#10003;</span> Multi-branch / multi-hospital</li>
+                <li class="yes"><span class="check">&#10003;</span> Insurance claims & TPA</li>
+                <li class="yes"><span class="check">&#10003;</span> Super admin dashboard</li>
+                <li class="yes"><span class="check">&#10003;</span> Shared doctor pool</li>
+                <li class="yes"><span class="check">&#10003;</span> Custom integrations</li>
+                <li class="yes"><span class="check">&#10003;</span> Dedicated account manager</li>
+                <li class="yes"><span class="check">&#10003;</span> SLA 99.9% uptime</li>
+                <li class="yes"><span class="check">&#10003;</span> On-premise option</li>
+                <li class="yes"><span class="check">&#10003;</span> Priority support (4hr SLA)</li>
+            </ul>
+            <div class="plan-cta purple">Contact Sales</div>
+        </div>
+    </div>
+
+    <!-- Add-ons -->
+    <div class="addons">
+        <h3>Add-Ons (available with any plan)</h3>
+        <div class="addon-grid">
+            <div class="addon-item">
+                <span class="addon-icon">📱</span>
+                <div class="addon-info"><strong>SMS Notifications</strong><span>&#8377;2,000/mo</span></div>
+            </div>
+            <div class="addon-item">
+                <span class="addon-icon">🤖</span>
+                <div class="addon-info"><strong>AI Doctor Assist</strong><span>&#8377;5,000/mo</span></div>
+            </div>
+            <div class="addon-item">
+                <span class="addon-icon">📊</span>
+                <div class="addon-info"><strong>Advanced Analytics</strong><span>&#8377;3,000/mo</span></div>
+            </div>
+            <div class="addon-item">
+                <span class="addon-icon">🏥</span>
+                <div class="addon-info"><strong>Extra Branch</strong><span>&#8377;7,500/mo each</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Why MedOS -->
+    <div class="why-strip">
+        <div class="why-item"><div class="icon">💬</div><p>WhatsApp-First<br>Booking</p></div>
+        <div class="why-item"><div class="icon">🇮🇳</div><p>India & UAE<br>Ready</p></div>
+        <div class="why-item"><div class="icon">🧠</div><p>AI Triage &<br>Smart Queue</p></div>
+        <div class="why-item"><div class="icon">🔒</div><p>HIPAA &<br>ABHA Ready</p></div>
+        <div class="why-item"><div class="icon">☁️</div><p>Zero Infra<br>Cloud Hosted</p></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="footer-left">
+            <p><strong>Free setup & onboarding</strong> included with all plans.<br>14-day free trial on Premium. No credit card required.<br>All prices exclusive of GST (18%).</p>
+        </div>
+        <div class="footer-right">
+            <div class="site">medos.haztech.cloud</div>
+            <p>info@haztech.in &middot; +91-XXXXX-XXXXX</p>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

@@ -16,6 +16,7 @@ class ModuleCatalog
         'doctor_assist'        => ['name' => 'Doctor Assist', 'description' => 'AI briefings and SOAP notes', 'category' => 'AI & Communication'],
         'whatsapp'             => ['name' => 'WhatsApp Integration', 'description' => 'Patient communication via WhatsApp', 'category' => 'AI & Communication'],
         'engagement'           => ['name' => 'Patient Engagement', 'description' => 'Reminders, follow-ups and feedback', 'category' => 'AI & Communication'],
+        'voice_calls'          => ['name' => 'Voice AI Calls', 'description' => 'AI-powered phone call handling and live call dashboard', 'category' => 'AI & Communication'],
 
         // Financial
         'billing'              => ['name' => 'Billing', 'description' => 'Bills, payments and the token counter', 'category' => 'Financial'],
@@ -43,7 +44,7 @@ class ModuleCatalog
     /** Module keys added since the original catalog — used to back-fill existing hospitals. */
     public const NEW_MODULE_KEYS = [
         'vaccination', 'dietary', 'dental', 'clinical_pathways', 'consent',
-        'inventory', 'incidents', 'housekeeping',
+        'inventory', 'incidents', 'housekeeping', 'voice_calls',
     ];
 
     /** @return array<string, array> grouped by category, preserving order. */
