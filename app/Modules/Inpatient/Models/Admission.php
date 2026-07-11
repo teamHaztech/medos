@@ -19,13 +19,16 @@ class Admission extends Model
 
     protected $fillable = [
         'id', 'hospital_id', 'patient_id', 'admitting_doctor_id', 'attending_doctor_id',
-        'ward_id', 'bed_id', 'admission_no', 'admitted_at', 'reason', 'provisional_diagnosis',
+        'ward_id', 'bed_id', 'room_daily_rate', 'nursing_daily_rate', 'bed_category',
+        'admission_no', 'admitted_at', 'reason', 'provisional_diagnosis',
         'status', 'discharged_at', 'discharge_summary', 'discharge_type',
         'discharge_status', 'discharge_initiated_at',
         'billing_cleared_at', 'pharmacy_cleared_at', 'nursing_cleared_at',
     ];
 
     protected $casts = [
+        'room_daily_rate'        => 'decimal:2',
+        'nursing_daily_rate'     => 'decimal:2',
         'admitted_at'            => 'datetime',
         'discharged_at'          => 'datetime',
         'discharge_initiated_at' => 'datetime',

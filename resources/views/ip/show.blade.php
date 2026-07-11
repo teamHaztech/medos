@@ -15,7 +15,7 @@
 
 @section('content')
 <div x-data="{
-        vOpen: false, ioOpen: false, noteOpen: false, tOpen: false, dOpen: false,
+        vOpen: false, ioOpen: false, noteOpen: false, tOpen: false, dOpen: false, chargeOpen: false,
         wards: {{ Illuminate\Support\Js::from($wardData) }},
         tWard: '',
         get tBeds() { return (this.wards.find(w => w.id === this.tWard) || {}).beds || []; },
@@ -198,7 +198,79 @@
         </div>
     </div>
 
+    {{-- Inpatient running bill --}}
+    @php $cur = \App\Modules\Core\Services\RegionService::currency(); @endphp
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+                <h3 class="text-sm font-semibold text-slate-700">Inpatient Bill</h3>
+                <p class="text-xs text-slate-400">Room accrues automatically per day. Add procedures, consumables and investigations as they happen.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                @if($admission->isActive())<button @click="chargeOpen = true" class="btn-secondary text-sm">+ Add charge</button>@endif
+                <form method="POST" action="{{ route('web.ip.bill', $admission->id) }}">@csrf
+                    <button type="submit" class="btn-primary text-sm whitespace-nowrap">{{ $ipBill ? 'Open bill' : 'Generate bill' }}</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50 border-b border-slate-200"><tr>
+                    <th class="table-header">Source</th><th class="table-header">Description</th><th class="table-header text-center">Qty</th><th class="table-header text-right">Rate</th><th class="table-header text-right">Amount</th>
+                </tr></thead>
+                <tbody class="divide-y divide-slate-100">
+                    @forelse($charges as $ch)
+                    <tr>
+                        <td class="px-4 py-2.5"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{{ $ch->sourceLabel() }}</span></td>
+                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $ch->description }}</td>
+                        <td class="px-4 py-2.5 text-sm text-slate-600 text-center">{{ rtrim(rtrim(number_format($ch->quantity, 2), '0'), '.') }}</td>
+                        <td class="px-4 py-2.5 text-sm text-slate-600 text-right">{{ $cur }}{{ number_format($ch->unit_price, 2) }}</td>
+                        <td class="px-4 py-2.5 text-sm font-medium text-slate-800 text-right">{{ $cur }}{{ number_format($ch->total, 2) }}</td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="5" class="px-4 py-6 text-center text-sm text-slate-400">No charges captured yet.</td></tr>
+                    @endforelse
+                </tbody>
+                <tfoot class="border-t-2 border-slate-200">
+                    <tr><td colspan="4" class="px-4 py-3 text-right text-sm font-semibold text-slate-600">Running total</td><td class="px-4 py-3 text-right text-base font-bold text-slate-900">{{ $cur }}{{ number_format($runningTotal, 2) }}</td></tr>
+                </tfoot>
+            </table>
+        </div>
+        @if($ipBill)
+        <p class="text-xs text-slate-400 mt-3">Bill <a href="{{ route('web.billing.show', $ipBill->id) }}" class="text-blue-600 hover:text-blue-800 font-medium">{{ $ipBill->bill_number }}</a> — {{ $cur }}{{ number_format($ipBill->total_amount, 2) }} · {{ ucfirst(is_object($ipBill->payment_status) ? $ipBill->payment_status->value : $ipBill->payment_status) }}</p>
+        @endif
+    </div>
+
     {{-- ================= MODALS ================= --}}
+
+    {{-- Add charge --}}
+    <x-modal show="chargeOpen" title="Add Inpatient Charge" max="lg">
+        <form method="POST" action="{{ route('web.ip.charge', $admission->id) }}" class="space-y-4"
+              x-data="{ svc: '', services: {{ Illuminate\Support\Js::from($services->map(fn($s)=>['id'=>$s->id,'name'=>$s->name,'price'=>(float)$s->price,'category'=>$s->category])->values()) }},
+                        source: 'procedure', desc: '', price: '',
+                        pick() { const s = this.services.find(x => x.id === this.svc); if (s) { this.desc = s.name; this.price = s.price; const m = {procedure:'procedure',investigation:'lab',consumable:'consumable',nursing:'nursing',room:'other'}; this.source = m[s.category] || 'procedure'; } } }">
+            @csrf
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">From rate card <span class="text-slate-400 font-normal">(optional)</span></label>
+                <select name="service_charge_id" x-model="svc" @change="pick()" class="input-field">
+                    <option value="">— custom —</option>
+                    @foreach($services as $s)<option value="{{ $s->id }}">{{ $s->name }} ({{ $cur }}{{ number_format($s->price, 0) }})</option>@endforeach
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-sm font-medium text-slate-700 mb-1">Type</label>
+                    <select name="source" x-model="source" class="input-field">
+                        <option value="procedure">Procedure</option><option value="consumable">Consumable</option><option value="lab">Investigation</option><option value="imaging">Imaging</option><option value="nursing">Nursing</option><option value="other">Other</option>
+                    </select>
+                </div>
+                <div><label class="block text-sm font-medium text-slate-700 mb-1">Quantity</label><input type="number" step="0.01" name="quantity" value="1" min="0.01" required class="input-field"></div>
+            </div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Description</label><input type="text" name="description" x-model="desc" required maxlength="255" class="input-field"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Unit price ({{ $cur }})</label><input type="number" step="0.01" name="unit_price" x-model="price" min="0" required class="input-field"></div>
+            <div class="flex items-center gap-3 pt-1"><button type="submit" class="btn-primary px-5 py-2.5">Add to bill</button><button type="button" @click="chargeOpen = false" class="text-sm text-slate-500 px-2 py-2">Cancel</button></div>
+        </form>
+    </x-modal>
 
     {{-- Vitals --}}
     <x-modal show="vOpen" title="Record Vitals" max="lg">

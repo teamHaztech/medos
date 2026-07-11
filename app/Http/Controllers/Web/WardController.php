@@ -32,18 +32,22 @@ class WardController extends Controller
     {
         $hid = $this->hid();
         $v = $request->validate([
-            'name'      => 'required|string|max:255',
-            'ward_type' => 'nullable|string|max:50',
-            'floor'     => 'nullable|string|max:50',
-            'bed_count' => 'nullable|integer|min:0|max:200',
-            'bed_prefix' => 'nullable|string|max:10',
+            'name'               => 'required|string|max:255',
+            'ward_type'          => 'nullable|string|max:50',
+            'daily_rate'         => 'nullable|numeric|min:0|max:1000000',
+            'nursing_daily_rate' => 'nullable|numeric|min:0|max:1000000',
+            'floor'              => 'nullable|string|max:50',
+            'bed_count'          => 'nullable|integer|min:0|max:200',
+            'bed_prefix'         => 'nullable|string|max:10',
         ]);
 
         $ward = Ward::create([
-            'hospital_id' => $hid,
-            'name'        => $v['name'],
-            'ward_type'   => $v['ward_type'] ?? null,
-            'floor'       => $v['floor'] ?? null,
+            'hospital_id'        => $hid,
+            'name'               => $v['name'],
+            'ward_type'          => $v['ward_type'] ?? null,
+            'daily_rate'         => $v['daily_rate'] ?? 0,
+            'nursing_daily_rate' => $v['nursing_daily_rate'] ?? 0,
+            'floor'              => $v['floor'] ?? null,
         ]);
 
         // Optionally create N beds up front.
@@ -66,9 +70,11 @@ class WardController extends Controller
         $this->hid();
         $ward = Ward::findOrFail($id);
         $ward->update($request->validate([
-            'name'      => 'required|string|max:255',
-            'ward_type' => 'nullable|string|max:50',
-            'floor'     => 'nullable|string|max:50',
+            'name'               => 'required|string|max:255',
+            'ward_type'          => 'nullable|string|max:50',
+            'daily_rate'         => 'nullable|numeric|min:0|max:1000000',
+            'nursing_daily_rate' => 'nullable|numeric|min:0|max:1000000',
+            'floor'              => 'nullable|string|max:50',
         ]));
 
         return redirect()->route('web.ip.wards')->with('success', 'Ward updated.');

@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Billing\Models\Bill;
+use App\Modules\Billing\Models\ChargeItem;
+use App\Modules\Billing\Models\ServiceCharge;
+use App\Modules\Billing\Services\ChargeCapture;
 use App\Modules\Core\Models\Staff;
 use App\Modules\Inpatient\Models\Admission;
 use App\Modules\Inpatient\Models\Bed;
@@ -120,6 +124,10 @@ class InpatientController extends Controller
 
         $seq = Admission::where('hospital_id', $hid)->whereDate('admitted_at', today())->count() + 1;
 
+        // Snapshot the ward tariff onto the admission so later rate changes don't
+        // retroactively alter this stay's bill.
+        $ward = Ward::find($v['ward_id']);
+
         $admission = Admission::create([
             'hospital_id'           => $hid,
             'patient_id'            => $v['patient_id'],
@@ -127,6 +135,9 @@ class InpatientController extends Controller
             'attending_doctor_id'   => $v['attending_doctor_id'] ?? $v['admitting_doctor_id'] ?? null,
             'ward_id'               => $v['ward_id'],
             'bed_id'                => $bed->id,
+            'room_daily_rate'       => $ward?->daily_rate ?? 0,
+            'nursing_daily_rate'    => $ward?->nursing_daily_rate ?? 0,
+            'bed_category'          => $ward?->ward_type,
             'admission_no'          => 'IP-' . now()->format('Ymd') . '-' . str_pad((string) $seq, 4, '0', STR_PAD_LEFT),
             'admitted_at'           => now(),
             'reason'                => $v['reason'] ?? null,
@@ -156,7 +167,65 @@ class InpatientController extends Controller
             ->with(['beds' => fn ($q) => $q->where('is_active', true)->where('status', 'available')])
             ->orderBy('name')->get();
 
-        return view('ip.show', compact('admission', 'wards'));
+        // Keep room/nursing accrual current, then load the running bill picture.
+        try {
+            app(ChargeCapture::class)->accrueRoom($admission, Auth::user()->name);
+        } catch (\Throwable $e) {
+            \Log::warning('[IPD] room accrual failed: ' . $e->getMessage());
+        }
+        $charges = ChargeItem::where('admission_id', $admission->id)
+            ->where('status', '!=', ChargeItem::STATUS_CANCELLED)
+            ->orderBy('posted_at')->get();
+        $runningTotal = round((float) $charges->sum('total'), 2);
+        $ipBill = Bill::withoutGlobalScopes()->where('admission_id', $admission->id)->first();
+        $services = ServiceCharge::where('hospital_id', $admission->hospital_id)->where('is_active', true)
+            ->orderBy('category')->orderBy('name')->get();
+
+        return view('ip.show', compact('admission', 'wards', 'charges', 'runningTotal', 'ipBill', 'services'));
+    }
+
+    /** Post an ad-hoc charge (procedure / consumable / investigation) to the admission. */
+    public function addCharge(Request $request, string $id)
+    {
+        $hid = $this->hid();
+        $admission = Admission::findOrFail($id);
+
+        $v = $request->validate([
+            'service_charge_id' => 'nullable|uuid',
+            'source'            => 'required|in:procedure,consumable,lab,imaging,nursing,other',
+            'description'       => 'required|string|max:255',
+            'unit_price'        => 'required|numeric|min:0',
+            'quantity'          => 'required|numeric|min:0.01|max:9999',
+        ]);
+
+        $cc = app(ChargeCapture::class);
+        $cc->post([
+            'hospital_id'       => $hid,
+            'patient_id'        => $admission->patient_id,
+            'admission_id'      => $admission->id,
+            'service_charge_id' => $v['service_charge_id'] ?? null,
+            'source'            => $v['source'],
+            'description'       => $v['description'],
+            'unit_price'        => (float) $v['unit_price'],
+            'quantity'          => (float) $v['quantity'],
+            'posted_by_name'    => Auth::user()->name,
+        ]);
+        $cc->compileBill($admission, Auth::user()->name);
+
+        return redirect()->route('web.ip.show', $admission->id)->with('success', 'Charge added to the inpatient bill.');
+    }
+
+    /** Compile (or refresh) the inpatient bill for an admission. */
+    public function compileBill(string $id)
+    {
+        $this->hid();
+        $admission = Admission::findOrFail($id);
+        $bill = app(ChargeCapture::class)->compileBill($admission, Auth::user()->name);
+        if (! $bill) {
+            return back()->with('error', 'No charges to bill yet for this admission.');
+        }
+
+        return redirect()->route('web.billing.show', $bill->id)->with('success', 'Inpatient bill ' . $bill->bill_number . ' ready.');
     }
 
     public function storeVital(Request $request, string $id)
@@ -300,7 +369,21 @@ class InpatientController extends Controller
             $admission->bed->update(['status' => 'available']);
         }
 
-        return redirect()->route('web.ip.admissions')->with('success', 'Patient discharged (' . $admission->admission_no . ').');
+        // Compile the final inpatient bill now that the stay (and its room days) is
+        // fixed. Non-fatal so a billing hiccup never blocks the discharge.
+        $bill = null;
+        try {
+            $bill = app(ChargeCapture::class)->compileBill($admission->fresh(), Auth::user()->name);
+        } catch (\Throwable $e) {
+            \Log::warning('[IPD] final bill compile failed: ' . $e->getMessage());
+        }
+
+        $msg = 'Patient discharged (' . $admission->admission_no . ').';
+        if ($bill) {
+            $msg .= ' Final bill ' . $bill->bill_number . ' — ' . \App\Modules\Core\Services\RegionService::currency() . number_format((float) $bill->total_amount, 2) . '.';
+        }
+
+        return redirect()->route('web.ip.admissions')->with('success', $msg);
     }
 
     // ---------------------------------------------------------------

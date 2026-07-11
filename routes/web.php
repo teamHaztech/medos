@@ -128,6 +128,8 @@ Route::middleware('auth')->prefix('ip')->name('web.ip.')->group(function () {
     Route::post('admissions/{id}/io', [InpatientController::class, 'storeIntakeOutput'])->name('io.store');
     Route::post('admissions/{id}/notes', [InpatientController::class, 'storeNote'])->name('notes.store');
     Route::post('admissions/{id}/transfer', [InpatientController::class, 'transfer'])->name('transfer');
+    Route::post('admissions/{id}/charge', [InpatientController::class, 'addCharge'])->name('charge');
+    Route::post('admissions/{id}/bill', [InpatientController::class, 'compileBill'])->name('bill');
     Route::post('admissions/{id}/discharge', [InpatientController::class, 'discharge'])->name('discharge');
     Route::post('admissions/{id}/discharge/initiate', [InpatientController::class, 'initiateDischarge'])->name('discharge.initiate');
     Route::post('admissions/{id}/clearance', [InpatientController::class, 'toggleClearance'])->name('clearance');

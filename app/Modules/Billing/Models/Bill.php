@@ -23,6 +23,7 @@ class Bill extends Model
         'id',
         'hospital_id',
         'encounter_id',
+        'admission_id',
         'patient_id',
         'bill_number',
         'bill_type',

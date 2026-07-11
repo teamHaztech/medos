@@ -7,6 +7,7 @@ use App\Modules\Billing\Models\ChargeItem;
 use App\Modules\Billing\Models\ServiceCharge;
 use App\Modules\Core\Models\Order;
 use App\Modules\Core\Services\RegionService;
+use App\Modules\Inpatient\Models\Admission;
 use App\Modules\Patient\Models\Encounter;
 use App\Modules\Pharmacy\Models\PharmacyStock;
 use Illuminate\Support\Facades\DB;
@@ -112,12 +113,18 @@ class ChargeCapture
     }
 
     /**
-     * Compile all of an encounter's charges into its Bill (create or refresh),
-     * mark them billed, and recompute payment state. Returns the Bill (or null if
-     * there is nothing to bill).
+     * Compile charges into a Bill (create or refresh), mark them billed, and
+     * recompute payment state. Accepts an Encounter (OPD) or an Admission (IPD).
+     * Returns the Bill, or null if there is nothing to bill.
      */
-    public function compileBill(Encounter $encounter, ?string $postedByName = null): ?Bill
+    public function compileBill($scope, ?string $postedByName = null): ?Bill
     {
+        if ($scope instanceof Admission) {
+            return $this->compileAdmissionBill($scope, $postedByName);
+        }
+
+        /** @var Encounter $encounter */
+        $encounter = $scope;
         $hid = $encounter->hospital_id;
 
         $charges = ChargeItem::where('hospital_id', $hid)
@@ -125,12 +132,137 @@ class ChargeCapture
             ->where('status', '!=', ChargeItem::STATUS_CANCELLED)
             ->orderBy('posted_at')->get();
 
-        $bill = Bill::withoutGlobalScopes()->where('encounter_id', $encounter->id)->first();
+        $bill = Bill::withoutGlobalScopes()->where('encounter_id', $encounter->id)
+            ->whereNull('admission_id')->first();
 
         if ($charges->isEmpty()) {
             return $bill; // nothing to compile
         }
 
+        $inv = $this->computeInvoice($charges, $bill);
+
+        if (! $bill) {
+            $bill = Bill::create(array_merge($this->newBillBase($hid, $encounter->patient_id, 'encounter', $inv), [
+                'encounter_id' => $encounter->id,
+            ]));
+        } else {
+            $bill->update($inv['update']);
+        }
+
+        $this->markBilled($charges, $bill);
+        $this->recomputePayments($bill->fresh());
+
+        return $bill->fresh();
+    }
+
+    /**
+     * Compile an admission's charges (room accrual + all ward charges) into its IPD
+     * bill. Ensures room/nursing days are current first. A lightweight billing
+     * encounter is created on first compile because every Bill needs an encounter.
+     */
+    private function compileAdmissionBill(Admission $adm, ?string $postedByName = null): ?Bill
+    {
+        $this->accrueRoom($adm, $postedByName);
+        $hid = $adm->hospital_id;
+
+        $charges = ChargeItem::where('hospital_id', $hid)
+            ->where('admission_id', $adm->id)
+            ->where('status', '!=', ChargeItem::STATUS_CANCELLED)
+            ->orderBy('posted_at')->get();
+
+        $bill = Bill::withoutGlobalScopes()->where('admission_id', $adm->id)->first();
+
+        if ($charges->isEmpty()) {
+            return $bill;
+        }
+
+        $inv = $this->computeInvoice($charges, $bill);
+
+        if (! $bill) {
+            $encounterId = Encounter::create([
+                'id'               => Str::uuid()->toString(),
+                'hospital_id'      => $hid,
+                'patient_id'       => $adm->patient_id,
+                'encounter_number' => 'ENC-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4)),
+                'type'             => 'consultation',
+                'status'           => 'completed',
+                'channel'          => 'walk_in',
+                'intake_data'      => ['source' => 'ipd', 'admission_no' => $adm->admission_no],
+            ])->id;
+
+            $bill = Bill::create(array_merge($this->newBillBase($hid, $adm->patient_id, 'ipd', $inv), [
+                'encounter_id' => $encounterId,
+                'admission_id' => $adm->id,
+                'notes'        => 'Inpatient bill — ' . $adm->admission_no,
+            ]));
+        } else {
+            $bill->update($inv['update']);
+        }
+
+        $this->markBilled($charges, $bill);
+        $this->recomputePayments($bill->fresh());
+
+        return $bill->fresh();
+    }
+
+    /**
+     * Accrue on-demand room + nursing charges for an admission: a single line whose
+     * quantity = length of stay in days, upserted in place as the stay grows. No cron.
+     *
+     * These lines stay mutable even after they land on a provisional running bill
+     * (unlike post(), which locks billed charges) so the day count stays correct
+     * right up to — and is finalised at — discharge.
+     */
+    public function accrueRoom(Admission $adm, ?string $postedByName = null): void
+    {
+        $days = $adm->lengthOfDays();
+        $category = $adm->bed_category ?: ($adm->ward->ward_type ?? 'Room');
+
+        $lines = [
+            ['room', (float) $adm->room_daily_rate, 'Room charge — ' . $category],
+            ['nursing', (float) $adm->nursing_daily_rate, 'Nursing charge'],
+        ];
+
+        foreach ($lines as [$source, $rate, $desc]) {
+            if ($rate <= 0) {
+                continue;
+            }
+            $ref = $source . ':' . $adm->id;
+            $existing = ChargeItem::where('hospital_id', $adm->hospital_id)
+                ->where('source', $source)->where('source_ref', $ref)->first();
+
+            $attrs = [
+                'description' => $desc,
+                'quantity'    => $days,
+                'unit_price'  => $rate,
+                'total'       => round($days * $rate, 2),
+            ];
+
+            if ($existing) {
+                if ($existing->status === ChargeItem::STATUS_CANCELLED) {
+                    continue;
+                }
+                $existing->update($attrs); // stays live even if already on the provisional bill
+            } else {
+                ChargeItem::create(array_merge($attrs, [
+                    'id'             => Str::uuid()->toString(),
+                    'hospital_id'    => $adm->hospital_id,
+                    'patient_id'     => $adm->patient_id,
+                    'admission_id'   => $adm->id,
+                    'source'         => $source,
+                    'source_ref'     => $ref,
+                    'is_taxable'     => false,
+                    'status'         => ChargeItem::STATUS_PENDING,
+                    'posted_by_name' => $postedByName,
+                    'posted_at'      => now(),
+                ]));
+            }
+        }
+    }
+
+    /** Build line items + totals from a charge set, preserving an existing bill's discount/insurance. */
+    private function computeInvoice($charges, ?Bill $bill): array
+    {
         $items = $charges->map(fn (ChargeItem $c) => [
             'description' => $c->description,
             'code'        => $c->code,
@@ -150,46 +282,50 @@ class ChargeCapture
         $total       = round($subtotal + $taxAmount - $discount, 2);
         $payable     = max(0, round($total - $insurance, 2));
 
-        if (! $bill) {
-            $bill = Bill::create([
-                'id'                => Str::uuid()->toString(),
-                'hospital_id'       => $hid,
-                'encounter_id'      => $encounter->id,
-                'patient_id'        => $encounter->patient_id,
-                'bill_number'       => 'BILL-' . date('Ymd') . '-' . strtoupper(Str::random(4)),
-                'bill_type'         => 'encounter',
-                'line_items'        => $items,
-                'subtotal'          => $subtotal,
-                'tax_rate'          => $taxRate,
-                'tax_amount'        => $taxAmount,
-                'discount_amount'   => 0,
-                'insurance_covered' => 0,
-                'total_amount'      => $total,
-                'patient_payable'   => $payable,
-                'amount_paid'       => 0,
-                'balance_due'       => $payable,
-                'payment_status'    => 'pending',
-                'currency'          => RegionService::currencyCode(),
-                'issued_at'         => now(),
-            ]);
-        } else {
-            $bill->update([
+        return [
+            'items' => $items, 'subtotal' => $subtotal, 'tax_rate' => $taxRate,
+            'tax_amount' => $taxAmount, 'total' => $total, 'payable' => $payable,
+            'update' => [
                 'line_items'      => $items,
                 'subtotal'        => $subtotal,
                 'tax_rate'        => $taxRate,
                 'tax_amount'      => $taxAmount,
                 'total_amount'    => $total,
                 'patient_payable' => $payable,
-            ]);
-        }
+            ],
+        ];
+    }
 
+    /** Common attributes for a freshly created bill. */
+    private function newBillBase(string $hid, string $patientId, string $billType, array $inv): array
+    {
+        return [
+            'id'                => Str::uuid()->toString(),
+            'hospital_id'       => $hid,
+            'patient_id'        => $patientId,
+            'bill_number'       => 'BILL-' . date('Ymd') . '-' . strtoupper(Str::random(4)),
+            'bill_type'         => $billType,
+            'line_items'        => $inv['items'],
+            'subtotal'          => $inv['subtotal'],
+            'tax_rate'          => $inv['tax_rate'],
+            'tax_amount'        => $inv['tax_amount'],
+            'discount_amount'   => 0,
+            'insurance_covered' => 0,
+            'total_amount'      => $inv['total'],
+            'patient_payable'   => $inv['payable'],
+            'amount_paid'       => 0,
+            'balance_due'       => $inv['payable'],
+            'payment_status'    => 'pending',
+            'currency'          => RegionService::currencyCode(),
+            'issued_at'         => now(),
+        ];
+    }
+
+    private function markBilled($charges, Bill $bill): void
+    {
         ChargeItem::whereIn('id', $charges->pluck('id'))
             ->where('status', ChargeItem::STATUS_PENDING)
             ->update(['status' => ChargeItem::STATUS_BILLED, 'bill_id' => $bill->id]);
-
-        $this->recomputePayments($bill->fresh());
-
-        return $bill->fresh();
     }
 
     // ---------------------------------------------------------------

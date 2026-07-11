@@ -15,10 +15,14 @@ class Ward extends Model
     protected $table = 'wards';
 
     protected $fillable = [
-        'id', 'hospital_id', 'name', 'ward_type', 'floor', 'is_active',
+        'id', 'hospital_id', 'name', 'ward_type', 'daily_rate', 'nursing_daily_rate', 'floor', 'is_active',
     ];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = [
+        'is_active'          => 'boolean',
+        'daily_rate'         => 'decimal:2',
+        'nursing_daily_rate' => 'decimal:2',
+    ];
 
     public const TYPES = ['General', 'Semi-Private', 'Private', 'ICU', 'Maternity', 'Pediatric', 'Emergency'];
 
