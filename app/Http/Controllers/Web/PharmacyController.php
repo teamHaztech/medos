@@ -48,6 +48,22 @@ class PharmacyController extends Controller
             'completed_at' => now(),
         ]);
 
+        // Capture the dispensed medicines as pharmacy charges at selling price, then
+        // fold them into the visit's running bill. Non-fatal — a billing hiccup must
+        // never block dispensing.
+        try {
+            $cc = app(\App\Modules\Billing\Services\ChargeCapture::class);
+            $cc->capturePharmacyDispense($order, Auth::user()->name);
+            if ($order->encounter_id) {
+                $encounter = \App\Modules\Patient\Models\Encounter::find($order->encounter_id);
+                if ($encounter) {
+                    $cc->compileBill($encounter, Auth::user()->name);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('[Pharmacy] dispense charge capture failed: ' . $e->getMessage());
+        }
+
         return response()->json(['success' => true]);
     }
 

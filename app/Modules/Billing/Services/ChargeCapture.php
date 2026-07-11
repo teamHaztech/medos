@@ -5,8 +5,11 @@ namespace App\Modules\Billing\Services;
 use App\Modules\Billing\Models\Bill;
 use App\Modules\Billing\Models\ChargeItem;
 use App\Modules\Billing\Models\ServiceCharge;
+use App\Modules\Core\Models\Order;
 use App\Modules\Core\Services\RegionService;
 use App\Modules\Patient\Models\Encounter;
+use App\Modules\Pharmacy\Models\PharmacyStock;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -187,6 +190,140 @@ class ChargeCapture
         $this->recomputePayments($bill->fresh());
 
         return $bill->fresh();
+    }
+
+    // ---------------------------------------------------------------
+    // Source capture helpers — the OPD auto-capture hooks (Phase 1)
+    // ---------------------------------------------------------------
+
+    /**
+     * Capture the consultation charge for an encounter, priced from the rate card
+     * (consultation category, matched to the doctor's department) or a booked package,
+     * falling back to a default department fee. Idempotent per encounter.
+     */
+    public function captureConsultation(Encounter $encounter, $doctor = null, ?string $postedByName = null): ChargeItem
+    {
+        $dept   = $doctor?->department;
+        $intake = is_array($encounter->intake_data) ? $encounter->intake_data : [];
+        $package = $intake['package'] ?? null;
+
+        if (is_array($package) && ! empty($package['name'])) {
+            return $this->post([
+                'hospital_id'   => $encounter->hospital_id,
+                'patient_id'    => $encounter->patient_id,
+                'encounter_id'  => $encounter->id,
+                'source'        => 'consultation',
+                'description'   => 'Package: ' . $package['name'],
+                'unit_price'    => (float) ($package['price'] ?? 0),
+                'source_ref'    => 'consult:' . $encounter->id,
+                'posted_by_name' => $postedByName,
+            ]);
+        }
+
+        $rate  = $this->priceFor($encounter->hospital_id, null, 'consultation', $dept);
+        $price = $rate['price'] ?? $this->defaultConsultationFee($dept);
+
+        return $this->post([
+            'hospital_id'    => $encounter->hospital_id,
+            'patient_id'     => $encounter->patient_id,
+            'encounter_id'   => $encounter->id,
+            'source'         => 'consultation',
+            'description'    => 'Consultation Fee' . ($dept ? ' (' . $dept . ')' : ''),
+            'unit_price'     => $price,
+            'is_taxable'     => $rate['is_taxable'] ?? false,
+            'service_charge_id' => $rate['service_charge_id'] ?? null,
+            'source_ref'     => 'consult:' . $encounter->id,
+            'posted_by_name' => $postedByName,
+        ]);
+    }
+
+    /**
+     * Capture a charge for each test in a lab / imaging / procedure order. Price from
+     * the order item → available_tests → rate card. Idempotent per (order, item).
+     */
+    public function captureOrder(Order $order, ?string $postedByName = null): void
+    {
+        $type = $order->type instanceof \BackedEnum ? $order->type->value : $order->type;
+        if (! in_array($type, ['lab', 'imaging', 'procedure'], true)) {
+            return;
+        }
+        $items = is_array($order->items) ? $order->items : (json_decode($order->items ?? '[]', true) ?: []);
+
+        foreach ($items as $idx => $item) {
+            $name  = $item['name'] ?? $item['test_name'] ?? 'Test';
+            $price = (float) ($item['price'] ?? 0);
+            if ($price <= 0) {
+                $test  = DB::table('available_tests')->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first();
+                $price = $test ? (float) $test->price : 0.0;
+                if ($price <= 0) {
+                    $rate  = $this->priceFor($order->hospital_id, null, 'investigation', $name);
+                    $price = $rate['price'] ?? 0.0;
+                }
+            }
+            $this->post([
+                'hospital_id'    => $order->hospital_id,
+                'patient_id'     => $order->patient_id,
+                'encounter_id'   => $order->encounter_id,
+                'source'         => $type === 'imaging' ? 'imaging' : ($type === 'procedure' ? 'procedure' : 'lab'),
+                'description'    => $name,
+                'unit_price'     => $price,
+                'source_ref'     => 'order:' . $order->id . ':' . $idx,
+                'posted_by_name' => $postedByName,
+            ]);
+        }
+    }
+
+    /**
+     * Capture a pharmacy charge per dispensed item at its selling price. Called on
+     * dispense — the point of sale. Idempotent per (order, item).
+     */
+    public function capturePharmacyDispense(Order $order, ?string $postedByName = null): void
+    {
+        $items = is_array($order->items) ? $order->items : (json_decode($order->items ?? '[]', true) ?: []);
+
+        foreach ($items as $idx => $item) {
+            $name = is_array($item) ? ($item['name'] ?? null) : null;
+            if (! $name) {
+                continue;
+            }
+            $qty   = max(1, (int) (is_array($item) ? ($item['quantity'] ?? $item['qty'] ?? 1) : 1));
+            $price = (float) ($item['price'] ?? 0);
+            if ($price <= 0) {
+                $medicineId = DB::table('medicines')->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->value('id');
+                if ($medicineId) {
+                    $price = (float) (PharmacyStock::where('hospital_id', $order->hospital_id)
+                        ->where('medicine_id', $medicineId)
+                        ->where('selling_price', '>', 0)
+                        ->orderByRaw('expiry_date IS NULL, expiry_date ASC')
+                        ->value('selling_price') ?? 0);
+                }
+            }
+            $dosage = is_array($item) ? trim((string) ($item['dosage'] ?? '')) : '';
+            $desc = ($dosage !== '' && stripos($name, $dosage) === false) ? trim($name . ' ' . $dosage) : $name;
+            $this->post([
+                'hospital_id'    => $order->hospital_id,
+                'patient_id'     => $order->patient_id,
+                'encounter_id'   => $order->encounter_id,
+                'source'         => 'pharmacy',
+                'description'    => $desc,
+                'unit_price'     => $price,
+                'quantity'       => $qty,
+                'source_ref'     => 'disp:' . $order->id . ':' . $idx,
+                'posted_by_name' => $postedByName,
+            ]);
+        }
+    }
+
+    /** Fallback consultation fee by department when the rate card has no consultation service. */
+    private function defaultConsultationFee(?string $dept): float
+    {
+        $map = [
+            'pediatrics' => 500, 'cardiology' => 800, 'orthopedics' => 700, 'orthopaedics' => 700,
+            'dermatology' => 600, 'gynecology' => 700, 'gynaecology' => 700, 'neurology' => 900,
+            'general medicine' => 400, 'ent' => 500, 'ophthalmology' => 600, 'psychiatry' => 800,
+        ];
+
+        return (float) ($map[strtolower(trim((string) $dept))] ?? 500);
     }
 
     /**
