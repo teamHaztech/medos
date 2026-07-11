@@ -87,7 +87,12 @@ class Hospital extends Model
      */
     public function isModuleEnabled(string $module): bool
     {
-        $modules = $this->modules_enabled ?? [];
+        $modules = $this->modules_enabled;
+
+        // Not configured yet → every module is on (backward compatible).
+        if (empty($modules)) {
+            return true;
+        }
 
         return in_array($module, $modules, true);
     }

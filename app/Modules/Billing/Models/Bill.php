@@ -10,6 +10,7 @@ use App\Modules\Patient\Models\Encounter;
 use App\Modules\Patient\Models\Patient;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Bill extends Model
 {
@@ -24,11 +25,15 @@ class Bill extends Model
         'encounter_id',
         'patient_id',
         'bill_number',
+        'bill_type',
         'line_items',
         'subtotal',
         'tax_amount',
+        'tax_rate',
         'discount_amount',
+        'discount_reason',
         'insurance_covered',
+        'deposit_applied',
         'patient_payable',
         'total_amount',
         'amount_paid',
@@ -40,6 +45,8 @@ class Bill extends Model
         'notes',
         'issued_at',
         'paid_at',
+        'cancelled_at',
+        'cancel_reason',
     ];
 
     protected $casts = [
@@ -52,10 +59,18 @@ class Bill extends Model
         'total_amount'             => 'decimal:2',
         'amount_paid'              => 'decimal:2',
         'balance_due'              => 'decimal:2',
+        'tax_rate'                 => 'decimal:2',
+        'deposit_applied'          => 'decimal:2',
         'payment_status'           => PaymentStatus::class,
         'issued_at'                => 'datetime',
         'paid_at'                  => 'datetime',
+        'cancelled_at'             => 'datetime',
     ];
+
+    public function isCancelled(): bool
+    {
+        return ! is_null($this->cancelled_at);
+    }
 
     // ---------------------------------------------------------------
     // Relationships
@@ -67,6 +82,14 @@ class Bill extends Model
     public function hospital(): BelongsTo
     {
         return $this->belongsTo(Hospital::class);
+    }
+
+    /**
+     * Payment ledger entries for this bill (newest first).
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(BillPayment::class)->orderByDesc('paid_at');
     }
 
     /**

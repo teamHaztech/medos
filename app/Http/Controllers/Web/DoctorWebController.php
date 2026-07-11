@@ -443,6 +443,8 @@ class DoctorWebController extends Controller
             if ($request->has('diagnosis_codes')) $updates['diagnosis_codes'] = $request->input('diagnosis_codes');
             if ($request->has('soap_notes')) $updates['soap_notes'] = $request->input('soap_notes');
             if ($request->has('follow_up_date')) $updates['follow_up_date'] = $request->input('follow_up_date');
+            if ($request->filled('vitals')) $updates['vitals'] = array_filter((array) $request->input('vitals'), fn ($x) => $x !== null && $x !== '');
+            if ($request->has('advice')) $updates['patient_advice'] = array_values((array) $request->input('advice'));
             $encounter->update($updates);
 
             // Link ABHA if patient has one

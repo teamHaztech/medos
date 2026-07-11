@@ -402,6 +402,24 @@ class SuperAdminController extends Controller
         return redirect()->route('web.superadmin.index')->with('success', 'Hospital updated.');
     }
 
+    /** Super-admin control of which modules a hospital has enabled. */
+    public function updateHospitalModules(Request $request, string $id)
+    {
+        $hospital = Hospital::findOrFail($id);
+        $valid = \App\Modules\Core\Support\ModuleCatalog::keys();
+        $submitted = (array) $request->input('modules', []);
+
+        // Preserve any enabled keys outside the catalog (e.g. scheduling, queue, analytics).
+        $existing = (array) ($hospital->modules_enabled ?? []);
+        $preserved = array_diff($existing, $valid);
+        $enabled = array_values(array_unique(array_merge($preserved, array_intersect($valid, $submitted))));
+
+        $hospital->update(['modules_enabled' => $enabled]);
+
+        return redirect()->route('web.superadmin.hospitals.show', $hospital->id)
+            ->with('success', 'Modules updated for ' . $hospital->name . '.');
+    }
+
     public function deleteHospital(string $id)
     {
         $hospital = Hospital::findOrFail($id);

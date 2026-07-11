@@ -96,15 +96,8 @@
     </div>
 
     {{-- Edit modal --}}
-    <div x-show="open" x-transition.opacity style="display:none"
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-         @keydown.escape.window="open = false">
-        <div @click.away="open = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900">Edit Package</h3>
-                <button type="button" @click="open = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-            </div>
-            <form method="POST" :action="action" class="p-6 space-y-4">
+    <x-modal show="open" title="Edit Package" max="lg">
+            <form method="POST" :action="action" class="space-y-4">
                 @csrf
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Package name *</label>
@@ -123,7 +116,6 @@
                     <button type="button" @click="open = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 </div>
 @endsection

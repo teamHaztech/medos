@@ -20,11 +20,19 @@
                 >
             </div>
         </form>
-        <button @click="showAddModal = true" class="btn-primary">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Add Patient
-        </button>
+        <div class="flex items-center gap-2">
+            <button @click="showAddModal = true" class="btn-secondary">
+                <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Quick Add
+            </button>
+            <a href="{{ route('web.admin.patients.register') }}" class="btn-primary">
+                <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                Full Registration
+            </a>
+        </div>
     </div>
+    @if(session('error'))<div class="mb-4 px-4 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">{{ session('error') }}</div>@endif
+    @if(session('success'))<div class="mb-4 px-4 py-2.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">{{ session('success') }}</div>@endif
 
     {{-- Table --}}
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -65,72 +73,15 @@
     </div>
 
     {{-- Add Patient Modal --}}
-    <div x-show="showAddModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-        <div class="absolute inset-0 bg-black/50" @click="showAddModal = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-slate-800">Add New Patient</h3>
-                <button @click="showAddModal = false" class="text-slate-400 hover:text-slate-600">&times;</button>
+    <x-modal show="showAddModal" title="Register New Patient" max="2xl">
+        <form method="POST" action="{{ route('web.admin.patients.store') }}">
+            @csrf
+            @include('admin._patient_fields')
+            <div class="flex justify-end gap-3 pt-6 mt-6 border-t border-slate-100">
+                <button type="button" @click="showAddModal = false" class="btn-secondary">Cancel</button>
+                <button type="submit" class="btn-primary">Register Patient</button>
             </div>
-            <form method="POST" action="{{ route('web.admin.patients.store') }}" class="space-y-4">
-                @csrf
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                    <input type="text" name="name" required class="input-field">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                    <input type="tel" name="phone" required class="input-field">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Date of Birth</label>
-                        <input type="date" name="date_of_birth" class="input-field">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Gender</label>
-                        <select name="gender" class="input-field">
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input type="email" name="email" class="input-field">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Language</label>
-                        <select name="language_preference" class="input-field">
-                            <option value="en">English</option>
-                            <option value="hi">Hindi</option>
-                            <option value="mr">Marathi</option>
-                            <option value="ar">Arabic</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Blood Group</label>
-                        <select name="blood_group" class="input-field">
-                            <option value="">-- Select --</option>
-                            <option value="A+">A+</option>
-                            <option value="A-">A-</option>
-                            <option value="B+">B+</option>
-                            <option value="B-">B-</option>
-                            <option value="AB+">AB+</option>
-                            <option value="AB-">AB-</option>
-                            <option value="O+">O+</option>
-                            <option value="O-">O-</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" @click="showAddModal = false" class="btn-secondary">Cancel</button>
-                    <button type="submit" class="btn-primary">Add Patient</button>
-                </div>
-            </form>
-        </div>
-    </div>
+        </form>
+    </x-modal>
 </div>
 @endsection

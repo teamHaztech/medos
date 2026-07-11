@@ -65,6 +65,39 @@
     <div class="flex gap-1 mb-4 bg-slate-100 rounded-lg p-1 w-fit">
         <button @click="tab = 'staff'" :class="tab === 'staff' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'" class="px-4 py-2 rounded-md text-sm font-medium transition-colors">Staff ({{ $staff->count() + $pivotStaff->count() }})</button>
         <button @click="tab = 'admins'" :class="tab === 'admins' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'" class="px-4 py-2 rounded-md text-sm font-medium transition-colors">Admins ({{ $admins->count() + $pivotAdmins->count() }})</button>
+        <button @click="tab = 'modules'" :class="tab === 'modules' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'" class="px-4 py-2 rounded-md text-sm font-medium transition-colors">Modules</button>
+    </div>
+
+    {{-- Modules Tab --}}
+    <div x-show="tab === 'modules'" style="display:none" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">Enabled Modules</h3>
+            <p class="text-xs text-slate-500">Control which features this hospital has access to.</p>
+        </div>
+        <form method="POST" action="{{ route('web.superadmin.hospitals.modules', $hospital->id) }}">
+            @csrf
+            <div class="space-y-5">
+                @foreach(\App\Modules\Core\Support\ModuleCatalog::byCategory() as $cat => $mods)
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{{ $cat }}</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        @foreach($mods as $key => $meta)
+                        <label class="flex items-start gap-2 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="checkbox" name="modules[]" value="{{ $key }}" {{ $hospital->isModuleEnabled($key) ? 'checked' : '' }} class="mt-0.5 rounded border-slate-300">
+                            <span>
+                                <span class="block text-sm font-medium text-slate-800">{{ $meta['name'] }}</span>
+                                <span class="block text-xs text-slate-500">{{ $meta['description'] }}</span>
+                            </span>
+                        </label>
+                        @endforeach
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            <div class="flex justify-end mt-5">
+                <button type="submit" class="btn-primary">Save modules</button>
+            </div>
+        </form>
     </div>
 
     {{-- Staff Tab --}}
@@ -193,15 +226,7 @@
     </div>
 
     {{-- Add Staff Modal --}}
-    <div x-show="showAddStaff" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" style="display:none">
-        <div @click.away="showAddStaff = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b border-slate-200 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-slate-900">Add Staff to {{ $hospital->name }}</h3>
-                <button @click="showAddStaff = false" class="text-slate-400 hover:text-slate-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-
+    <x-modal show="showAddStaff" title="Add Staff to {{ $hospital->name }}" max="lg" body-class="">
             {{-- Mode switcher --}}
             <div class="px-6 pt-4">
                 <div class="flex gap-1 bg-slate-100 rounded-lg p-1">
@@ -279,20 +304,11 @@
                 </div>
                 <button type="submit" class="btn-primary w-full py-2.5">Create & Assign Staff</button>
             </form>
-        </div>
-    </div>
+    </x-modal>
 
     {{-- Add Admin Modal --}}
-    <div x-show="showAddAdmin" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" style="display:none">
-        <div @click.away="showAddAdmin = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4">
-            <div class="p-6 border-b border-slate-200 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-slate-900">Add Admin to {{ $hospital->name }}</h3>
-                <button @click="showAddAdmin = false" class="text-slate-400 hover:text-slate-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-
-            <form method="POST" action="{{ route('web.superadmin.hospitals.admin.add', $hospital->id) }}" class="p-6 space-y-4">
+    <x-modal show="showAddAdmin" title="Add Admin to {{ $hospital->name }}" max="lg">
+            <form method="POST" action="{{ route('web.superadmin.hospitals.admin.add', $hospital->id) }}" class="space-y-4">
                 @csrf
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Full Name *</label>
@@ -308,8 +324,7 @@
                 </div>
                 <button type="submit" class="btn-primary w-full py-2.5">Create Admin</button>
             </form>
-        </div>
-    </div>
+    </x-modal>
 </div>
 @endsection
 

@@ -164,7 +164,7 @@ class MessageFormatter
 
         $currency = $bill->currency ?? 'INR';
         $total = number_format((float) $bill->total_amount, 2);
-        $insurance = number_format((float) ($bill->insurance_covered_amount ?? 0), 2);
+        $insurance = number_format((float) ($bill->insurance_covered ?? 0), 2);
         $due = number_format((float) ($bill->balance_due ?? $bill->total_amount), 2);
         $billNumber = $bill->bill_number ?? $bill->id;
 
@@ -185,7 +185,7 @@ class MessageFormatter
 
         $message .= "*Subtotal:* {$currency} {$total}\n";
 
-        if ((float) $bill->insurance_covered_amount > 0) {
+        if ((float) $bill->insurance_covered > 0) {
             $message .= "*Insurance Coverage:* -{$currency} {$insurance}\n";
         }
 

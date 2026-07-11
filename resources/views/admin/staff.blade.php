@@ -118,13 +118,7 @@
     </div>
 
     {{-- Edit Staff Modal --}}
-    <div x-show="showEditModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-        <div class="absolute inset-0 bg-black/50" @click="showEditModal = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-slate-800">Edit Staff Member</h3>
-                <button @click="showEditModal = false" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
-            </div>
+    <x-modal show="showEditModal" title="Edit Staff Member" max="lg">
             <form :action="'/admin/staff/' + editingStaff.id" method="POST" class="space-y-4">
                 @csrf
                 @method('PUT')
@@ -177,17 +171,10 @@
                     <button type="submit" class="btn-primary">Save Changes</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 
     {{-- Add Staff Modal --}}
-    <div x-show="showAddModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-        <div class="absolute inset-0 bg-black/50" @click="showAddModal = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-slate-800">Add Staff Member</h3>
-                <button @click="showAddModal = false" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
-            </div>
+    <x-modal show="showAddModal" title="Add Staff Member" max="lg">
             <form method="POST" action="{{ route('web.admin.staff.store') }}" class="space-y-4">
                 @csrf
                 <div>
@@ -246,8 +233,7 @@
                     <button type="submit" class="btn-primary">Add Staff</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 </div>
 @endsection
 

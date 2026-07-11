@@ -14,17 +14,27 @@ class WebAuthController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
-            $user = Auth::user();
-            $role = is_object($user->role) ? $user->role->value : $user->role;
-
-            if (in_array($role, ['super_admin', 'hospital_admin'])) {
-                return redirect()->route('web.admin.dashboard');
-            }
-
-            return redirect()->route('web.doctor.dashboard');
+            $role = is_object(Auth::user()->role) ? Auth::user()->role->value : Auth::user()->role;
+            return redirect()->route($this->landingRoute($role));
         }
 
         return view('auth.login');
+    }
+
+    /**
+     * Where each role/department lands after login (their day-to-day work area).
+     */
+    private function landingRoute(?string $role): string
+    {
+        return match ($role) {
+            'doctor'        => 'web.doctor.dashboard',
+            'lab_tech'      => 'web.lab.dashboard',
+            'pharmacist'    => 'web.pharmacy.dashboard',
+            'billing_staff' => 'web.billing.index',
+            'receptionist'  => 'web.admin.appointments',
+            'nurse'         => 'web.ip.dashboard',
+            default         => 'web.admin.dashboard', // super_admin, hospital_admin
+        };
     }
 
     /**
@@ -42,14 +52,9 @@ class WebAuthController extends Controller
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
 
-            $user = Auth::user();
+            $role = is_object(Auth::user()->role) ? Auth::user()->role->value : Auth::user()->role;
 
-            // Redirect doctors to their dashboard
-            if ($user->isDoctor()) {
-                return redirect()->intended(route('web.doctor.dashboard'));
-            }
-
-            return redirect()->intended(route('web.admin.dashboard'));
+            return redirect()->intended(route($this->landingRoute($role)));
         }
 
         return back()->withErrors([

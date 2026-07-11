@@ -36,12 +36,60 @@ class PharmacyController extends Controller
     {
         $order = Order::findOrFail($id);
 
+        $status = $order->status instanceof \BackedEnum ? $order->status->value : $order->status;
+        if ($status === 'dispensed') {
+            return response()->json(['success' => true, 'already' => true]);
+        }
+
+        $this->decrementStockFor($order);
+
         $order->update([
             'status' => 'dispensed',
             'completed_at' => now(),
         ]);
 
         return response()->json(['success' => true]);
+    }
+
+    /** Draw the dispensed medicines down from inventory (FEFO across batches). */
+    private function decrementStockFor(Order $order): void
+    {
+        try {
+            $items = is_array($order->items) ? $order->items : (json_decode($order->items ?? '[]', true) ?: []);
+            foreach ($items as $item) {
+                $name = is_array($item) ? ($item['name'] ?? null) : null;
+                if (! $name) {
+                    continue;
+                }
+                $qty = (int) (is_array($item) ? ($item['quantity'] ?? $item['qty'] ?? 1) : 1);
+                $qty = max(1, $qty);
+
+                $medicineId = DB::table('medicines')
+                    ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+                    ->value('id');
+                if (! $medicineId) {
+                    continue;
+                }
+
+                // First-expiry-first-out: consume soonest-expiring available batches first.
+                $batches = PharmacyStock::where('hospital_id', $order->hospital_id)
+                    ->where('medicine_id', $medicineId)
+                    ->where('quantity_available', '>', 0)
+                    ->orderByRaw('expiry_date IS NULL, expiry_date ASC')
+                    ->get();
+
+                foreach ($batches as $batch) {
+                    if ($qty <= 0) {
+                        break;
+                    }
+                    $take = min($qty, (int) $batch->quantity_available);
+                    $batch->update(['quantity_available' => $batch->quantity_available - $take]);
+                    $qty -= $take;
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('[Pharmacy] stock decrement on dispense failed: ' . $e->getMessage());
+        }
     }
 
     public function stock()

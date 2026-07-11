@@ -8,7 +8,7 @@
 <div x-data="{
         editOpen: false,
         mode: 'add',
-        blank: { id:'', asset_name:'', asset_type:'', serial_number:'', model:'', manufacturer:'', department:'', location:'', purchase_date:'', purchase_cost:'', vendor_id:'', status:'active', notes:'' },
+        blank: { id:'', asset_name:'', asset_type:'', serial_number:'', model:'', manufacturer:'', department:'', location:'', purchase_date:'', purchase_cost:'', useful_life_years:'', salvage_value:'', vendor_id:'', status:'active', notes:'' },
         edit: {},
         openAdd() { this.edit = Object.assign({}, this.blank); this.mode = 'add'; this.editOpen = true; },
         openEdit(a) { this.edit = Object.assign({}, a); this.mode = 'edit'; this.editOpen = true; },
@@ -103,7 +103,7 @@
                         <td class="table-cell">
                             <div class="flex items-center gap-2">
                                 <button type="button"
-                                    @click="openEdit({ id:'{{ $a->id }}', asset_name: @js($a->asset_name), asset_type: @js($a->asset_type ?? ''), serial_number: @js($a->serial_number ?? ''), model: @js($a->model ?? ''), manufacturer: @js($a->manufacturer ?? ''), department: @js($a->department ?? ''), location: @js($a->location ?? ''), purchase_date: '{{ optional($a->purchase_date)->toDateString() }}', purchase_cost: '{{ $a->purchase_cost }}', vendor_id: '{{ $a->vendor_id }}', status: @js($a->status), notes: @js($a->notes ?? '') })"
+                                    @click="openEdit({ id:'{{ $a->id }}', asset_name: @js($a->asset_name), asset_type: @js($a->asset_type ?? ''), serial_number: @js($a->serial_number ?? ''), model: @js($a->model ?? ''), manufacturer: @js($a->manufacturer ?? ''), department: @js($a->department ?? ''), location: @js($a->location ?? ''), purchase_date: '{{ optional($a->purchase_date)->toDateString() }}', purchase_cost: '{{ $a->purchase_cost }}', useful_life_years: '{{ $a->useful_life_years }}', salvage_value: '{{ $a->salvage_value }}', vendor_id: '{{ $a->vendor_id }}', status: @js($a->status), notes: @js($a->notes ?? '') })"
                                     class="text-blue-500 hover:text-blue-700 text-sm font-medium">Edit</button>
                                 <form method="POST" action="{{ route('web.admin.assets.destroy', $a->id) }}" onsubmit="return confirm('Remove this asset from the register?')">
                                     @csrf @method('DELETE')
@@ -120,13 +120,8 @@
     </div>
 
     {{-- Edit modal --}}
-    <div x-show="editOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="editOpen = false">
-        <div @click.away="editOpen = false" style="max-height:88vh" class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-y-auto">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900" x-text="mode === 'edit' ? 'Edit Asset' : 'Add Asset'"></h3>
-                <button type="button" @click="editOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-            </div>
-            <form method="POST" :action="formAction" class="p-6 grid grid-cols-2 gap-4">
+    <x-modal show="editOpen" title-expr="mode === 'edit' ? 'Edit Asset' : 'Add Asset'" max="2xl">
+            <form method="POST" :action="formAction" class="grid grid-cols-2 gap-4">
                 @csrf
                 <input type="hidden" name="_method" :value="mode === 'edit' ? 'PUT' : 'POST'">
                 <div class="col-span-2">
@@ -147,6 +142,8 @@
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Location</label><input type="text" name="location" x-model="edit.location" class="input-field"></div>
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Purchase date</label><input type="date" name="purchase_date" x-model="edit.purchase_date" class="input-field"></div>
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Purchase cost ({{ $cur }})</label><input type="number" step="0.01" name="purchase_cost" x-model="edit.purchase_cost" class="input-field"></div>
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1">Useful life (years)</label><input type="number" min="1" max="100" name="useful_life_years" x-model="edit.useful_life_years" class="input-field" placeholder="e.g. 5"></div>
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1">Salvage value ({{ $cur }})</label><input type="number" step="0.01" name="salvage_value" x-model="edit.salvage_value" class="input-field" placeholder="0"></div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Vendor</label>
                     <select name="vendor_id" x-model="edit.vendor_id" class="input-field">
@@ -166,7 +163,6 @@
                     <button type="button" @click="editOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 </div>
 @endsection

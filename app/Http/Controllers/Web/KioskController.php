@@ -745,7 +745,19 @@ class KioskController extends Controller
 
     public function queueDisplay()
     {
-        $doctors = Staff::where('is_active', true)
+        return view('kiosk.queue-display', ['doctors' => $this->buildQueueDoctors()]);
+    }
+
+    /** Live JSON payload for the queue-display board's auto-refresh. */
+    public function queueDisplayJson()
+    {
+        return response()->json(['doctors' => $this->buildQueueDoctors()]);
+    }
+
+    /** Today's active per-doctor queues used by both the board view and its JSON refresh. */
+    private function buildQueueDoctors()
+    {
+        return Staff::where('is_active', true)
             ->whereIn('role', ['doctor', 'hospital_admin'])
             ->get()
             ->map(function ($doctor) {
@@ -779,7 +791,5 @@ class KioskController extends Controller
             })
             ->filter(fn ($d) => $d['current'] || count($d['waiting']) > 0)
             ->values();
-
-        return view('kiosk.queue-display', ['doctors' => $doctors]);
     }
 }

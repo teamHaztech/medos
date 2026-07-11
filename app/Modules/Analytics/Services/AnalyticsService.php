@@ -297,7 +297,7 @@ class AnalyticsService extends BaseModuleService
         $approvalRate = $total > 0 ? round(($approved / $total) * 100, 1) : 0;
 
         // Group by insurer
-        $byInsurer = $transactions->groupBy('insurer_name')->map(function ($group, $insurer) {
+        $byInsurer = $transactions->groupBy('provider_name')->map(function ($group, $insurer) {
             $insurerTotal = $group->count();
             $insurerApproved = $group->where('status', 'approved')->count();
 
@@ -307,7 +307,7 @@ class AnalyticsService extends BaseModuleService
                 'approved'      => $insurerApproved,
                 'denied'        => $group->where('status', 'denied')->count(),
                 'approval_rate' => $insurerTotal > 0 ? round(($insurerApproved / $insurerTotal) * 100, 1) : 0,
-                'total_amount'  => $group->sum('amount'),
+                'total_amount'  => $group->sum('approved_amount'),
             ];
         })->values()->toArray();
 
@@ -341,7 +341,7 @@ class AnalyticsService extends BaseModuleService
         $totalRevenue = $bills->sum('amount_paid');
         $totalBilled = $bills->sum('total_amount');
         $totalOutstanding = $bills->sum('balance_due');
-        $insuranceCovered = $bills->sum('insurance_covered_amount');
+        $insuranceCovered = $bills->sum('insurance_covered');
 
         $breakdown = [];
 
@@ -365,7 +365,7 @@ class AnalyticsService extends BaseModuleService
                         'label'            => $key,
                         'billed'           => round($group->sum('total_amount'), 2),
                         'collected'        => round($group->sum('amount_paid'), 2),
-                        'insurance_amount' => round($group->sum('insurance_covered_amount'), 2),
+                        'insurance_amount' => round($group->sum('insurance_covered'), 2),
                         'count'            => $group->count(),
                     ])
                     ->values()

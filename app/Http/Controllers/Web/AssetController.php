@@ -256,6 +256,8 @@ class AssetController extends Controller
             'location'      => 'nullable|string|max:150',
             'purchase_date' => 'nullable|date',
             'purchase_cost' => 'nullable|numeric|min:0',
+            'useful_life_years' => 'nullable|integer|min:1|max:100',
+            'salvage_value'     => 'nullable|numeric|min:0',
             'vendor_id'     => 'nullable|uuid|exists:vendors,id',
             'status'        => 'required|in:active,under_maintenance,decommissioned',
             'notes'         => 'nullable|string|max:1000',
@@ -504,6 +506,7 @@ class AssetController extends Controller
             fputcsv($out, [
                 'Asset', 'Type', 'Serial', 'Model', 'Manufacturer', 'Department', 'Location',
                 'Status', 'Vendor', 'Purchase Date', 'Purchase Cost',
+                'Useful Life (yrs)', 'Salvage', 'Annual Depreciation', 'Accum. Depreciation', 'Book Value',
                 'Warranty Type', 'Warranty End', 'Warranty Status', 'Days To Expiry',
             ]);
             foreach ($assets as $a) {
@@ -514,6 +517,7 @@ class AssetController extends Controller
                     $a->asset_name, $a->asset_type, $a->serial_number, $a->model, $a->manufacturer,
                     $a->department, $a->location, $a->statusLabel(), $a->vendor?->name,
                     optional($a->purchase_date)->toDateString(), $a->purchase_cost,
+                    $a->useful_life_years, $a->salvage_value, $a->annualDepreciation(), $a->accumulatedDepreciation(), $a->bookValue(),
                     $latest?->typeLabel(), optional($latest?->end_date)->toDateString(),
                     $wStatus, $latest?->daysToExpiry(),
                 ]);

@@ -18,6 +18,13 @@ class SendReminders extends Command
         try {
             $dispatched = 0;
 
+            // Patient Engagement module gate — skip hospitals that have it disabled.
+            $moduleMap = \App\Modules\Core\Models\Hospital::all(['id', 'modules_enabled'])->keyBy('id');
+            $engagementOff = function ($hid) use ($moduleMap) {
+                $h = $moduleMap[$hid] ?? null;
+                return $h && ! empty($h->modules_enabled) && ! in_array('engagement', $h->modules_enabled, true);
+            };
+
             // Find appointments in the next 24 hours that haven't been reminded (24h reminder)
             $twentyFourHourAppointments = Appointment::where('status', 'confirmed')
                 ->whereBetween('slot_start', [now(), now()->addHours(24)])
@@ -30,6 +37,9 @@ class SendReminders extends Command
 
             foreach ($twentyFourHourAppointments as $appointment) {
                 if (! $appointment->patient_id || ! $appointment->encounter_id) {
+                    continue;
+                }
+                if ($engagementOff($appointment->hospital_id)) {
                     continue;
                 }
 
@@ -59,6 +69,9 @@ class SendReminders extends Command
 
             foreach ($twoHourAppointments as $appointment) {
                 if (! $appointment->patient_id || ! $appointment->encounter_id) {
+                    continue;
+                }
+                if ($engagementOff($appointment->hospital_id)) {
                     continue;
                 }
 

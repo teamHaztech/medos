@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # MedOS — AI-First Hospital Operating System
 
 ## Project
@@ -14,16 +18,46 @@
 - All IDs: UUID
 - Multi-tenant: hospital_id on every table
 
-## Logins
-| Email | Password | Role |
-|---|---|---|
-| superadmin@haztech.in | password123 | Super Admin |
-| admin@haztech.in | password123 | Hospital Admin |
-| priya@haztech.in | password123 | Doctor (Pediatrics) |
-| amit@haztech.in | password123 | Doctor (Cardiology) |
+## Local development (Windows dev machine)
+No `php`/`composer`/`npm` on PATH and **no Tailwind build step**. Use the WinGet PHP 8.4 binary directly:
+- **PHP:** `"C:/Users/regan/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe"`
+- **Run the app:** `php artisan serve --host=127.0.0.1 --port=8000` (run in background; then log in with an account above)
+- **Migrations:** `php artisan migrate --force`
+- **After editing any Blade:** `php artisan view:clear` (the running server serves compiled views). To compile-check ALL templates at once (catches Blade syntax errors everywhere): `php artisan view:cache && php artisan view:clear`
+- **Inspect routes:** `php artisan route:list --path=<segment>`
+- **Clear caches after route/config/middleware edits:** `php artisan optimize:clear`
 
-## Database (19 tables)
-hospitals, users, staff, patients, encounters, appointments, conversations, insurance_transactions, orders, bills, queue_entries, notifications_log, audit_logs, referrals, medicines(120), available_tests(74), abha_consents, abha_health_records, abha_audit_logs, personal_access_tokens
+### Verifying behaviour = throwaway kernel harness (there is no maintained PHPUnit suite)
+Boot the kernel, authenticate, call controller methods / render views directly, assert, then **delete the script and any rows/config it touched**:
+```php
+require __DIR__.'/vendor/autoload.php';
+$app = require __DIR__.'/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+use Illuminate\Support\Facades\{Auth, View, Session}; use Illuminate\Http\Request;
+Session::start(); View::share('errors', new Illuminate\Support\ViewErrorBag());
+Auth::setUser(App\Models\User::where('email','admin@haztech.in')->first());
+$c = new App\Http\Controllers\Web\AdminWebController();
+echo strlen($c->patients(Request::create('/','GET',[]))->render());   // render a page, or call an action
+```
+For Alpine/JS bugs you can extract a page's `<script>` and run it through `node --check` / `node` to catch syntax or runtime errors server-side.
+
+## Logins
+All `password123`. Each role lands on its own work area after login (see `WebAuthController::landingRoute`) and gets a role-specific sidebar block (`_sidebar_nav.blade.php`).
+| Email | Role | Lands on |
+|---|---|---|
+| superadmin@haztech.in | Super Admin | admin dashboard |
+| admin@haztech.in | Hospital Admin | admin dashboard |
+| priya@haztech.in / amit@haztech.in | Doctor | doctor dashboard |
+| reception@haztech.in | Receptionist | appointments |
+| nurse@haztech.in | Nurse | inpatients |
+| billing@haztech.in | Billing Staff | billing |
+| lab@haztech.in / pharmacy@haztech.in | Lab / Pharmacy | lab / pharmacy dashboard |
+
+Demo accounts for reception/nurse/billing are seeded by `2026_07_08_000002_seed_department_accounts` and surfaced as quick-login buttons on `/login`.
+
+## Database
+Core: hospitals, users, staff, patients, encounters, appointments, conversations, insurance_transactions, orders, bills, queue_entries, notifications_log, audit_logs, referrals, medicines(120), available_tests(74), abha_consents, abha_health_records, abha_audit_logs, personal_access_tokens.
+Added since: **billing** — service_charges (rate card), patient_deposits (advance ledger), bill_payments (payment ledger; refunds = negative rows), billing_integration_logs (external-sync audit); **inpatient/ADT** — wards, beds, admissions, ip_vitals, ip_notes, ip_intake_outputs; icd10_codes.
 
 ### Key columns to remember
 - **patients**: name (NOT first_name), phone, abha_number, language_preference (NOT preferred_language), insurance_details (encrypted:array), allergies/medical_history/current_medications (array cast)
@@ -35,8 +69,8 @@ hospitals, users, staff, patients, encounters, appointments, conversations, insu
 ## File Structure
 ```
 app/Modules/          — 15 modules (Core, Auth, AIReceptionist, WhatsApp, Triage, Appointment, Queue, Insurance, Billing, Patient, DoctorAssist, Engagement, Multilingual, Analytics, ABHA)
-app/Http/Controllers/Web/  — AdminWebController, DoctorWebController, KioskController, ChatController, SuperAdminController, WebAuthController
-app/Http/Controllers/Api/  — WhatsAppWebhookController
+app/Http/Controllers/Web/  — AdminWebController (front office: patients, appts, queue, counter, info-desk, settings, api-keys), BillingWebController, PublicBookingController (/book), InpatientController, DoctorWebController, KioskController, ChatController, SuperAdminController, WebAuthController, LabController, PharmacyController
+app/Http/Controllers/Api/  — WhatsAppWebhookController, IntegrationController (customer / doctor-schedule / book-appointment)
 config/medos.php      — central config (AI, WhatsApp, triage, queue, scheduling, insurance, languages)
 config/regions.php    — India vs UAE region config (currency, languages, health ID, insurance, etc.)
 routes/web.php        — all web routes
@@ -46,16 +80,17 @@ routes/api_v1.php     — all API routes
 ## Routes cheat sheet
 ```
 /login                          — auth
-/admin/*                        — dashboard, patients, appointments, staff, settings, slots, tests, medicines, analytics
+/admin/*                        — dashboard, patients, appointments(+schedule), queue, counter (Payment & Token), info-desk, inpatients(/ip), billing, staff, settings, api-keys, slots, tests, analytics
 /doctor/*                       — queue, stats, my-patients, my-appointments, history, referrals, complete/{id}, call-next/{id}, queue-json
 /kiosk/*                        — index, register, checkin, check-phone, verify-abha, match-doctors, doctors, queue-display, room/{name}
+/book                           — PUBLIC patient web/mobile booking (no auth): ?hospital=slug → pick doctor → future slot → book. /book/doctors, /book/slots/{id}, /book/confirmed/{token}
+/billing/*                      — bills, dashboard, services (rate card), new (itemized), export (CSV/Tally), {id} (payments/refund/cancel/deposit)
 /chat                           — WhatsApp bot simulator
 /super-admin                    — hospital management
-/ajax/medicines?q=              — medicine search
-/ajax/tests?type=               — tests list
-/ajax/doctor-slots/{id}         — 14-day slot calendar
-/api/v1/auth/login              — API token
-/api/v1/abha/*                  — ABHA endpoints
+/ajax/doctor-slots/{id}         — 14-day slot calendar (staff) · /ajax/patients?q= · /ajax/info-desk?q= (token|name auto-detect)
+/api/v1/auth/login              — API token (send Accept: application/json + email/password, NOT "admin")
+/api/v1/customer?phone= · /doctor-schedule?name= · POST /book-appointment   — external integration APIs (Sanctum)
+/api/v1/billing/*               — bill read/write (ability:billing) · /api/v1/abha/* · /insurance/*
 ```
 
 ## Key services
@@ -73,6 +108,18 @@ routes/api_v1.php     — all API routes
 - Alpine.js for all interactivity — x-data, x-show, @click, fetch() for AJAX
 - Doctor queue auto-refreshes from /doctor/queue-json every 5 seconds
 - Room display at /kiosk/room/{name} — voice in 5 languages (EN, HI, MR, KOK, AR)
+
+## Architecture notes (spans multiple files — read before touching these areas)
+- **Tenant scoping** — the `BelongsToHospital` trait auto-fills `hospital_id` on create and adds a global scope `where hospital_id = config('medos.current_hospital_id')`. That config is **NULL** in ordinary web/CLI requests, so controllers either set `config(['medos.current_hospital_id' => Auth::user()->hospital_id])` at the top of the method (e.g. `InpatientController::hid()`, `AssetController`) OR scope every query by hand with `->where('hospital_id', Auth::user()->hospital_id)` (e.g. `BillingWebController`, `AdminWebController`). Newer models that scope by hand (`ServiceCharge`, `PatientDeposit`) deliberately use only `HasUuid` to avoid the null-scope trap. Know which pattern a file uses before adding queries.
+- **Tokens & the doctor queue** — the live doctor "queue" is NOT `queue_entries`; it is today's `appointments` with status `checked_in`/`in_progress` (see `DoctorWebController::queueJson`, `KioskController::queueDisplay`). Tokens like `PED-001` come from `Appointment::generateToken($doctorId, $department, $slotStart)`. Walk-in booking, Add-to-Queue, and the Payment & Token counter all create a `checked_in` appointment to put the patient in the queue.
+- **Billing** — a `Bill` holds JSON `line_items` plus a `BillPayment` ledger; partial payments are extra rows and **refunds are negative-amount rows**. `BillingWebController::recomputeBill()` derives `amount_paid`/`balance_due`/`payment_status` from the ledger — never set those columns directly. Rate card = `ServiceCharge` (service master); patient advances = `PatientDeposit` (signed ledger, balance via `PatientDeposit::balanceFor()`, paid via a `deposit` method). Every bill needs an `encounter_id`, so standalone/counter bills create a lightweight `Encounter` (`type consultation`, `channel walk_in`).
+- **Module gating** — `Hospital::isModuleEnabled($key)` (empty `modules_enabled` ⇒ everything on) + the `module:<key>` middleware (`EnsureModuleEnabled`) 404s disabled modules; `AppServiceProvider` shares a `$moduleOn('key')` closure to every view for hiding nav/UI. Catalog of toggleable keys: `App\Modules\Core\Support\ModuleCatalog`.
+- **Shared UI** — every add/edit popup uses the `<x-modal show="alpineVar" title="…" max="lg">` component (`resources/views/components/modal.blade.php`); pass `body-class=""` when the slot brings its own padding. Don't hand-roll modal overlays.
+- **Idempotent migrations** — new migrations guard with `Schema::hasTable`/`Schema::hasColumn` and wrap sample-seed blocks in count checks, because prod runs them via `/public/deploy.php` and pages must not 500 if a table isn't there yet (controllers also guard with `Schema::hasTable`).
+- **Pluggable adapter + registry pattern** — used for external integrations: `app/Modules/Billing/Integrations/*` (`BaseBillingConnector` abstract + `GenericWebhookConnector` + `BillingConnectorRegistry::make($code)`), mirroring `app/Modules/Insurance/Providers/*` + `InsuranceService::resolveProvider()`. To add a connector/gateway = one subclass + one registry line; per-hospital config + encrypted secrets live in `Hospital.config['<section>']` (save idiom = `AdminWebController::saveBillingIntegration` / `saveWhatsappSettings`, "•••• saved" secret pattern). The **Payment gateway** layer (Phase 2, `app/Modules/Billing/Payments/*`) follows the same shape.
+- **External billing / ERP sync** — `BillObserver` (the app's one model observer, registered in `BillingServiceProvider`) fires on Bill create + `payment_status` change → dispatches the queued `SyncBillToExternal` job → HMAC-signed POST to the hospital's configured endpoint, logged to `billing_integration_logs`. So **any** created/paid/refunded bill auto-flows to the external ERP. Queue = `database` driver → prod needs an hPanel cron `queue:work --stop-when-empty` to drain it (same for WhatsApp/notification jobs).
+- **Role-based access** — `WebAuthController::landingRoute($role)` routes each role to its work area on login; the sidebar (`_sidebar_nav.blade.php`) renders a per-role `@if($is<Role>)` block. Hospital admin issues long-lived Sanctum API keys at `/admin/api-keys` (billing:read / billing:write abilities enforced by `ability:` middleware on `/api/v1/billing/*`); `resolve.hospital` pins non-super-admin tokens to their own hospital (rejects a mismatched `X-Hospital-ID`).
+- **Public patient surfaces** — booking (`/book`, `PublicBookingController`) and kiosk (`/kiosk`) are the only patient-facing, no-auth web flows; both resolve the hospital by `?hospital=slug`/session and extend `layouts/public` (booking) or `layouts/kiosk`. Slot availability comes from the shared `DoctorSlotService::calendar()`. Guard new public routes with `throttle` and hospital-scope every query.
 
 ## Deployment rules
 - MUST commit vendor/ and public/build/ (no composer/npm on server)
@@ -92,7 +139,7 @@ routes/api_v1.php     — all API routes
 - Money: use RegionService::currency() not hardcoded ₹ or AED
 
 ## Known gotchas
-- Tailwind v4 uses @source directives for class scanning — if new classes don't compile, check resources/css/app.css
+- **Tailwind is NOT rebuilt** locally or on prod — the compiled `public/build/` is committed as-is. Any arbitrary `[...]` bracket class (`text-[10px]`, `bg-black/50`, `max-h-[90vh]`, `print:hidden`) that isn't already in the built CSS silently no-ops in production. Prefer inline `style="…"` or standard utilities; verify a bracket class ships with `grep -F 'text-[10px]' public/build/assets/*.css`.
 - `lg:!translate-x-0` on sidebar uses !important to override Alpine.js
 - SQLite doesn't support TIMESTAMPDIFF — use Carbon diffInMinutes() in PHP
 - Patient model has Auditable trait — if AuditLog insert fails, check column names (action NOT event, no user_name column)

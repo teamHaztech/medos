@@ -130,7 +130,7 @@ class SendAppointmentReminder implements ShouldQueue
             'follow_up_reminder',
             $language,
             [
-                'name' => $patient->first_name,
+                'name' => $patient->name,
                 'date' => $followUpDate ?? 'soon',
             ],
         );

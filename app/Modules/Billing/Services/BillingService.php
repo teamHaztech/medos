@@ -230,7 +230,7 @@ class BillingService extends BaseModuleService
         $coveragePercent = 100 - $copayPercent;
         $insuranceCoverage = round($subtotal * ($coveragePercent / 100), 2);
 
-        $bill->insurance_covered_amount = $insuranceCoverage;
+        $bill->insurance_covered = $insuranceCoverage;
         $bill->total_amount = $subtotal
             + (float) $bill->tax_amount
             - (float) $bill->discount_amount
@@ -271,7 +271,7 @@ class BillingService extends BaseModuleService
         $bill->total_amount = (float) $bill->subtotal
             + (float) $bill->tax_amount
             - (float) $bill->discount_amount
-            - (float) $bill->insurance_covered_amount;
+            - (float) $bill->insurance_covered;
 
         if ($bill->total_amount < 0) {
             $bill->total_amount = 0;
@@ -364,7 +364,7 @@ class BillingService extends BaseModuleService
             'subtotal'        => (float) $bill->subtotal,
             'tax'             => (float) $bill->tax_amount,
             'discount'        => (float) $bill->discount_amount,
-            'insurance'       => (float) $bill->insurance_covered_amount,
+            'insurance'       => (float) $bill->insurance_covered,
             'total'           => (float) $bill->total_amount,
             'paid'            => (float) $bill->amount_paid,
             'balance_due'     => (float) $bill->balance_due,
@@ -403,7 +403,7 @@ class BillingService extends BaseModuleService
         $totalRevenue = $bills->sum('total_amount');
         $totalPaid = $bills->sum('amount_paid');
         $totalOutstanding = $bills->sum('balance_due');
-        $totalInsurance = $bills->sum('insurance_covered_amount');
+        $totalInsurance = $bills->sum('insurance_covered');
         $totalDiscount = $bills->sum('discount_amount');
         $totalTax = $bills->sum('tax_amount');
         $billCount = $bills->count();
@@ -526,8 +526,8 @@ class BillingService extends BaseModuleService
         if ((float) $bill->discount_amount > 0) {
             $lines[] = "Discount: -{$bill->currency} " . number_format((float) $bill->discount_amount, 2);
         }
-        if ((float) $bill->insurance_covered_amount > 0) {
-            $lines[] = "Insurance: -{$bill->currency} " . number_format((float) $bill->insurance_covered_amount, 2);
+        if ((float) $bill->insurance_covered > 0) {
+            $lines[] = "Insurance: -{$bill->currency} " . number_format((float) $bill->insurance_covered, 2);
         }
 
         $lines[] = "*Total Due: {$bill->currency} " . number_format((float) $bill->balance_due, 2) . "*";

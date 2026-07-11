@@ -16,3 +16,10 @@ yarn-error.log
 database/database.sqlite
 docs/MedOS-System-Lifecycle.pdf
 /node_modules
+
+# Local dev / Claude Code tooling (not part of the app)
+/.claude
+/.agents
+/.postman
+/postman
+/skills-lock.json

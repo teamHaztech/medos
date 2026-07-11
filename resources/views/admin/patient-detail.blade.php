@@ -89,6 +89,38 @@
         @endif
     </div>
 
+    {{-- Registration details --}}
+    @php
+        $age = $patient->date_of_birth ? \Carbon\Carbon::parse($patient->date_of_birth)->age : $patient->age_approximate;
+        $ins = (array) ($patient->insurance_details ?? []);
+        $healthLabel = \App\Modules\Core\Services\RegionService::healthIdLabel();
+    @endphp
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        <h3 class="text-sm font-semibold text-slate-700 mb-4">Registration Details</h3>
+        <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Phone</dt><dd class="text-slate-800">{{ $patient->phone ?? '—' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Email</dt><dd class="text-slate-800">{{ $patient->email ?? '—' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Gender / Age</dt><dd class="text-slate-800">{{ $patient->gender ? ucfirst($patient->gender) : '—' }}{{ $age ? ' · ' . $age . ' yrs' : '' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Blood Group</dt><dd class="text-slate-800">{{ $patient->blood_group ?? '—' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">City</dt><dd class="text-slate-800">{{ $patient->city ?? '—' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Emergency Contact</dt><dd class="text-slate-800">{{ $patient->emergency_contact_name ? $patient->emergency_contact_name . ($patient->emergency_contact_phone ? ' · ' . $patient->emergency_contact_phone : '') : '—' }}</dd></div>
+            <div class="col-span-2 sm:col-span-3"><dt class="text-xs uppercase tracking-wide text-slate-400">Address</dt><dd class="text-slate-800">{{ $patient->address ?? '—' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">{{ $healthLabel }}</dt><dd class="text-slate-800">{{ $patient->abha_number ?? '—' }} @if($patient->abha_number && $patient->abha_verified)<span class="text-green-600 font-semibold">✓ verified</span>@endif</dd></div>
+        </dl>
+        @if(!empty($ins))
+        <div class="mt-4 pt-4 border-t border-slate-100">
+            <h4 class="text-xs font-semibold text-slate-500 mb-2">Insurance</h4>
+            <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-700">
+                @if(!empty($ins['provider']))<span><span class="text-slate-400">Provider:</span> {{ $ins['provider'] }}</span>@endif
+                @if(!empty($ins['policy_no']))<span><span class="text-slate-400">Policy:</span> {{ $ins['policy_no'] }}</span>@endif
+                @if(!empty($ins['tpa']))<span><span class="text-slate-400">TPA:</span> {{ $ins['tpa'] }}</span>@endif
+                @if(!empty($ins['valid_till']))<span><span class="text-slate-400">Valid till:</span> {{ \Carbon\Carbon::parse($ins['valid_till'])->format('M d, Y') }}</span>@endif
+                @if(!empty($ins['coverage']))<span><span class="text-slate-400">Coverage:</span> {{ \App\Modules\Core\Services\RegionService::currency() }}{{ number_format((float) $ins['coverage']) }}</span>@endif
+            </div>
+        </div>
+        @endif
+    </div>
+
     {{-- Tabs --}}
     <div class="border-b border-slate-200 mb-6">
         <nav class="flex gap-6">
@@ -213,85 +245,29 @@
     </div>
 
     {{-- Edit Patient Modal --}}
-    <div x-show="showEditModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-        <div class="absolute inset-0 bg-black/50" @click="showEditModal = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-slate-800">Edit Patient</h3>
-                <button @click="showEditModal = false" class="text-slate-400 hover:text-slate-600">&times;</button>
+    <x-modal show="showEditModal" title="Edit Patient" max="2xl">
+        <form method="POST" action="{{ route('web.admin.patients.update', $patient->id) }}">
+            @csrf
+            @method('PUT')
+            @include('admin._patient_fields', ['patient' => $patient])
+            <div class="flex justify-end gap-3 pt-6 mt-6 border-t border-slate-100">
+                <button type="button" @click="showEditModal = false" class="btn-secondary">Cancel</button>
+                <button type="submit" class="btn-primary">Save Changes</button>
             </div>
-            <form method="POST" action="{{ route('web.admin.patients.update', $patient->id) }}" class="space-y-4">
-                @csrf
-                @method('PUT')
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                    <input type="text" name="name" value="{{ $patient->name }}" required class="input-field">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                    <input type="tel" name="phone" value="{{ $patient->phone }}" required class="input-field">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Date of Birth</label>
-                        <input type="date" name="date_of_birth" value="{{ $patient->date_of_birth ? \Carbon\Carbon::parse($patient->date_of_birth)->format('Y-m-d') : '' }}" class="input-field">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Gender</label>
-                        <select name="gender" class="input-field">
-                            <option value="male" @selected(($patient->gender ?? '') === 'male')>Male</option>
-                            <option value="female" @selected(($patient->gender ?? '') === 'female')>Female</option>
-                            <option value="other" @selected(($patient->gender ?? '') === 'other')>Other</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input type="email" name="email" value="{{ $patient->email }}" class="input-field">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Language</label>
-                        <select name="language_preference" class="input-field">
-                            <option value="en" @selected(($patient->language_preference ?? 'en') === 'en')>English</option>
-                            <option value="hi" @selected(($patient->language_preference ?? '') === 'hi')>Hindi</option>
-                            <option value="mr" @selected(($patient->language_preference ?? '') === 'mr')>Marathi</option>
-                            <option value="ar" @selected(($patient->language_preference ?? '') === 'ar')>Arabic</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Blood Group</label>
-                        <select name="blood_group" class="input-field">
-                            <option value="">-- Select --</option>
-                            @foreach(['A+','A-','B+','B-','AB+','AB-','O+','O-'] as $bg)
-                                <option value="{{ $bg }}" @selected(($patient->blood_group ?? '') === $bg)>{{ $bg }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" @click="showEditModal = false" class="btn-secondary">Cancel</button>
-                    <button type="submit" class="btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
+        </form>
+    </x-modal>
 
     {{-- Delete Confirmation Modal --}}
-    <div x-show="showDeleteConfirm" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-        <div class="absolute inset-0 bg-black/50" @click="showDeleteConfirm = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-            <h3 class="text-lg font-semibold text-slate-800 mb-2">Delete Patient</h3>
-            <p class="text-sm text-slate-600 mb-6">Are you sure you want to delete <strong>{{ $patient->name }}</strong>? This action can be undone by an administrator.</p>
-            <div class="flex justify-end gap-3">
-                <button @click="showDeleteConfirm = false" class="btn-secondary">Cancel</button>
-                <form method="POST" action="{{ route('web.admin.patients.delete', $patient->id) }}">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">Delete Patient</button>
-                </form>
-            </div>
+    <x-modal show="showDeleteConfirm" title="Delete Patient" max="sm">
+        <p class="text-sm text-slate-600 mb-6">Are you sure you want to delete <strong>{{ $patient->name }}</strong>? This action can be undone by an administrator.</p>
+        <div class="flex justify-end gap-3">
+            <button @click="showDeleteConfirm = false" class="btn-secondary">Cancel</button>
+            <form method="POST" action="{{ route('web.admin.patients.delete', $patient->id) }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">Delete Patient</button>
+            </form>
         </div>
-    </div>
+    </x-modal>
 </div>
 @endsection

@@ -52,9 +52,25 @@ class HospitalContext
      */
     public function resolveFromRequest(Request $request): ?string
     {
-        // 1. Explicit header
-        if ($headerValue = $request->header('X-Hospital-ID')) {
-            return $headerValue;
+        $header = $request->header('X-Hospital-ID');
+        $user = $request->user();
+
+        // Authenticated non-super-admin users are pinned to their own hospital.
+        // A mismatching X-Hospital-ID header is a cross-tenant attempt → unresolvable.
+        if ($user && isset($user->hospital_id)) {
+            $role = is_object($user->role) ? $user->role->value : $user->role;
+            if ($role !== 'super_admin') {
+                if ($header && $header !== $user->hospital_id) {
+                    return null;
+                }
+
+                return $user->hospital_id;
+            }
+        }
+
+        // 1. Explicit header (super admin, or unauthenticated webhook context)
+        if ($header) {
+            return $header;
         }
 
         // 2. Subdomain resolution
@@ -68,8 +84,7 @@ class HospitalContext
             }
         }
 
-        // 3. Authenticated user's hospital
-        $user = $request->user();
+        // 3. Authenticated user's hospital (super admin without header)
         if ($user && isset($user->hospital_id)) {
             return $user->hospital_id;
         }

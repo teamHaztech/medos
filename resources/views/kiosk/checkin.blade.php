@@ -127,15 +127,7 @@ function kioskCheckin() {
                     this.error = data.message || 'Appointment not found. Please check your token or phone number.';
                 }
             } catch (e) {
-                // Placeholder: simulate success for demo
-                this.result = {
-                    success: true,
-                    patientName: 'Patient',
-                    queuePosition: Math.floor(Math.random() * 10) + 1,
-                    doctorName: 'Dr. Ahmed',
-                    estimatedWait: Math.floor(Math.random() * 30 + 5) + ' minutes',
-                    room: 'Room 3',
-                };
+                this.error = 'Could not reach the server. Please try again or see the front desk.';
             } finally {
                 this.loading = false;
             }

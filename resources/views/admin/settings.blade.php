@@ -134,7 +134,10 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-base font-semibold text-slate-800">Departments</h3>
-            <button type="button" @click="openDept(-1)" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add Department</button>
+            <div class="flex items-center gap-3">
+                <button type="button" @click="openDept(-1)" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add Department</button>
+                <button type="button" @click="saveDepts()" class="btn-primary text-sm">Save</button>
+            </div>
         </div>
         <div class="space-y-2">
             <template x-for="(dept, index) in departments" :key="index">
@@ -150,54 +153,54 @@
     </div>
 
     {{-- Department Add/Edit modal --}}
-    <div x-show="deptModal" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="deptModal = false">
-        <div @click.away="deptModal = false" class="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900" x-text="deptIndex === -1 ? 'Add Department' : 'Edit Department'"></h3>
-                <button type="button" @click="deptModal = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+    <x-modal show="deptModal" title-expr="deptIndex === -1 ? 'Add Department' : 'Edit Department'" max="md">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Department name *</label>
+                <input type="text" x-model="deptDraft.name" maxlength="100" @keydown.enter="saveDept()" class="input-field" placeholder="e.g. Cardiology">
+                <p x-show="deptError" x-text="deptError" class="text-red-500 text-xs mt-1"></p>
             </div>
-            <div class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Department name *</label>
-                    <input type="text" x-model="deptDraft.name" maxlength="100" @keydown.enter="saveDept()" class="input-field" placeholder="e.g. Cardiology">
-                    <p x-show="deptError" x-text="deptError" class="text-red-500 text-xs mt-1"></p>
-                </div>
-                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" x-model="deptDraft.active" class="rounded border-slate-300 text-blue-600">
-                    Active
-                </label>
-                <div class="flex items-center gap-3 pt-1">
-                    <button type="button" @click="saveDept()" class="btn-primary px-5 py-2.5">Save</button>
-                    <button type="button" @click="deptModal = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
-                </div>
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" x-model="deptDraft.active" class="rounded border-slate-300 text-blue-600">
+                Active
+            </label>
+            <div class="flex items-center gap-3 pt-1">
+                <button type="button" @click="saveDept()" class="btn-primary px-5 py-2.5">Save</button>
+                <button type="button" @click="deptModal = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
             </div>
         </div>
-    </div>
+    </x-modal>
 
     {{-- Module Toggles --}}
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <h3 class="text-base font-semibold text-slate-800 mb-4">Module Configuration</h3>
-        <div class="space-y-3">
-            <template x-for="mod in modules" :key="mod.key">
-                <div class="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
-                    <div>
-                        <p class="text-sm font-medium text-slate-800" x-text="mod.name"></p>
-                        <p class="text-xs text-slate-500" x-text="mod.description"></p>
-                    </div>
-                    <button
-                        @click="mod.enabled = !mod.enabled"
-                        :class="mod.enabled ? 'bg-blue-600' : 'bg-slate-300'"
-                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                    >
-                        <span
-                            :class="mod.enabled ? 'translate-x-6' : 'translate-x-1'"
-                            class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
-                        ></span>
-                    </button>
+    <form method="POST" action="{{ route('web.admin.settings.modules') }}" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        @csrf
+        <div class="flex items-center justify-between mb-1">
+            <h3 class="text-base font-semibold text-slate-800">Module Configuration</h3>
+            <button type="submit" class="btn-primary">Save Modules</button>
+        </div>
+        <p class="text-xs text-slate-500 mb-3">Disabled modules are fully blocked — their pages 404 and their links disappear.</p>
+        <div class="space-y-5">
+            <template x-for="cat in moduleCategories" :key="cat.name">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1" x-text="cat.name"></p>
+                    <template x-for="mod in cat.modules" :key="mod.key">
+                        <div class="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
+                            <div>
+                                <p class="text-sm font-medium text-slate-800" x-text="mod.name"></p>
+                                <p class="text-xs text-slate-500" x-text="mod.description"></p>
+                            </div>
+                            <button type="button" @click="mod.enabled = !mod.enabled"
+                                :class="mod.enabled ? 'bg-blue-600' : 'bg-slate-300'"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0">
+                                <span :class="mod.enabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-4 w-4 rounded-full bg-white transition-transform"></span>
+                            </button>
+                            <template x-if="mod.enabled"><input type="hidden" name="modules[]" :value="mod.key"></template>
+                        </div>
+                    </template>
                 </div>
             </template>
         </div>
-    </div>
+    </form>
 
     {{-- AI Configuration --}}
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
@@ -219,10 +222,10 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">API Key</label>
-                <input type="password" x-model="ai.apiKey" class="input-field" placeholder="sk-...">
+                <input type="password" x-model="ai.apiKey" class="input-field" :placeholder="ai.hasKey ? '•••••••• saved — leave blank to keep' : 'sk-...'">
             </div>
             <div class="flex justify-end">
-                <button type="button" class="btn-primary">Save AI Settings</button>
+                <button type="button" @click="saveAi()" class="btn-primary">Save AI Settings</button>
             </div>
         </div>
     </div>
@@ -247,7 +250,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">API Token</label>
-                <input type="password" x-model="whatsapp.token" class="input-field" placeholder="Enter API token">
+                <input type="password" x-model="whatsapp.token" class="input-field" :placeholder="whatsapp.hasToken ? '•••••••• saved — leave blank to keep' : 'Enter API token'">
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Webhook URL</label>
@@ -257,7 +260,66 @@
                 </div>
             </div>
             <div class="flex justify-end">
-                <button type="button" class="btn-primary">Save WhatsApp Settings</button>
+                <button type="button" @click="saveWhatsapp()" class="btn-primary">Save WhatsApp Settings</button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Billing Integrations --}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between mb-1">
+            <h3 class="text-base font-semibold text-slate-800">Billing Integrations</h3>
+            <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" x-model="billing.enabled" class="rounded border-slate-300">
+                <span class="text-slate-600">Enabled</span>
+            </label>
+        </div>
+        <p class="text-xs text-slate-500 mb-4">Send every bill to your hospital's own billing / accounting software as it is created, paid, refunded or cancelled.</p>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Connector</label>
+                <select x-model="billing.connector" class="input-field">
+                    <template x-for="c in billing.connectors" :key="c.code">
+                        <option :value="c.code" x-text="c.label"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Endpoint URL</label>
+                <input type="url" x-model="billing.endpoint" class="input-field" placeholder="https://your-system.example.com/webhooks/medos-bills">
+                <p class="text-xs text-slate-400 mt-1">MedOS sends an HTTP POST with the bill as JSON to this URL.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">API key / Bearer token</label>
+                    <input type="password" x-model="billing.secret" class="input-field" :placeholder="billing.hasSecret ? '•••••••• saved — leave blank to keep' : 'Optional'">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Signing secret (HMAC)</label>
+                    <input type="password" x-model="billing.signing_secret" class="input-field" :placeholder="billing.hasSigning ? '•••••••• saved — leave blank to keep' : 'Optional'">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Send these events</label>
+                <div class="flex flex-wrap gap-4">
+                    @foreach($biEvents as $key => $label)
+                    <label class="inline-flex items-center gap-2 text-sm">
+                        <input type="checkbox" value="{{ $key }}" x-model="billing.events" class="rounded border-slate-300">
+                        <span class="text-slate-600">{{ $label }}</span>
+                    </label>
+                    @endforeach
+                </div>
+            </div>
+            <div class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                Sync runs in the background queue. On shared hosting, add a scheduled task running <code>php artisan queue:work --stop-when-empty</code> each minute so pushes are delivered.
+            </div>
+            <p class="text-xs text-slate-500">Prefer your software to <strong>pull</strong> data instead of receiving pushes? <a href="{{ route('web.admin.api-keys') }}" class="text-blue-600 hover:text-blue-800 font-medium">Generate an API key →</a></p>
+            <div class="flex items-center justify-between gap-3">
+                <span class="text-sm" :class="billing.testOk === true ? 'text-green-600' : (billing.testOk === false ? 'text-red-600' : 'text-slate-400')" x-text="billing.testMsg"></span>
+                <div class="flex gap-2">
+                    <button type="button" @click="testBilling()" class="btn-secondary text-sm">Send test</button>
+                    <button type="button" @click="saveBilling()" class="btn-primary">Save</button>
+                </div>
             </div>
         </div>
     </div>
@@ -294,12 +356,7 @@ function settingsPage() {
                 end: saved[name]?.end ?? defaults[name].end,
             }));
         })(),
-        departments: [
-            { name: 'General Medicine', active: true },
-            { name: 'Cardiology', active: true },
-            { name: 'Pediatrics', active: true },
-            { name: 'Orthopedics', active: true },
-        ],
+        departments: {{ \Illuminate\Support\Js::from($departments ?? []) }},
         deptModal: false,
         deptIndex: -1,
         deptDraft: { name: '', active: true },
@@ -322,30 +379,71 @@ function settingsPage() {
             else { this.departments[this.deptIndex] = dept; }
             this.deptModal = false;
         },
-        modules: [
-            { key: 'ai_receptionist', name: 'AI Receptionist', description: 'Automated patient intake via WhatsApp', enabled: true },
-            { key: 'triage', name: 'AI Triage', description: 'Automatic urgency classification', enabled: true },
-            { key: 'doctor_assist', name: 'Doctor Assist', description: 'AI-generated patient briefings and SOAP notes', enabled: true },
-            { key: 'insurance', name: 'Insurance Module', description: 'Insurance verification and claims', enabled: true },
-            { key: 'billing', name: 'Billing', description: 'Automated bill generation', enabled: true },
-            { key: 'whatsapp', name: 'WhatsApp Integration', description: 'Patient communication via WhatsApp', enabled: false },
-            { key: 'engagement', name: 'Patient Engagement', description: 'Follow-ups, reminders, and feedback', enabled: true },
-        ],
-        ai: {
-            provider: 'openai',
-            model: 'gpt-4o',
-            apiKey: '',
+        modules: {{ \Illuminate\Support\Js::from($moduleList ?? []) }},
+        get moduleCategories() {
+            const order = [], map = {};
+            this.modules.forEach(m => {
+                const c = m.category || 'Other';
+                if (!map[c]) { map[c] = []; order.push(c); }
+                map[c].push(m);
+            });
+            return order.map(name => ({ name, modules: map[name] }));
         },
-        whatsapp: {
-            number: '',
-            provider: 'twilio',
-            token: '',
-        },
+        ai: {{ \Illuminate\Support\Js::from(['provider' => $aiCfg['provider'] ?? 'anthropic', 'model' => $aiCfg['model'] ?? '', 'apiKey' => '', 'hasKey' => $aiCfg['hasKey'] ?? false]) }},
+        whatsapp: {{ \Illuminate\Support\Js::from(['number' => $waCfg['number'] ?? '', 'provider' => $waCfg['provider'] ?? 'meta', 'token' => '', 'hasToken' => $waCfg['hasToken'] ?? false]) }},
         webhookUrl: window.location.origin + '/api/whatsapp/webhook',
+        billing: {{ \Illuminate\Support\Js::from([
+            'enabled'    => $biCfg['enabled'],
+            'connector'  => $biCfg['connector'],
+            'endpoint'   => $biCfg['endpoint'],
+            'events'     => array_values($biCfg['events']),
+            'hasSecret'  => $biCfg['hasSecret'],
+            'hasSigning' => $biCfg['hasSigning'],
+            'connectors' => $biCfg['connectors'],
+            'secret'     => '',
+            'signing_secret' => '',
+            'testMsg'    => '',
+            'testOk'     => null,
+        ]) }},
 
-        saveHospitalInfo() {
-            // TODO: POST to API
-            alert('Hospital info saved (placeholder)');
+        async _post(url, payload) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            return res.json();
+        },
+        async saveDepts() {
+            try { const d = await this._post('{{ route("web.admin.settings.departments") }}', { departments: this.departments }); alert(d.message || 'Saved!'); }
+            catch(e) { alert('Failed to save departments.'); }
+        },
+        async saveAi() {
+            try { const d = await this._post('{{ route("web.admin.settings.ai") }}', { provider: this.ai.provider, model: this.ai.model, api_key: this.ai.apiKey }); if (this.ai.apiKey) this.ai.hasKey = true; this.ai.apiKey = ''; alert(d.message || 'Saved!'); }
+            catch(e) { alert('Failed to save AI settings.'); }
+        },
+        async saveWhatsapp() {
+            try { const d = await this._post('{{ route("web.admin.settings.whatsapp") }}', { number: this.whatsapp.number, provider: this.whatsapp.provider, token: this.whatsapp.token }); if (this.whatsapp.token) this.whatsapp.hasToken = true; this.whatsapp.token = ''; alert(d.message || 'Saved!'); }
+            catch(e) { alert('Failed to save WhatsApp settings.'); }
+        },
+        async saveBilling() {
+            try {
+                const d = await this._post('{{ route("web.admin.settings.billing-integration") }}', {
+                    enabled: this.billing.enabled, connector: this.billing.connector, endpoint: this.billing.endpoint,
+                    events: this.billing.events, secret: this.billing.secret, signing_secret: this.billing.signing_secret,
+                });
+                if (this.billing.secret) this.billing.hasSecret = true;
+                if (this.billing.signing_secret) this.billing.hasSigning = true;
+                this.billing.secret = ''; this.billing.signing_secret = '';
+                alert(d.message || 'Saved!');
+            } catch(e) { alert('Failed to save billing integration.'); }
+        },
+        async testBilling() {
+            this.billing.testMsg = 'Testing…'; this.billing.testOk = null;
+            try {
+                const d = await this._post('{{ route("web.admin.settings.billing-integration.test") }}', {});
+                this.billing.testOk = !!d.success; this.billing.testMsg = d.message || (d.success ? 'OK' : 'Failed');
+            } catch(e) { this.billing.testOk = false; this.billing.testMsg = 'Test request failed.'; }
         },
         async saveHours() {
             const hours = {};

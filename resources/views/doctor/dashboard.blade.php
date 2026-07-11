@@ -170,8 +170,8 @@
     </div>
 
     {{-- Refer to Lab modal --}}
-    <div x-show="showReferLab" x-transition.opacity style="display:none"
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    <div x-show="showReferLab" x-transition.opacity style="display:none; background:rgba(0,0,0,0.5)"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
          @keydown.escape.window="showReferLab = false">
         <div @click.away="showReferLab = false" style="max-height:85vh" class="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
@@ -229,7 +229,8 @@ function doctorDashboard() {
         selectedDiagnoses: [], customDiagnosis: '',
         orders: [], testFilter: 'all', allTests: [],
         showReferLab: false, referTests: [], referFilter: 'all',
-        prescriptions: [], medSearch: '', medResults: [], medSearching: false,
+        prescriptions: [], medSearch: '', medResults: [], medSearching: false, rxNotice: '',
+        icdSearch: '', icdResults: [], icdSearching: false,
         referral: null, referralReason: '', referralSlot: null, referralDays: [], referralSelectedDay: null, referralLoading: false, referralUrgency: 'normal',
         followUp: null,
         soap: { subjective:'',assessment:'',plan:'' },
@@ -423,6 +424,7 @@ function doctorDashboard() {
             this.vitals={bp:'',temp:'',pulse:'',spo2:'',weight:'',rr:'',examNotes:''};
             this.selectedDiagnoses=[];this.customDiagnosis='';
             this.orders=[];this.prescriptions=[];this.medSearch='';this.medResults=[];
+            this.icdSearch='';this.icdResults=[];this.rxNotice='';
             this.referral=null;this.referralReason='';this.referralSlot=null;this.referralDays=[];this.referralSelectedDay=null;this.referralUrgency='normal';
             this.followUp=null;this.soap={subjective:'',assessment:'',plan:''};this.advice=[];
         },
@@ -445,6 +447,11 @@ function doctorDashboard() {
         },
 
         addMedicineFromDB(med) {
+            if (this.prescriptions.some(p => (p.name||'').toLowerCase() === (med.name||'').toLowerCase())) {
+                this.rxNotice = med.name + ' is already prescribed.';
+                setTimeout(() => { this.rxNotice = ''; }, 3500);
+                return;
+            }
             this.prescriptions.push({
                 name: med.name,
                 dosage: med.default_dosage||'',
@@ -452,12 +459,66 @@ function doctorDashboard() {
                 duration: med.default_duration||'',
                 timing: med.default_timing||'',
                 form: med.form||'tablet',
+                _allergy: this.drugAllergyConflict(med),
             });
         },
 
         addCustomMedicine() {
-            this.prescriptions.push({ name:this.medSearch, dosage:'', frequency:'', duration:'', timing:'', form:'tablet' });
+            const med = { name: this.medSearch };
+            this.prescriptions.push({ name:this.medSearch, dosage:'', frequency:'', duration:'', timing:'', form:'tablet', _allergy: this.drugAllergyConflict(med) });
             this.medSearch=''; this.medResults=[];
+        },
+
+        // ---- Clinical decision support: drug–allergy interaction check ----
+        drugAllergyConflict(med) {
+            const allergies = (this.selectedPatient?.allergies || []).map(a => (a||'').toLowerCase().trim()).filter(Boolean);
+            if (!allergies.length) return null;
+            const hay = [med.name||'', med.generic_name||med.generic||'', med.category||''].join(' ').toLowerCase();
+            const classes = {
+                'penicillin': ['penicillin','amoxicillin','amox','ampicillin','augmentin','clavulan','piperacillin','cloxacillin','co-amoxiclav'],
+                'sulfa': ['sulfa','sulpha','sulfamethoxazole','cotrimoxazole','co-trimoxazole','bactrim','septran','sulfadiazine'],
+                'cephalosporin': ['cephalosporin','cephalexin','cefixime','ceftriaxone','cefuroxime','cefpodoxime','cefo','ceft','cefa'],
+                'cephalexin': ['cephalexin','cef'],
+                'nsaid': ['nsaid','ibuprofen','diclofenac','naproxen','aspirin','ketorolac','aceclofenac','mefenamic','indomethacin'],
+                'aspirin': ['aspirin','acetylsalicylic','asa','disprin'],
+                'ibuprofen': ['ibuprofen','brufen'],
+                'diclofenac': ['diclofenac','voveran'],
+                'macrolide': ['macrolide','azithromycin','erythromycin','clarithromycin','azithro'],
+                'azithromycin': ['azithromycin','azithro'],
+                'quinolone': ['quinolone','floxacin','ciprofloxacin','levofloxacin','ofloxacin','norfloxacin'],
+                'ciprofloxacin': ['ciprofloxacin','cipro'],
+                'paracetamol': ['paracetamol','acetaminophen','crocin','dolo','calpol'],
+                'metformin': ['metformin'],
+                'codeine': ['codeine'],
+            };
+            for (const allergy of allergies) {
+                // direct: patient allergic to a word that appears in the drug
+                for (const tok of allergy.split(/[^a-z]+/).filter(t => t.length >= 4)) {
+                    if (hay.includes(tok)) return allergy;
+                }
+                // class cross-reactivity
+                for (const [key, drugs] of Object.entries(classes)) {
+                    if (allergy.includes(key) && drugs.some(d => hay.includes(d))) return allergy;
+                }
+            }
+            return null;
+        },
+
+        // ---- ICD-10 coded diagnosis search ----
+        async searchIcd10() {
+            if (this.icdSearch.length < 2) { this.icdResults = []; return; }
+            this.icdSearching = true;
+            try {
+                const r = await fetch('/ajax/icd10?q='+encodeURIComponent(this.icdSearch), {headers:{'Accept':'application/json'}});
+                if (r.ok) this.icdResults = await r.json();
+            } catch(e){}
+            this.icdSearching = false;
+        },
+        addIcd10(item) {
+            if (!this.selectedDiagnoses.find(d => d.code === item.code)) {
+                this.selectedDiagnoses.push({ code: item.code, name: item.title });
+            }
+            this.icdSearch=''; this.icdResults=[];
         },
 
         async selectReferral(doc) {
@@ -484,6 +545,8 @@ function doctorDashboard() {
                 const body = {
                     diagnosis_codes: this.selectedDiagnoses.map(d => d.code),
                     soap_notes: this.soap,
+                    vitals: this.vitals,
+                    advice: this.advice,
                 };
                 if (this.followUp) {
                     const days = {'3 days':3,'1 week':7,'2 weeks':14,'1 month':30,'3 months':90}[this.followUp] || 7;

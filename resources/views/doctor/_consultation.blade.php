@@ -48,6 +48,22 @@
                         <button @click="toggleDiagnosis(d)" :class="selectedDiagnoses.find(s=>s.code===d.code)?'bg-blue-500 text-white':'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="px-2 py-1 rounded text-xs font-medium transition-all" x-text="d.name"></button>
                     </template>
                 </div>
+                {{-- ICD-10 coded search --}}
+                <p class="text-[10px] font-semibold text-slate-400 uppercase mb-1.5">ICD-10 Code Search</p>
+                <div class="relative mb-2">
+                    <input type="text" x-model="icdSearch" @input.debounce.300ms="searchIcd10()" class="input-field text-sm" placeholder="Search ICD-10 code or diagnosis (e.g. J06, hypertension)...">
+                    <div x-show="icdSearch.length >= 2 && icdResults.length" style="max-height:220px" class="absolute z-30 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-y-auto">
+                        <template x-for="c in icdResults" :key="c.code">
+                            <button type="button" @click="addIcd10(c)" class="w-full flex items-center gap-2 p-2 hover:bg-blue-50 text-left border-b border-slate-100 last:border-0">
+                                <span class="text-xs font-mono font-bold text-blue-700 w-16 flex-shrink-0" x-text="c.code"></span>
+                                <span class="text-sm text-slate-700" x-text="c.title"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <div x-show="icdSearch.length >= 2 && icdResults.length === 0 && !icdSearching" class="absolute z-30 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl p-2 text-center text-xs text-slate-400">No ICD-10 match — use Custom below.</div>
+                </div>
+
+                <p class="text-[10px] font-semibold text-slate-400 uppercase mb-1.5">Custom</p>
                 <div class="flex gap-2">
                     <input type="text" x-model="customDiagnosis" class="input-field flex-1 text-sm" placeholder="Custom diagnosis..." @keydown.enter.prevent="if(customDiagnosis){selectedDiagnoses.push({code:'CUSTOM',name:customDiagnosis});customDiagnosis='';}">
                     <button @click="if(customDiagnosis){selectedDiagnoses.push({code:'CUSTOM',name:customDiagnosis});customDiagnosis='';}" class="btn-primary text-xs px-3">Add</button>
@@ -56,6 +72,7 @@
                     <div class="mt-2 flex flex-wrap gap-1">
                         <template x-for="(d,i) in selectedDiagnoses" :key="i">
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                                <span x-show="d.code && d.code !== 'CUSTOM'" class="font-mono font-bold" x-text="d.code"></span>
                                 <span x-text="d.name"></span>
                                 <button @click="selectedDiagnoses.splice(i,1)" class="text-blue-400 hover:text-blue-700">&times;</button>
                             </span>
@@ -97,6 +114,10 @@
 
             {{-- PRESCRIPTION (from DB with search) --}}
             <div x-show="cTab==='rx'">
+                <template x-if="selectedPatient?.allergies?.length">
+                    <div class="mb-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-800">⚠ Known allergies: <span class="font-semibold" x-text="selectedPatient.allergies.join(', ')"></span> — medicines are checked automatically.</div>
+                </template>
+                <div x-show="rxNotice" x-transition class="mb-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800" x-text="rxNotice"></div>
                 <div class="relative mb-3">
                     <input type="text" x-model="medSearch" @input.debounce.300ms="searchMedicines()" class="input-field text-sm pr-8" placeholder="Search medicines... (type 2+ chars)">
                     <div x-show="medSearch.length >= 2 && medResults.length" style="max-height:200px" class="absolute z-20 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-y-auto">
@@ -105,6 +126,7 @@
                                 <div>
                                     <span class="text-sm font-semibold text-slate-800" x-text="med.name"></span>
                                     <span class="text-xs text-slate-400 ml-1" x-text="med.form"></span>
+                                    <span x-show="drugAllergyConflict(med)" class="text-xs font-bold text-red-600 ml-1">⚠ allergy</span>
                                     <span class="block text-xs text-slate-500" x-text="med.category + (med.generic_name && med.generic_name !== med.name ? ' · ' + med.generic_name : '')"></span>
                                 </div>
                                 <span class="text-xs text-slate-400" x-text="[med.default_dosage, med.default_frequency].filter(Boolean).join(' · ')"></span>
@@ -121,7 +143,7 @@
                 <template x-if="prescriptions.length">
                     <div class="space-y-2">
                         <template x-for="(rx,i) in prescriptions" :key="i">
-                            <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="p-3 border rounded-lg" :class="rx._allergy ? 'bg-red-50 border-red-300' : 'bg-green-50 border-green-200'">
                                 <div class="flex items-start justify-between mb-2">
                                     <div>
                                         <span class="text-sm font-bold text-slate-900" x-text="rx.name"></span>
@@ -130,6 +152,8 @@
                                     </div>
                                     <button @click="prescriptions.splice(i,1)" class="text-red-400 hover:text-red-600 text-lg leading-none">&times;</button>
                                 </div>
+
+                                <div x-show="rx._allergy" class="mb-2 px-2 py-1 rounded bg-red-100 text-xs font-semibold text-red-700">⚠ Allergy alert: patient is allergic to <span x-text="rx._allergy"></span>. Review before prescribing.</div>
 
                                 {{-- How many times a day --}}
                                 <div class="mb-2">

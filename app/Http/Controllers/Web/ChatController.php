@@ -62,6 +62,11 @@ class ChatController extends Controller
             session(['chat_hospital_id' => $hospital->id]);
         }
 
+        // AI Receptionist module gate.
+        if ($hospital && ! $hospital->isModuleEnabled('ai_receptionist')) {
+            return response()->json(['replies' => [['text' => 'The AI receptionist is currently unavailable.']]]);
+        }
+
         // Cache keys are scoped per hospital so a patient from one hospital is
         // never recognised in another hospital's chat.
         $scopeId = $hospital?->id ?? 'none';

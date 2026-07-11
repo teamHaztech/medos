@@ -5,6 +5,16 @@
 
 @section('content')
 <div>
+    <div class="flex flex-wrap items-center gap-2 mb-6">
+        <a href="{{ route('web.billing.dashboard') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Dashboard</a>
+        <a href="{{ route('web.billing.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 text-white">Bills</a>
+        <a href="{{ route('web.billing.services') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Service Master</a>
+        <div class="ml-auto flex items-center gap-2">
+            <a href="{{ route('web.billing.export', ['format' => 'csv']) }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Export CSV</a>
+            <a href="{{ route('web.billing.export', ['format' => 'tally']) }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Export Tally</a>
+            <a href="{{ route('web.billing.new') }}" class="btn-primary">+ New Bill</a>
+        </div>
+    </div>
     @if(session('info'))
         <div class="mb-4 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800">{{ session('info') }}</div>
     @endif
@@ -66,6 +76,7 @@
                     <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>Paid</option>
                     <option value="partial" {{ request('payment_status') === 'partial' ? 'selected' : '' }}>Partial</option>
                     <option value="refunded" {{ request('payment_status') === 'refunded' ? 'selected' : '' }}>Refunded</option>
+                    <option value="cancelled" {{ request('payment_status') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                     <option value="waived" {{ request('payment_status') === 'waived' ? 'selected' : '' }}>Waived</option>
                 </select>
             </div>
@@ -119,6 +130,8 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Refunded</span>
                                 @elseif($status === 'waived')
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">Waived</span>
+                                @elseif($status === 'cancelled')
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-200 text-slate-600 line-through">Cancelled</span>
                                 @else
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Pending</span>
                                 @endif

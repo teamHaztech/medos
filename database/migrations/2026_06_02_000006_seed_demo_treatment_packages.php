@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 return new class extends Migration
 {
     /**
-     * Seed a few department-appropriate demo treatment packages for the main
+     * Seed a few department-appropriate treatment packages for the main
      * City Care doctors. Idempotent — skips any package that already exists for
      * that doctor, and only adds them once.
      */
@@ -80,6 +80,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        // No-op: demo data.
+        // No-op: seeded data is left in place.
     }
 };

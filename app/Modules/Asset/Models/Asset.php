@@ -20,11 +20,14 @@ class Asset extends Model
         'model', 'manufacturer', 'department', 'location', 'purchase_date',
         'purchase_cost', 'vendor_id', 'status', 'notes', 'is_active',
         'decommissioned_on', 'decommission_reason', 'disposal_method',
+        'useful_life_years', 'salvage_value',
     ];
 
     protected $casts = [
         'purchase_date'     => 'date',
         'purchase_cost'     => 'decimal:2',
+        'salvage_value'     => 'decimal:2',
+        'useful_life_years' => 'integer',
         'decommissioned_on' => 'date',
         'is_active'         => 'boolean',
     ];
@@ -44,6 +47,48 @@ class Asset extends Model
     ];
 
     public const DEPARTMENTS = ['OT', 'ICU', 'Ward', 'Emergency', 'Radiology', 'Laboratory', 'OPD'];
+
+    // ---------------------------------------------------------------
+    // Depreciation (straight-line)
+    // ---------------------------------------------------------------
+
+    /** Depreciable base = cost − salvage value. */
+    public function depreciableBase(): float
+    {
+        return max(0, (float) $this->purchase_cost - (float) ($this->salvage_value ?? 0));
+    }
+
+    public function annualDepreciation(): float
+    {
+        $life = (int) ($this->useful_life_years ?? 0);
+
+        return $life > 0 ? round($this->depreciableBase() / $life, 2) : 0.0;
+    }
+
+    /** Whole+fractional years since purchase (0 if no purchase date). */
+    public function ageYears(): float
+    {
+        return $this->purchase_date ? max(0, $this->purchase_date->floatDiffInYears(now())) : 0.0;
+    }
+
+    public function accumulatedDepreciation(): float
+    {
+        if (! $this->useful_life_years || ! $this->purchase_cost) {
+            return 0.0;
+        }
+
+        return round(min($this->annualDepreciation() * $this->ageYears(), $this->depreciableBase()), 2);
+    }
+
+    /** Current written-down / book value, floored at salvage value. */
+    public function bookValue(): float
+    {
+        if (! $this->purchase_cost) {
+            return 0.0;
+        }
+
+        return round((float) $this->purchase_cost - $this->accumulatedDepreciation(), 2);
+    }
 
     // ---------------------------------------------------------------
     // Relationships

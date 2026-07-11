@@ -196,6 +196,18 @@ class WhatsAppNotifier
      */
     private static function send(string $phone, string $message): void
     {
+        // Resolve the patient's hospital and respect its WhatsApp module toggle.
+        $patient = \DB::table('patients')->where('phone', $phone)->first(['id', 'hospital_id']);
+        $hospitalId = $patient->hospital_id ?? \DB::table('hospitals')->where('is_active', true)->value('id');
+
+        $modules = \DB::table('hospitals')->where('id', $hospitalId)->value('modules_enabled');
+        if ($modules) {
+            $enabled = json_decode($modules, true) ?: [];
+            if (! empty($enabled) && ! in_array('whatsapp', $enabled, true)) {
+                return; // WhatsApp Integration disabled for this hospital.
+            }
+        }
+
         // Log all outgoing messages
         Log::channel('single')->info('[WhatsApp OUT] ' . $phone . ': ' . substr($message, 0, 100));
 
@@ -208,8 +220,8 @@ class WhatsAppNotifier
         try {
             \DB::table('notifications_log')->insert([
                 'id' => \Str::uuid()->toString(),
-                'hospital_id' => \DB::table('hospitals')->where('is_active', true)->value('id'),
-                'patient_id' => \DB::table('patients')->where('phone', $phone)->value('id'),
+                'hospital_id' => $hospitalId,
+                'patient_id' => $patient->id ?? null,
                 'channel' => 'whatsapp',
                 'type' => 'appointment_notification',
                 'content' => json_encode(['message' => $message, 'phone' => $phone]),

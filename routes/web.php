@@ -3,9 +3,11 @@
 use App\Http\Controllers\Web\AdminWebController;
 use App\Http\Controllers\Web\AssetController;
 use App\Http\Controllers\Web\DoctorWebController;
+use App\Http\Controllers\Web\InpatientController;
 use App\Http\Controllers\Web\KioskController;
 use App\Http\Controllers\Web\ServiceRequestController;
 use App\Http\Controllers\Web\VendorController;
+use App\Http\Controllers\Web\WardController;
 use App\Http\Controllers\Web\WebAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,10 +28,22 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
     Route::get('/', [AdminWebController::class, 'dashboard'])->name('dashboard');
     Route::get('patients', [AdminWebController::class, 'patients'])->name('patients');
     Route::post('patients', [AdminWebController::class, 'storePatient'])->name('patients.store');
+    Route::get('patients/register', [AdminWebController::class, 'registerForm'])->name('patients.register');
+    Route::post('patients/verify-id', [AdminWebController::class, 'verifyHealthId'])->name('patients.verify-id');
     Route::get('patients/{id}', [AdminWebController::class, 'patientDetail'])->name('patients.show');
     Route::put('patients/{id}', [AdminWebController::class, 'updatePatient'])->name('patients.update');
     Route::delete('patients/{id}', [AdminWebController::class, 'deletePatient'])->name('patients.delete');
     Route::get('appointments', [AdminWebController::class, 'appointments'])->name('appointments');
+    Route::get('appointments/schedule', [AdminWebController::class, 'scheduleForm'])->name('appointments.schedule');
+    Route::post('appointments', [AdminWebController::class, 'storeAppointment'])->name('appointments.store');
+    Route::post('appointments/{id}/reschedule', [AdminWebController::class, 'rescheduleAppointment'])->name('appointments.reschedule');
+    Route::post('appointments/{id}/no-show', [AdminWebController::class, 'noShowAppointment'])->name('appointments.no-show');
+    Route::get('queue', [AdminWebController::class, 'queue'])->name('queue');
+    Route::post('queue/add', [AdminWebController::class, 'addToQueue'])->name('queue.add');
+    Route::get('counter', [AdminWebController::class, 'counter'])->name('counter');
+    Route::post('counter/issue', [AdminWebController::class, 'issueToken'])->name('counter.issue');
+    Route::get('counter/slip/{id}', [AdminWebController::class, 'tokenSlip'])->name('counter.slip');
+    Route::get('info-desk', [AdminWebController::class, 'infoDesk'])->name('info-desk');
     Route::get('staff', [AdminWebController::class, 'staff'])->name('staff');
     Route::post('staff', [AdminWebController::class, 'storeStaff'])->name('staff.store');
     Route::put('staff/{id}', [AdminWebController::class, 'updateStaff'])->name('staff.update');
@@ -45,6 +59,15 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::get('settings', [AdminWebController::class, 'settings'])->name('settings');
         Route::post('settings', [AdminWebController::class, 'saveSettings'])->name('settings.save');
         Route::post('settings/hours', [AdminWebController::class, 'saveOperatingHours'])->name('settings.hours');
+        Route::post('settings/modules', [AdminWebController::class, 'updateModules'])->name('settings.modules');
+        Route::post('settings/departments', [AdminWebController::class, 'saveDepartments'])->name('settings.departments');
+        Route::post('settings/ai', [AdminWebController::class, 'saveAiSettings'])->name('settings.ai');
+        Route::post('settings/whatsapp', [AdminWebController::class, 'saveWhatsappSettings'])->name('settings.whatsapp');
+        Route::post('settings/billing-integration', [AdminWebController::class, 'saveBillingIntegration'])->name('settings.billing-integration');
+        Route::post('settings/billing-integration/test', [AdminWebController::class, 'testBillingIntegration'])->name('settings.billing-integration.test');
+        Route::get('api-keys', [AdminWebController::class, 'apiKeys'])->name('api-keys');
+        Route::post('api-keys', [AdminWebController::class, 'createApiKey'])->name('api-keys.create');
+        Route::post('api-keys/{id}/revoke', [AdminWebController::class, 'revokeApiKey'])->name('api-keys.revoke');
         Route::get('slots', [AdminWebController::class, 'slots'])->name('slots');
         Route::post('slots/{staffId}', [AdminWebController::class, 'updateSlots'])->name('slots.update');
         Route::get('tests', [AdminWebController::class, 'tests'])->name('tests');
@@ -88,6 +111,36 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::post('vendors', [VendorController::class, 'store'])->name('vendors.store');
         Route::put('vendors/{id}', [VendorController::class, 'update'])->name('vendors.update');
         Route::delete('vendors/{id}', [VendorController::class, 'destroy'])->name('vendors.destroy');
+    });
+});
+
+// ---------------------------------------------------------------
+// Inpatient (IP) + ADT — wards, beds, admissions, case sheet
+// ---------------------------------------------------------------
+
+Route::middleware('auth')->prefix('ip')->name('web.ip.')->group(function () {
+    Route::get('/', [InpatientController::class, 'dashboard'])->name('dashboard');
+    Route::get('adt', [InpatientController::class, 'adt'])->name('adt');
+    Route::get('admissions', [InpatientController::class, 'admissions'])->name('admissions');
+    Route::post('admissions', [InpatientController::class, 'admit'])->name('admit');
+    Route::get('admissions/{id}', [InpatientController::class, 'show'])->name('show');
+    Route::post('admissions/{id}/vitals', [InpatientController::class, 'storeVital'])->name('vitals.store');
+    Route::post('admissions/{id}/io', [InpatientController::class, 'storeIntakeOutput'])->name('io.store');
+    Route::post('admissions/{id}/notes', [InpatientController::class, 'storeNote'])->name('notes.store');
+    Route::post('admissions/{id}/transfer', [InpatientController::class, 'transfer'])->name('transfer');
+    Route::post('admissions/{id}/discharge', [InpatientController::class, 'discharge'])->name('discharge');
+    Route::post('admissions/{id}/discharge/initiate', [InpatientController::class, 'initiateDischarge'])->name('discharge.initiate');
+    Route::post('admissions/{id}/clearance', [InpatientController::class, 'toggleClearance'])->name('clearance');
+
+    // Ward / bed setup (admin only)
+    Route::middleware('admin')->group(function () {
+        Route::get('wards', [WardController::class, 'index'])->name('wards');
+        Route::post('wards', [WardController::class, 'storeWard'])->name('wards.store');
+        Route::put('wards/{id}', [WardController::class, 'updateWard'])->name('wards.update');
+        Route::delete('wards/{id}', [WardController::class, 'destroyWard'])->name('wards.destroy');
+        Route::post('wards/{wardId}/beds', [WardController::class, 'storeBed'])->name('beds.store');
+        Route::put('beds/{id}', [WardController::class, 'updateBed'])->name('beds.update');
+        Route::delete('beds/{id}', [WardController::class, 'destroyBed'])->name('beds.destroy');
     });
 });
 
@@ -151,12 +204,29 @@ Route::middleware('auth')->prefix('pharmacy')->name('web.pharmacy.')->group(func
 // Billing Module
 // ---------------------------------------------------------------
 
-Route::middleware('auth')->prefix('billing')->name('web.billing.')->group(function () {
+Route::middleware(['auth', 'module:billing'])->prefix('billing')->name('web.billing.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\BillingWebController::class, 'index'])->name('index');
+    Route::get('dashboard', [\App\Http\Controllers\Web\BillingWebController::class, 'dashboard'])->name('dashboard');
     Route::get('create/{encounterId}', [\App\Http\Controllers\Web\BillingWebController::class, 'create'])->name('create');
     Route::post('/', [\App\Http\Controllers\Web\BillingWebController::class, 'store'])->name('store');
+    // Service / charge master
+    Route::get('services', [\App\Http\Controllers\Web\BillingWebController::class, 'services'])->name('services');
+    Route::post('services', [\App\Http\Controllers\Web\BillingWebController::class, 'storeService'])->name('services.store');
+    Route::put('services/{id}', [\App\Http\Controllers\Web\BillingWebController::class, 'updateService'])->name('services.update');
+    Route::delete('services/{id}', [\App\Http\Controllers\Web\BillingWebController::class, 'destroyService'])->name('services.destroy');
+    // Itemized / standalone bill builder
+    Route::get('new', [\App\Http\Controllers\Web\BillingWebController::class, 'newBill'])->name('new');
+    Route::post('new', [\App\Http\Controllers\Web\BillingWebController::class, 'storeBill'])->name('bill.store');
+    // Advances / deposits
+    Route::post('deposit', [\App\Http\Controllers\Web\BillingWebController::class, 'collectDeposit'])->name('deposit');
+    // Accounting export (CSV / Tally XML) — must precede the {id} route
+    Route::get('export', [\App\Http\Controllers\Web\BillingWebController::class, 'exportAccounting'])->name('export');
     Route::get('{id}', [\App\Http\Controllers\Web\BillingWebController::class, 'show'])->name('show');
     Route::post('{id}/pay', [\App\Http\Controllers\Web\BillingWebController::class, 'recordPayment'])->name('pay');
+    Route::post('{id}/cancel', [\App\Http\Controllers\Web\BillingWebController::class, 'cancelBill'])->name('cancel');
+    Route::put('{billId}/payments/{paymentId}', [\App\Http\Controllers\Web\BillingWebController::class, 'updatePayment'])->name('payments.update');
+    Route::delete('{billId}/payments/{paymentId}', [\App\Http\Controllers\Web\BillingWebController::class, 'deletePayment'])->name('payments.delete');
+    Route::post('{billId}/payments/{paymentId}/refund', [\App\Http\Controllers\Web\BillingWebController::class, 'refundPayment'])->name('payments.refund');
     Route::get('{id}/print', [\App\Http\Controllers\Web\BillingWebController::class, 'printReceipt'])->name('print');
 });
 
@@ -184,8 +254,115 @@ Route::prefix('kiosk')->name('kiosk.')->group(function () {
     Route::get('verify-abha', [KioskController::class, 'verifyAbha'])->name('verify-abha');
     Route::post('register', [KioskController::class, 'processRegister'])->name('register.process');
     Route::get('queue-display', [KioskController::class, 'queueDisplay'])->name('queue-display');
+    Route::get('queue-display/json', [KioskController::class, 'queueDisplayJson'])->name('queue-display.json');
     Route::get('room/{doctorId}', [KioskController::class, 'roomDisplay'])->name('room-display');
     Route::get('q/{doctorId}', [KioskController::class, 'patientQueueView'])->name('queue-live');
+});
+
+// ---------------------------------------------------------------
+// Public "Book Online" — patient-facing web & mobile booking (no auth)
+// ---------------------------------------------------------------
+Route::prefix('book')->name('book.')->middleware('throttle:60,1')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\PublicBookingController::class, 'index'])->name('index');
+    Route::get('doctors', [\App\Http\Controllers\Web\PublicBookingController::class, 'doctors'])->name('doctors');
+    Route::get('slots/{doctorId}', [\App\Http\Controllers\Web\PublicBookingController::class, 'slots'])->name('slots');
+    Route::post('/', [\App\Http\Controllers\Web\PublicBookingController::class, 'store'])->name('store');
+    Route::get('confirmed/{token}', [\App\Http\Controllers\Web\PublicBookingController::class, 'confirmed'])->name('confirmed');
+});
+
+// ---------------------------------------------------------------
+// Vaccination — records + due tracking + vaccine master
+// ---------------------------------------------------------------
+Route::middleware(['auth', 'module:vaccination'])->prefix('vaccination')->name('web.vaccination.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\VaccinationController::class, 'index'])->name('index');
+    Route::get('certificate/{patient}', [\App\Http\Controllers\Web\VaccinationController::class, 'certificate'])->name('certificate');
+    Route::post('record', [\App\Http\Controllers\Web\VaccinationController::class, 'record'])->name('record');
+    Route::post('vaccines', [\App\Http\Controllers\Web\VaccinationController::class, 'storeVaccine'])->name('vaccines.store');
+    Route::put('vaccines/{id}', [\App\Http\Controllers\Web\VaccinationController::class, 'updateVaccine'])->name('vaccines.update');
+    Route::delete('vaccines/{id}', [\App\Http\Controllers\Web\VaccinationController::class, 'destroyVaccine'])->name('vaccines.destroy');
+});
+
+// ---------------------------------------------------------------
+// Dietary — meal master + prescribe meals + delivery tracking
+// ---------------------------------------------------------------
+Route::middleware(['auth', 'module:dietary'])->prefix('dietary')->name('web.dietary.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\DietaryController::class, 'index'])->name('index');
+    Route::post('order', [\App\Http\Controllers\Web\DietaryController::class, 'orderDiet'])->name('order');
+    Route::post('orders/{id}/discontinue', [\App\Http\Controllers\Web\DietaryController::class, 'discontinueOrder'])->name('orders.discontinue');
+    Route::post('assessment', [\App\Http\Controllers\Web\DietaryController::class, 'storeAssessment'])->name('assessment');
+    Route::post('diets', [\App\Http\Controllers\Web\DietaryController::class, 'storeDiet'])->name('diets.store');
+    Route::put('diets/{id}', [\App\Http\Controllers\Web\DietaryController::class, 'updateDiet'])->name('diets.update');
+    Route::delete('diets/{id}', [\App\Http\Controllers\Web\DietaryController::class, 'destroyDiet'])->name('diets.destroy');
+});
+
+// ---------------------------------------------------------------
+// Consent Management — form repository + patient consents + compliance
+// ---------------------------------------------------------------
+Route::middleware(['auth', 'module:consent'])->prefix('consent')->name('web.consent.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\ConsentController::class, 'index'])->name('index');
+    Route::post('request', [\App\Http\Controllers\Web\ConsentController::class, 'request'])->name('request');
+    Route::post('{id}/sign', [\App\Http\Controllers\Web\ConsentController::class, 'sign'])->name('sign');
+    Route::post('{id}/status', [\App\Http\Controllers\Web\ConsentController::class, 'setStatus'])->name('status');
+    Route::post('forms', [\App\Http\Controllers\Web\ConsentController::class, 'storeForm'])->name('forms.store');
+    Route::put('forms/{id}', [\App\Http\Controllers\Web\ConsentController::class, 'updateForm'])->name('forms.update');
+    Route::delete('forms/{id}', [\App\Http\Controllers\Web\ConsentController::class, 'destroyForm'])->name('forms.destroy');
+});
+
+// ---------------------------------------------------------------
+// Incident Reporting — safety/quality incidents + CAPA workflow
+// ---------------------------------------------------------------
+Route::middleware(['auth', 'module:incidents'])->prefix('incidents')->name('web.incidents.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\IncidentController::class, 'index'])->name('index');
+    Route::post('/', [\App\Http\Controllers\Web\IncidentController::class, 'store'])->name('store');
+    Route::post('{id}', [\App\Http\Controllers\Web\IncidentController::class, 'update'])->name('update');
+});
+
+// ---------------------------------------------------------------
+// Housekeeping — location issue / non-compliance log + closure
+// ---------------------------------------------------------------
+Route::middleware(['auth', 'module:housekeeping'])->prefix('housekeeping')->name('web.housekeeping.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\HousekeepingController::class, 'index'])->name('index');
+    Route::post('/', [\App\Http\Controllers\Web\HousekeepingController::class, 'store'])->name('store');
+    Route::post('{id}', [\App\Http\Controllers\Web\HousekeepingController::class, 'update'])->name('update');
+});
+
+// ---------------------------------------------------------------
+// Inventory — stock ledger + reorder alerts + batch/expiry
+// ---------------------------------------------------------------
+Route::middleware(['auth', 'module:inventory'])->prefix('inventory')->name('web.inventory.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\InventoryController::class, 'index'])->name('index');
+    Route::post('move', [\App\Http\Controllers\Web\InventoryController::class, 'move'])->name('move');
+    Route::post('items', [\App\Http\Controllers\Web\InventoryController::class, 'storeItem'])->name('items.store');
+    Route::put('items/{id}', [\App\Http\Controllers\Web\InventoryController::class, 'updateItem'])->name('items.update');
+    Route::delete('items/{id}', [\App\Http\Controllers\Web\InventoryController::class, 'destroyItem'])->name('items.destroy');
+});
+
+// ---------------------------------------------------------------
+// Clinical Pathways — templates + patient enrollment + step tracking
+// ---------------------------------------------------------------
+Route::middleware(['auth', 'module:clinical_pathways'])->prefix('pathways')->name('web.pathways.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\ClinicalPathwayController::class, 'index'])->name('index');
+    Route::post('enroll', [\App\Http\Controllers\Web\ClinicalPathwayController::class, 'enroll'])->name('enroll');
+    Route::post('{id}/steps', [\App\Http\Controllers\Web\ClinicalPathwayController::class, 'toggleSteps'])->name('steps');
+    Route::post('{id}/status', [\App\Http\Controllers\Web\ClinicalPathwayController::class, 'setStatus'])->name('status');
+    Route::post('templates', [\App\Http\Controllers\Web\ClinicalPathwayController::class, 'storeTemplate'])->name('templates.store');
+    Route::put('templates/{id}', [\App\Http\Controllers\Web\ClinicalPathwayController::class, 'updateTemplate'])->name('templates.update');
+    Route::delete('templates/{id}', [\App\Http\Controllers\Web\ClinicalPathwayController::class, 'destroyTemplate'])->name('templates.destroy');
+});
+
+// ---------------------------------------------------------------
+// Dental — tooth chart + treatment plan
+// ---------------------------------------------------------------
+Route::middleware(['auth', 'module:dental'])->prefix('dental')->name('web.dental.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\DentalController::class, 'index'])->name('index');
+    Route::post('chart', [\App\Http\Controllers\Web\DentalController::class, 'saveChart'])->name('chart.save');
+    Route::post('treatment', [\App\Http\Controllers\Web\DentalController::class, 'addTreatment'])->name('treatment.add');
+    Route::post('treatment/{id}', [\App\Http\Controllers\Web\DentalController::class, 'updateTreatment'])->name('treatment.update');
+    Route::post('treatment/{id}/delete', [\App\Http\Controllers\Web\DentalController::class, 'deleteTreatment'])->name('treatment.delete');
+    Route::post('bill', [\App\Http\Controllers\Web\DentalController::class, 'billTreatments'])->name('bill');
+    Route::post('visit', [\App\Http\Controllers\Web\DentalController::class, 'addVisit'])->name('visit.add');
+    Route::post('procedure', [\App\Http\Controllers\Web\DentalController::class, 'storeProcedure'])->name('procedure.store');
+    Route::post('procedure/{id}', [\App\Http\Controllers\Web\DentalController::class, 'updateProcedure'])->name('procedure.update');
 });
 
 // ---------------------------------------------------------------
@@ -229,6 +406,40 @@ Route::prefix('ajax')->middleware('auth')->group(function () {
             ->orderBy('name')
             ->limit(20)
             ->get(['id', 'name', 'generic_name', 'category', 'form', 'default_dosage', 'default_frequency', 'default_duration', 'default_timing']);
+    });
+
+    Route::get('patient-upcoming', [AdminWebController::class, 'patientUpcoming']);
+    Route::get('info-desk', [AdminWebController::class, 'infoDeskLookup']);
+    Route::get('info-desk/patient/{id}', [AdminWebController::class, 'infoDeskPatient']);
+
+    Route::get('patients', function (\Illuminate\Http\Request $request) {
+        $hid = auth()->user()->hospital_id;
+        $q = trim((string) $request->get('q', ''));
+        if (mb_strlen($q) < 2) {
+            return response()->json([]);
+        }
+        return \Illuminate\Support\Facades\DB::table('patients')
+            ->where('hospital_id', $hid)
+            ->whereNull('deleted_at')
+            ->where(function ($x) use ($q) {
+                $x->where('name', 'like', "%{$q}%")->orWhere('phone', 'like', "%{$q}%");
+            })
+            ->orderBy('name')->limit(15)
+            ->get(['id', 'name', 'phone']);
+    });
+
+    Route::get('icd10', function (\Illuminate\Http\Request $request) {
+        $q = trim((string) $request->get('q', ''));
+        if (mb_strlen($q) < 2) {
+            return response()->json([]);
+        }
+        return \Illuminate\Support\Facades\DB::table('icd10_codes')
+            ->where('code', 'like', "{$q}%")
+            ->orWhere('title', 'like', "%{$q}%")
+            ->orderByRaw('CASE WHEN code LIKE ? THEN 0 ELSE 1 END', ["{$q}%"])
+            ->orderBy('code')
+            ->limit(20)
+            ->get(['code', 'title', 'category']);
     });
 
     Route::get('tests', function (\Illuminate\Http\Request $request) {
@@ -306,7 +517,7 @@ Route::prefix('ajax')->middleware('auth')->group(function () {
 });
 
 // ---------------------------------------------------------------
-// WhatsApp Bot Simulator (dev/demo)
+// WhatsApp Bot Simulator
 // ---------------------------------------------------------------
 Route::get('chat', function (\Illuminate\Http\Request $request) {
     $hospital = null;
@@ -318,6 +529,7 @@ Route::get('chat', function (\Illuminate\Http\Request $request) {
     if (!$hospital) {
         $hospital = \App\Modules\Core\Models\Hospital::where('is_active', true)->first();
     }
+    abort_if($hospital && ! $hospital->isModuleEnabled('ai_receptionist'), 404);
     return view('chat.index', ['hospital' => $hospital]);
 })->name('chat');
 Route::post('chat/send', [\App\Http\Controllers\Web\ChatController::class, 'send'])->name('chat.send');
@@ -332,6 +544,7 @@ Route::middleware(['auth', 'super_admin'])->prefix('super-admin')->name('web.sup
     Route::get('hospitals/{id}', [\App\Http\Controllers\Web\SuperAdminController::class, 'hospitalDetail'])->name('hospitals.show');
     Route::get('hospitals/{id}/edit', [\App\Http\Controllers\Web\SuperAdminController::class, 'editHospital'])->name('hospitals.edit');
     Route::put('hospitals/{id}', [\App\Http\Controllers\Web\SuperAdminController::class, 'updateHospital'])->name('hospitals.update');
+    Route::post('hospitals/{id}/modules', [\App\Http\Controllers\Web\SuperAdminController::class, 'updateHospitalModules'])->name('hospitals.modules');
     Route::delete('hospitals/{id}', [\App\Http\Controllers\Web\SuperAdminController::class, 'deleteHospital'])->name('hospitals.delete');
     Route::delete('hospitals/{id}/force', [\App\Http\Controllers\Web\SuperAdminController::class, 'destroyHospital'])->name('hospitals.destroy');
     Route::post('hospitals/{id}/staff', [\App\Http\Controllers\Web\SuperAdminController::class, 'addStaffToHospital'])->name('hospitals.staff.add');

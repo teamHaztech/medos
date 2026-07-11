@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'ability'          => \App\Modules\Auth\Middleware\CheckTokenAbility::class,
             'admin'            => \App\Http\Middleware\EnsureAdmin::class,
             'super_admin'      => \App\Http\Middleware\EnsureSuperAdmin::class,
+            'module'           => \App\Http\Middleware\EnsureModuleEnabled::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {

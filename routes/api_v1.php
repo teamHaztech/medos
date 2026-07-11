@@ -95,14 +95,15 @@ Route::middleware(['auth:sanctum', 'resolve.hospital'])->group(function () {
         Route::get('transactions', [\App\Modules\Insurance\Controllers\InsuranceController::class, 'transactions'])->name('transactions');
     });
 
-    // Billing
+    // Billing — read endpoints require billing:read, write endpoints require billing:write
+    // (both satisfied by the billing:* wildcard held by admin / billing_staff tokens).
     Route::prefix('billing')->name('billing.')->group(function () {
-        Route::get('{billId}', [\App\Modules\Billing\Controllers\BillingController::class, 'show'])->name('show');
-        Route::post('generate', [\App\Modules\Billing\Controllers\BillingController::class, 'generate'])->name('generate');
-        Route::post('{billId}/charge', [\App\Modules\Billing\Controllers\BillingController::class, 'addCharge'])->name('add-charge');
-        Route::post('{billId}/pay', [\App\Modules\Billing\Controllers\BillingController::class, 'processPayment'])->name('pay');
-        Route::get('patient/{patientId}', [\App\Modules\Billing\Controllers\BillingController::class, 'patientBills'])->name('patient');
-        Route::get('revenue/summary', [\App\Modules\Billing\Controllers\BillingController::class, 'revenueSummary'])->name('revenue');
+        Route::get('{billId}', [\App\Modules\Billing\Controllers\BillingController::class, 'show'])->middleware('ability:billing:read')->name('show');
+        Route::post('generate', [\App\Modules\Billing\Controllers\BillingController::class, 'generate'])->middleware('ability:billing:write')->name('generate');
+        Route::post('{billId}/charge', [\App\Modules\Billing\Controllers\BillingController::class, 'addCharge'])->middleware('ability:billing:write')->name('add-charge');
+        Route::post('{billId}/pay', [\App\Modules\Billing\Controllers\BillingController::class, 'processPayment'])->middleware('ability:billing:write')->name('pay');
+        Route::get('patient/{patientId}', [\App\Modules\Billing\Controllers\BillingController::class, 'patientBills'])->middleware('ability:billing:read')->name('patient');
+        Route::get('revenue/summary', [\App\Modules\Billing\Controllers\BillingController::class, 'revenueSummary'])->middleware('ability:billing:read')->name('revenue');
     });
 
     // -----------------------------------------------------------------

@@ -40,6 +40,8 @@
         $currency = \App\Modules\Core\Services\RegionService::currency();
         $taxName = \App\Modules\Core\Services\RegionService::taxName();
         $status = is_object($bill->payment_status) ? $bill->payment_status->value : $bill->payment_status;
+        $cancelled = ! is_null($bill->cancelled_at);
+        $refunded = round((float) abs(($bill->payments ?? collect())->where('amount', '<', 0)->sum('amount')), 2);
     @endphp
 
     <button class="print-btn" onclick="window.print()">Print Receipt</button>
@@ -51,7 +53,12 @@
     </div>
 
     <hr class="divider">
-    <div class="title">RECEIPT</div>
+    <div class="title" style="{{ $cancelled ? 'color:#dc2626;' : '' }}">{{ $cancelled ? 'CANCELLED / VOID' : 'RECEIPT' }}</div>
+    @if($cancelled)
+    <div style="border:2px solid #dc2626; color:#dc2626; text-align:center; font-weight:700; padding:8px; border-radius:6px; margin:8px 0;">
+        THIS BILL WAS CANCELLED — NOT A VALID RECEIPT{{ $bill->cancel_reason ? ' · '.$bill->cancel_reason : '' }}
+    </div>
+    @endif
 
     <div class="info-section">
         <div class="info-row">
@@ -114,7 +121,7 @@
             <span>{{ $currency }}{{ number_format($bill->tax_amount, 2) }}</span>
         </div>
         <div class="row">
-            <span>Discount:</span>
+            <span>Discount:{{ $bill->discount_reason ? ' ('.$bill->discount_reason.')' : '' }}</span>
             <span>-{{ $currency }}{{ number_format($bill->discount_amount, 2) }}</span>
         </div>
         <div class="row">
@@ -125,10 +132,22 @@
             <span>TOTAL:</span>
             <span>{{ $currency }}{{ number_format($bill->total_amount, 2) }}</span>
         </div>
+        @if(($bill->deposit_applied ?? 0) > 0)
+        <div class="row">
+            <span>Deposit Applied:</span>
+            <span>-{{ $currency }}{{ number_format($bill->deposit_applied, 2) }}</span>
+        </div>
+        @endif
         <div class="row">
             <span>Amount Paid:</span>
             <span>{{ $currency }}{{ number_format($bill->amount_paid ?? 0, 2) }}</span>
         </div>
+        @if($refunded > 0)
+        <div class="row" style="color:#7c3aed;">
+            <span>Refunded:</span>
+            <span>-{{ $currency }}{{ number_format($refunded, 2) }}</span>
+        </div>
+        @endif
         <div class="row">
             <span>Balance Due:</span>
             <span>{{ $currency }}{{ number_format($bill->balance_due ?? 0, 2) }}</span>

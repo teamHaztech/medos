@@ -73,13 +73,8 @@
     </div>
 
     {{-- Edit modal --}}
-    <div x-show="editOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="editOpen = false">
-        <div @click.away="editOpen = false" class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900">Edit Medicine</h3>
-                <button type="button" @click="editOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-            </div>
-            <form method="POST" :action="editAction" class="p-6 grid grid-cols-2 gap-4">
+    <x-modal show="editOpen" title="Edit Medicine" max="lg">
+            <form method="POST" :action="editAction" class="grid grid-cols-2 gap-4">
                 @csrf @method('PUT')
                 <div class="col-span-2">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Name *</label>
@@ -108,7 +103,6 @@
                     <button type="button" @click="editOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 </div>
 @endsection

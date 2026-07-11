@@ -52,6 +52,11 @@
             <div><p class="text-xs text-slate-400">Vendor</p><p class="font-medium text-slate-700">{{ $asset->vendor?->name ?? '-' }}</p></div>
             <div><p class="text-xs text-slate-400">Purchase Date</p><p class="font-medium text-slate-700">{{ optional($asset->purchase_date)->format('M d, Y') ?? '-' }}</p></div>
             <div><p class="text-xs text-slate-400">Purchase Cost</p><p class="font-medium text-slate-700">{{ $asset->purchase_cost ? $cur . number_format($asset->purchase_cost, 2) : '-' }}</p></div>
+            @if($asset->purchase_cost && $asset->useful_life_years)
+            <div><p class="text-xs text-slate-400">Useful Life</p><p class="font-medium text-slate-700">{{ $asset->useful_life_years }} yrs · salvage {{ $cur }}{{ number_format($asset->salvage_value ?? 0, 0) }}</p></div>
+            <div><p class="text-xs text-slate-400">Annual Depreciation</p><p class="font-medium text-slate-700">{{ $cur }}{{ number_format($asset->annualDepreciation(), 2) }}</p></div>
+            <div><p class="text-xs text-slate-400">Current Book Value</p><p class="font-semibold text-blue-700">{{ $cur }}{{ number_format($asset->bookValue(), 2) }} <span class="text-xs text-slate-400 font-normal">(accum. {{ $cur }}{{ number_format($asset->accumulatedDepreciation(), 0) }})</span></p></div>
+            @endif
             <div><p class="text-xs text-slate-400">Total Downtime</p><p class="font-medium text-slate-700">{{ $asset->downtimeHours() }} h</p></div>
         </div>
         @if($asset->notes)<p class="text-sm text-slate-600 mt-4 p-3 bg-slate-50 rounded-lg">{{ $asset->notes }}</p>@endif
@@ -214,13 +219,8 @@
     {{-- ===================== MODALS ===================== --}}
 
     {{-- Warranty add / edit --}}
-    <div x-show="wOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="wOpen = false">
-        <div @click.away="wOpen = false" style="max-height:88vh" class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-y-auto">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900" x-text="wMode === 'edit' ? 'Edit Warranty' : 'Add Warranty'"></h3>
-                <button type="button" @click="wOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-            </div>
-            <form method="POST" :action="wAction" enctype="multipart/form-data" class="p-6 grid grid-cols-2 gap-4">
+    <x-modal show="wOpen" title-expr="wMode === 'edit' ? 'Edit Warranty' : 'Add Warranty'" max="lg">
+            <form method="POST" :action="wAction" enctype="multipart/form-data" class="grid grid-cols-2 gap-4">
                 @csrf
                 <input type="hidden" name="_method" :value="wMode === 'edit' ? 'PUT' : 'POST'">
                 <div>
@@ -238,17 +238,11 @@
                     <button type="button" @click="wOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 
     {{-- Warranty renew --}}
-    <div x-show="rOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="rOpen = false">
-        <div @click.away="rOpen = false" class="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900">Renew Warranty</h3>
-                <button type="button" @click="rOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-            </div>
-            <form method="POST" :action="rAction" class="p-6 space-y-4">
+    <x-modal show="rOpen" title="Renew Warranty" max="md">
+            <form method="POST" :action="rAction" class="space-y-4">
                 @csrf
                 <p class="text-xs text-slate-500">Creates a new term continuing from the current one; the old record is kept as history.</p>
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">New end date *</label><input type="date" name="end_date" required class="input-field"></div>
@@ -259,17 +253,11 @@
                     <button type="button" @click="rOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 
     {{-- Maintenance add --}}
-    <div x-show="mOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="mOpen = false">
-        <div @click.away="mOpen = false" style="max-height:88vh" class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-y-auto">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900">Add Maintenance Log</h3>
-                <button type="button" @click="mOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-            </div>
-            <form method="POST" action="{{ route('web.admin.assets.maintenance.store', $asset->id) }}" class="p-6 grid grid-cols-2 gap-4">
+    <x-modal show="mOpen" title="Add Maintenance Log" max="lg">
+            <form method="POST" action="{{ route('web.admin.assets.maintenance.store', $asset->id) }}" class="grid grid-cols-2 gap-4">
                 @csrf
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Type</label>
@@ -285,17 +273,11 @@
                     <button type="button" @click="mOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 
     {{-- Calibration add --}}
-    <div x-show="cOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="cOpen = false">
-        <div @click.away="cOpen = false" style="max-height:88vh" class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-y-auto">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900">Add Calibration Record</h3>
-                <button type="button" @click="cOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-            </div>
-            <form method="POST" action="{{ route('web.admin.assets.calibrations.store', $asset->id) }}" enctype="multipart/form-data" class="p-6 grid grid-cols-2 gap-4">
+    <x-modal show="cOpen" title="Add Calibration Record" max="lg">
+            <form method="POST" action="{{ route('web.admin.assets.calibrations.store', $asset->id) }}" enctype="multipart/form-data" class="grid grid-cols-2 gap-4">
                 @csrf
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Calibrated on</label><input type="date" name="calibrated_on" class="input-field"></div>
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Next due date</label><input type="date" name="next_due_date" class="input-field"></div>
@@ -312,17 +294,11 @@
                     <button type="button" @click="cOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 
     {{-- Decommission --}}
-    <div x-show="dOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="dOpen = false">
-        <div @click.away="dOpen = false" class="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900">Decommission Asset</h3>
-                <button type="button" @click="dOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-            </div>
-            <form method="POST" action="{{ route('web.admin.assets.decommission', $asset->id) }}" class="p-6 space-y-4">
+    <x-modal show="dOpen" title="Decommission Asset" max="md">
+            <form method="POST" action="{{ route('web.admin.assets.decommission', $asset->id) }}" class="space-y-4">
                 @csrf
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Date *</label><input type="date" name="decommissioned_on" required value="{{ now()->toDateString() }}" class="input-field"></div>
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Reason *</label><textarea name="decommission_reason" required rows="2" class="input-field" placeholder="End of life, beyond economic repair..."></textarea></div>
@@ -332,17 +308,11 @@
                     <button type="button" @click="dOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 
     {{-- Report issue --}}
-    <div x-show="srOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="srOpen = false">
-        <div @click.away="srOpen = false" class="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900">Report Issue</h3>
-                <button type="button" @click="srOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-            </div>
-            <form method="POST" action="{{ route('web.admin.tickets.store', $asset->id) }}" class="p-6 space-y-4">
+    <x-modal show="srOpen" title="Report Issue" max="md">
+            <form method="POST" action="{{ route('web.admin.tickets.store', $asset->id) }}" class="space-y-4">
                 @csrf
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Issue *</label><textarea name="issue" required rows="3" class="input-field" placeholder="Describe the fault / breakdown"></textarea></div>
                 <div>
@@ -355,17 +325,11 @@
                     <button type="button" @click="srOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 
     {{-- Ticket status update --}}
-    <div x-show="stOpen" x-transition.opacity style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="stOpen = false">
-        <div @click.away="stOpen = false" class="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-900">Update Service Request</h3>
-                <button type="button" @click="stOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-            </div>
-            <form method="POST" :action="stAction" class="p-6 space-y-4">
+    <x-modal show="stOpen" title="Update Service Request" max="md">
+            <form method="POST" :action="stAction" class="space-y-4">
                 @csrf @method('PUT')
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
@@ -383,7 +347,6 @@
                     <button type="button" @click="stOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-modal>
 </div>
 @endsection

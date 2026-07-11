@@ -11,6 +11,11 @@
 </head>
 <body class="min-h-screen bg-slate-900 text-white antialiased" x-data="queueDisplay()" x-init="init()">
 
+    {{-- Staff-only quick action (hidden on public/TV view) --}}
+    @auth
+    <a href="{{ url('/admin/queue') }}" class="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xl text-sm">+ Add to Queue</a>
+    @endauth
+
     {{-- Hospital branding --}}
     <header class="bg-slate-800 border-b border-slate-700 px-8 py-4">
         <div class="flex items-center justify-between">
@@ -113,56 +118,14 @@
             currentTime: '',
             currentDate: '',
             lastUpdated: '',
-            // TODO: fetch from API
             doctors: @json($doctors ?? []),
 
             init() {
                 this.updateClock();
                 setInterval(() => this.updateClock(), 1000);
-
-                // Load placeholder data if empty
-                if (this.doctors.length === 0) {
-                    this.doctors = [
-                        {
-                            id: 1, name: 'Dr. Sarah Ahmed', department: 'General Medicine',
-                            current: { token: 'A-05', name: 'Aisha Khan' },
-                            waiting: [
-                                { token: 'A-06', name: 'Rahul M.' },
-                                { token: 'A-07', name: 'Fatima S.' },
-                                { token: 'A-08', name: 'John D.' },
-                            ]
-                        },
-                        {
-                            id: 2, name: 'Dr. Raj Patel', department: 'Cardiology',
-                            current: { token: 'B-03', name: 'Mohammed Ali' },
-                            waiting: [
-                                { token: 'B-04', name: 'Sara J.' },
-                                { token: 'B-05', name: 'Priya S.' },
-                            ]
-                        },
-                        {
-                            id: 3, name: 'Dr. Fatima Al-Hassan', department: 'Pediatrics',
-                            current: { token: 'C-02', name: 'Ahmad Jr.' },
-                            waiting: [
-                                { token: 'C-03', name: 'Zara K.' },
-                            ]
-                        },
-                        {
-                            id: 4, name: 'Dr. John Smith', department: 'Orthopedics',
-                            current: null,
-                            waiting: [
-                                { token: 'D-01', name: 'Rajesh P.' },
-                                { token: 'D-02', name: 'Amina H.' },
-                                { token: 'D-03', name: 'Vikram S.' },
-                                { token: 'D-04', name: 'Noor A.' },
-                            ]
-                        },
-                    ];
-                }
-
                 this.lastUpdated = new Date().toLocaleTimeString();
 
-                // Auto-refresh every 30 seconds
+                // Auto-refresh from the live queue every 30 seconds
                 setInterval(() => this.refreshQueue(), 30000);
             },
 
@@ -174,14 +137,13 @@
 
             async refreshQueue() {
                 try {
-                    const res = await fetch('/api/queue/display');
+                    const res = await fetch('{{ route('kiosk.queue-display.json') }}', { headers: { 'Accept': 'application/json' } });
                     if (res.ok) {
                         const data = await res.json();
-                        this.doctors = data.doctors || data;
+                        this.doctors = data.doctors || [];
                     }
                 } catch(e) {
-                    // Silent fail - keep showing stale data
-                    console.log('Queue refresh failed, will retry in 30s');
+                    // Keep showing the last successful snapshot until the next tick.
                 }
                 this.lastUpdated = new Date().toLocaleTimeString();
             },

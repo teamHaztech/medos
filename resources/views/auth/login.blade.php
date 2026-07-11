@@ -31,7 +31,7 @@
 
     {{-- Quick login buttons --}}
     <div class="mt-6 pt-5 border-t border-slate-200">
-        <p class="text-xs text-slate-400 text-center mb-3">Quick Login (Demo)</p>
+        <p class="text-xs text-slate-400 text-center mb-3">Quick Login</p>
         <div class="space-y-2">
             <button @click="email='superadmin@haztech.in'; password='password123'; $nextTick(() => $el.closest('div').previousElementSibling.querySelector('form').submit())"
                 class="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-300 rounded-lg transition-all text-left">
@@ -101,6 +101,36 @@
                     <p class="text-xs text-slate-500">pharmacy@haztech.in</p>
                 </div>
                 <span class="ml-auto px-2 py-0.5 bg-teal-100 text-teal-700 text-xs font-medium rounded">Pharmacy</span>
+            </button>
+
+            <button @click="email='reception@haztech.in'; password='password123'; $nextTick(() => $el.closest('div').previousElementSibling.querySelector('form').submit())"
+                class="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg transition-all text-left">
+                <div class="w-8 h-8 bg-indigo-500 text-white rounded-full flex items-center justify-center text-xs font-bold">R</div>
+                <div>
+                    <p class="text-sm font-semibold text-slate-800">Receptionist</p>
+                    <p class="text-xs text-slate-500">reception@haztech.in</p>
+                </div>
+                <span class="ml-auto px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-medium rounded">Front Office</span>
+            </button>
+
+            <button @click="email='nurse@haztech.in'; password='password123'; $nextTick(() => $el.closest('div').previousElementSibling.querySelector('form').submit())"
+                class="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 rounded-lg transition-all text-left">
+                <div class="w-8 h-8 bg-rose-500 text-white rounded-full flex items-center justify-center text-xs font-bold">N</div>
+                <div>
+                    <p class="text-sm font-semibold text-slate-800">Nurse</p>
+                    <p class="text-xs text-slate-500">nurse@haztech.in</p>
+                </div>
+                <span class="ml-auto px-2 py-0.5 bg-rose-100 text-rose-700 text-xs font-medium rounded">Nursing</span>
+            </button>
+
+            <button @click="email='billing@haztech.in'; password='password123'; $nextTick(() => $el.closest('div').previousElementSibling.querySelector('form').submit())"
+                class="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-cyan-50 border border-slate-200 hover:border-cyan-300 rounded-lg transition-all text-left">
+                <div class="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-xs font-bold">B</div>
+                <div>
+                    <p class="text-sm font-semibold text-slate-800">Billing Staff</p>
+                    <p class="text-xs text-slate-500">billing@haztech.in</p>
+                </div>
+                <span class="ml-auto px-2 py-0.5 bg-cyan-100 text-cyan-700 text-xs font-medium rounded">Billing</span>
             </button>
         </div>
     </div>

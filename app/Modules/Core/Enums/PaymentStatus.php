@@ -7,8 +7,9 @@ enum PaymentStatus: string
     case Pending  = 'pending';
     case Partial  = 'partial';
     case Paid     = 'paid';
-    case Refunded = 'refunded';
-    case Waived   = 'waived';
+    case Refunded  = 'refunded';
+    case Waived    = 'waived';
+    case Cancelled = 'cancelled';
 
     /**
      * Get a human-readable label for the payment status.
@@ -16,11 +17,12 @@ enum PaymentStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Pending  => 'Pending',
-            self::Partial  => 'Partial',
-            self::Paid     => 'Paid',
-            self::Refunded => 'Refunded',
-            self::Waived   => 'Waived',
+            self::Pending   => 'Pending',
+            self::Partial   => 'Partial',
+            self::Paid      => 'Paid',
+            self::Refunded  => 'Refunded',
+            self::Waived    => 'Waived',
+            self::Cancelled => 'Cancelled',
         };
     }
 
