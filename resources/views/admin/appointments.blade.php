@@ -7,7 +7,7 @@
 <div x-data="appointmentsPage()">
 
     <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <p class="text-sm text-slate-500">Walk-in &amp; online appointments (one synced list)</p>
+        <p class="text-sm text-slate-500">{{ ($isPractitioner ?? false) ? 'My appointments' : 'Walk-in &amp; online appointments (one synced list)' }}</p>
         <div class="flex items-center gap-2">
             @include('admin._add_to_queue', ['addBtnClass' => 'btn-secondary'])
             <a href="{{ route('web.admin.appointments.schedule') }}" class="btn-primary">+ Book Appointment</a>
@@ -38,6 +38,7 @@
             <label class="block text-xs font-medium text-slate-500 mb-1">Search</label>
             <input type="text" x-model="filterSearch" @keydown.enter="applyFilters()" class="input-field" placeholder="Patient name, phone, or token…">
         </div>
+        @unless($isPractitioner ?? false)
         <div>
             <label class="block text-xs font-medium text-slate-500 mb-1">Doctor</label>
             <select x-model="filterDoctor" @change="applyFilters()" class="input-field">
@@ -47,6 +48,7 @@
                 @endforeach
             </select>
         </div>
+        @endunless
         <div>
             <label class="block text-xs font-medium text-slate-500 mb-1">Status</label>
             <select x-model="filterStatus" @change="applyFilters()" class="input-field">

@@ -432,7 +432,16 @@ class AdminWebController extends Controller
             $query->whereDate('slot_start', $date);
         }
 
-        if ($doctorId = $request->get('doctor')) {
+        // A logged-in practitioner (doctor / dentist / dietitian) sees only their own
+        // appointments; admins and reception see everyone's and can filter by doctor.
+        $user = Auth::user();
+        $role = is_object($user->role) ? $user->role->value : $user->role;
+        $selfStaffId = $user->staff?->id;
+        $isPractitioner = in_array($role, ['doctor', 'dentist', 'dietitian'], true) && $selfStaffId;
+
+        if ($isPractitioner) {
+            $query->where('doctor_id', $selfStaffId);
+        } elseif ($doctorId = $request->get('doctor')) {
             $query->where('doctor_id', $doctorId);
         }
         if ($status = $request->get('status')) {
@@ -461,11 +470,12 @@ class AdminWebController extends Controller
             ->get();
 
         // Lab bookings (orders) for the same date — direct bookings and referrals.
-        $labBookings = \App\Modules\Core\Models\Order::labBookingsForDate($hospitalId, $date);
+        // Not relevant to an individual practitioner's own list.
+        $labBookings = $isPractitioner ? collect() : \App\Modules\Core\Models\Order::labBookingsForDate($hospitalId, $date);
 
         $tests = $this->queueTests();
 
-        return view('admin.appointments', compact('appointments', 'doctors', 'labBookings', 'view', 'date', 'search', 'board', 'tests'));
+        return view('admin.appointments', compact('appointments', 'doctors', 'labBookings', 'view', 'date', 'search', 'board', 'tests', 'isPractitioner'));
     }
 
     public function staff()
