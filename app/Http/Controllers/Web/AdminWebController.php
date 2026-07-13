@@ -57,7 +57,7 @@ class AdminWebController extends Controller
         // Active queues by doctor
         $queues = Staff::where('hospital_id', $hospitalId)
             ->where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
             ->get()
             ->map(function ($doctor) {
                 $depth = Appointment::where('doctor_id', $doctor->id)
@@ -165,7 +165,7 @@ class AdminWebController extends Controller
             ->whereDate('created_at', today())->count();
         $activeDoctors = Staff::where('hospital_id', $hospitalId)
             ->where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])->count();
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])->count();
         $totalAppointmentsToday = $totalToday;
 
         return view('admin.dashboard', compact(
@@ -456,7 +456,7 @@ class AdminWebController extends Controller
 
         $doctors = Staff::where('hospital_id', $hospitalId)
             ->where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
             ->orderBy('name')
             ->get();
 
@@ -809,7 +809,7 @@ class AdminWebController extends Controller
         $hid = Auth::user()->hospital_id;
         $today = strtolower(now()->format('l'));
         $doctors = \App\Modules\Core\Models\Staff::where('hospital_id', $hid)
-            ->where('is_active', true)->whereIn('role', ['doctor', 'hospital_admin'])
+            ->where('is_active', true)->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
             ->orderBy('name')->get()->map(function ($d) use ($today) {
                 $sched = is_array($d->schedule) ? $d->schedule : (json_decode($d->schedule ?? '{}', true) ?: []);
                 $blocks = $sched[$today] ?? [];
@@ -1037,7 +1037,7 @@ class AdminWebController extends Controller
     public function slots()
     {
         $doctors = Staff::where('hospital_id', Auth::user()->hospital_id)
-            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name', 'department', 'specialization', 'schedule', 'consultation_duration_default']);
@@ -1427,7 +1427,7 @@ class AdminWebController extends Controller
         $hospitalId = Auth::user()->hospital_id;
         $doctors = Staff::where('hospital_id', $hospitalId)
             ->where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
             ->orderBy('name')
             ->get(['id', 'name', 'department', 'consultation_duration_default']);
 
@@ -1647,7 +1647,7 @@ class AdminWebController extends Controller
     {
         $hospitalId = Auth::user()->hospital_id;
         $doctors = Staff::where('hospital_id', $hospitalId)->where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])->orderBy('name')
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])->orderBy('name')
             ->get(['id', 'name', 'department', 'consultation_duration_default']);
         $services = \App\Modules\Billing\Models\ServiceCharge::where('hospital_id', $hospitalId)
             ->where('is_active', true)->orderBy('category')->orderBy('name')
@@ -1852,7 +1852,7 @@ class AdminWebController extends Controller
             ->get();
 
         $doctors = Staff::where('hospital_id', $hospitalId)->where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])->orderBy('name')
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])->orderBy('name')
             ->get(['id', 'name', 'department', 'consultation_duration_default']);
 
         $tests = $this->queueTests();
