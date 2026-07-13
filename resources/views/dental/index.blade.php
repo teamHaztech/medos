@@ -90,6 +90,7 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
             <button type="button" @click="tab='chart'" :class="tab==='chart'?'bg-blue-600 text-white':'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Odontogram</button>
             <button type="button" @click="tab='plan'" :class="tab==='plan'?'bg-blue-600 text-white':'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Treatment Plan</button>
             <button type="button" @click="tab='visits'" :class="tab==='visits'?'bg-blue-600 text-white':'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Visit Notes ({{ $visits->count() }})</button>
+            <button type="button" @click="tab='toolkit'" :class="tab==='toolkit'?'bg-blue-600 text-white':'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Chairside Toolkit</button>
         </div>
 
         {{-- ODONTOGRAM --}}
@@ -250,6 +251,122 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
                 </form>
             </x-modal>
         </div>
+
+        {{-- CHAIRSIDE TOOLKIT --}}
+        <div x-show="tab==='toolkit'" style="display:none" x-data="dentalCalc()">
+            {{-- Local anaesthetic maximum-dose calculator --}}
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden mb-4">
+                <div class="px-5 py-3 border-b border-slate-200">
+                    <h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Local Anaesthetic — Maximum Safe Dose</h4>
+                    <p class="text-xs text-slate-400">Weight-based limit &amp; number of cartridges. Critical for children &amp; small adults.</p>
+                </div>
+                <div class="p-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Patient weight (kg)</label>
+                            <input type="number" min="1" max="200" x-model.number="weight" class="input-field">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Anaesthetic agent</label>
+                            <select x-model="agent" class="input-field">
+                                <template x-for="(a, key) in agents" :key="key">
+                                    <option :value="key" x-text="a.label"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="rounded-xl border border-slate-200 p-4 text-center">
+                            <p class="text-xs text-slate-500">By weight</p>
+                            <p class="text-lg font-bold text-slate-700"><span x-text="r(byWeight)"></span><span class="text-xs font-normal text-slate-400"> mg</span></p>
+                            <p class="text-xs text-slate-400"><span x-text="ag.perKg"></span> mg/kg</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 p-4 text-center">
+                            <p class="text-xs text-slate-500">Absolute cap</p>
+                            <p class="text-lg font-bold text-slate-700"><span x-text="ag.cap"></span><span class="text-xs font-normal text-slate-400"> mg</span></p>
+                            <p class="text-xs" :class="capped ? 'text-amber-600 font-semibold' : 'text-slate-400'" x-text="capped ? 'cap applies' : ''"></p>
+                        </div>
+                        <div class="rounded-xl border-2 border-blue-200 bg-blue-50 p-4 text-center">
+                            <p class="text-xs text-blue-600 font-semibold">Max dose</p>
+                            <p class="text-2xl font-bold text-blue-700"><span x-text="r(maxMg)"></span><span class="text-xs font-normal text-blue-400"> mg</span></p>
+                        </div>
+                        <div class="rounded-xl border-2 border-green-200 bg-green-50 p-4 text-center">
+                            <p class="text-xs text-green-700 font-semibold">Max cartridges</p>
+                            <p class="text-2xl font-bold text-green-700" x-text="maxCart"></p>
+                            <p class="text-xs text-green-600/70"><span x-text="ag.mgCart"></span> mg / 1.8 ml</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-4 leading-relaxed">Guidance only. Reduce the limit for cardiac, hepatic, elderly and pregnant patients, and always cross-check the current formulary. Cartridge = 1.8 ml. Cartridge count is rounded down to the safe whole number.</p>
+                </div>
+            </div>
+
+            {{-- Reference: LA agents --}}
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden mb-4">
+                <div class="px-5 py-3 border-b border-slate-200"><h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Local Anaesthetics — Quick Reference</h4></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 border-b border-slate-200"><tr>
+                            <th class="table-header">Agent</th><th class="table-header text-right">Max mg/kg</th><th class="table-header text-right">Absolute cap</th><th class="table-header text-right">mg / cartridge</th><th class="table-header">Pulpal duration</th>
+                        </tr></thead>
+                        <tbody class="divide-y divide-slate-100 text-sm">
+                            <tr><td class="px-4 py-2 text-slate-800">Lidocaine 2% + epi 1:100k</td><td class="px-4 py-2 text-right text-slate-600">7</td><td class="px-4 py-2 text-right text-slate-600">500 mg</td><td class="px-4 py-2 text-right text-slate-600">36 mg</td><td class="px-4 py-2 text-slate-500">~60–90 min</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Articaine 4% + epi 1:100k</td><td class="px-4 py-2 text-right text-slate-600">7</td><td class="px-4 py-2 text-right text-slate-600">500 mg</td><td class="px-4 py-2 text-right text-slate-600">72 mg</td><td class="px-4 py-2 text-slate-500">~60–75 min</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Mepivacaine 3% plain</td><td class="px-4 py-2 text-right text-slate-600">6.6</td><td class="px-4 py-2 text-right text-slate-600">400 mg</td><td class="px-4 py-2 text-right text-slate-600">54 mg</td><td class="px-4 py-2 text-slate-500">~20–40 min (no epi)</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Prilocaine 4% plain</td><td class="px-4 py-2 text-right text-slate-600">8</td><td class="px-4 py-2 text-right text-slate-600">600 mg</td><td class="px-4 py-2 text-right text-slate-600">72 mg</td><td class="px-4 py-2 text-slate-500">~40–60 min</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Bupivacaine 0.5% + epi</td><td class="px-4 py-2 text-right text-slate-600">1.3</td><td class="px-4 py-2 text-right text-slate-600">90 mg</td><td class="px-4 py-2 text-right text-slate-600">9 mg</td><td class="px-4 py-2 text-slate-500">~90–180 min (long)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Reference: common dental prescriptions --}}
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden mb-4">
+                <div class="px-5 py-3 border-b border-slate-200"><h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Common Dental Prescriptions — Adult</h4></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 border-b border-slate-200"><tr>
+                            <th class="table-header">Drug</th><th class="table-header">Indication</th><th class="table-header">Typical adult dose</th>
+                        </tr></thead>
+                        <tbody class="divide-y divide-slate-100 text-sm">
+                            <tr><td class="px-4 py-2 text-slate-800">Amoxicillin</td><td class="px-4 py-2 text-slate-500">Odontogenic infection</td><td class="px-4 py-2 text-slate-600">500 mg TDS × 5 days</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Amoxicillin + Clavulanate</td><td class="px-4 py-2 text-slate-500">Spreading / resistant</td><td class="px-4 py-2 text-slate-600">625 mg TDS × 5 days</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Metronidazole</td><td class="px-4 py-2 text-slate-500">Anaerobic (± amoxicillin)</td><td class="px-4 py-2 text-slate-600">400 mg TDS × 5 days</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Azithromycin</td><td class="px-4 py-2 text-slate-500">Penicillin allergy</td><td class="px-4 py-2 text-slate-600">500 mg OD × 3 days</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Clindamycin</td><td class="px-4 py-2 text-slate-500">Penicillin allergy / severe</td><td class="px-4 py-2 text-slate-600">300 mg TDS × 5 days</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Ibuprofen</td><td class="px-4 py-2 text-slate-500">Pain / inflammation</td><td class="px-4 py-2 text-slate-600">400 mg TDS after food</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Paracetamol</td><td class="px-4 py-2 text-slate-500">Pain (max 4 g/day)</td><td class="px-4 py-2 text-slate-600">500–1000 mg QDS</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Chlorhexidine 0.2%</td><td class="px-4 py-2 text-slate-500">Antiseptic mouth rinse</td><td class="px-4 py-2 text-slate-600">10 ml BD rinse</td></tr>
+                            <tr><td class="px-4 py-2 text-slate-800">Amoxicillin (prophylaxis)</td><td class="px-4 py-2 text-slate-500">Endocarditis-risk cover</td><td class="px-4 py-2 text-slate-600">2 g single dose, 1 h pre-op</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Reference: FDI tooth notation --}}
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div class="px-5 py-3 border-b border-slate-200"><h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">FDI Tooth Notation</h4></div>
+                <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div class="space-y-1.5">
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Permanent (adult)</p>
+                        <p class="text-slate-600"><span class="font-mono font-semibold text-slate-800">11–18</span> — upper right (Q1)</p>
+                        <p class="text-slate-600"><span class="font-mono font-semibold text-slate-800">21–28</span> — upper left (Q2)</p>
+                        <p class="text-slate-600"><span class="font-mono font-semibold text-slate-800">31–38</span> — lower left (Q3)</p>
+                        <p class="text-slate-600"><span class="font-mono font-semibold text-slate-800">41–48</span> — lower right (Q4)</p>
+                    </div>
+                    <div class="space-y-1.5">
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Primary (child)</p>
+                        <p class="text-slate-600"><span class="font-mono font-semibold text-slate-800">51–55</span> — upper right (Q5)</p>
+                        <p class="text-slate-600"><span class="font-mono font-semibold text-slate-800">61–65</span> — upper left (Q6)</p>
+                        <p class="text-slate-600"><span class="font-mono font-semibold text-slate-800">71–75</span> — lower left (Q7)</p>
+                        <p class="text-slate-600"><span class="font-mono font-semibold text-slate-800">81–85</span> — lower right (Q8)</p>
+                    </div>
+                    <div class="sm:col-span-2 pt-2 border-t border-slate-100">
+                        <p class="text-xs text-slate-500"><span class="font-semibold text-slate-600">Surfaces:</span> M mesial · O occlusal · D distal · B buccal · L lingual · I incisal — number from the midline, tooth 1 (central incisor) to 8 (third molar).</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 @endif
 
@@ -288,6 +405,26 @@ function dental() {
             const p = this.procs.find(x => x.id === this.pickProc);
             if (p) { this.procName = p.name; this.procCost = p.fee; }
         },
+    };
+}
+function dentalCalc() {
+    return {
+        weight: 60,
+        agent: 'lidocaine',
+        agents: {
+            lidocaine:   { label: 'Lidocaine 2% + epi 1:100k', perKg: 7,   cap: 500, mgCart: 36 },
+            articaine:   { label: 'Articaine 4% + epi 1:100k', perKg: 7,   cap: 500, mgCart: 72 },
+            mepivacaine: { label: 'Mepivacaine 3% plain',      perKg: 6.6, cap: 400, mgCart: 54 },
+            prilocaine:  { label: 'Prilocaine 4% plain',       perKg: 8,   cap: 600, mgCart: 72 },
+            bupivacaine: { label: 'Bupivacaine 0.5% + epi',    perKg: 1.3, cap: 90,  mgCart: 9  },
+        },
+        get w() { return parseFloat(this.weight) || 0; },
+        get ag() { return this.agents[this.agent]; },
+        get byWeight() { return this.ag.perKg * this.w; },
+        get maxMg() { return Math.min(this.byWeight, this.ag.cap); },
+        get capped() { return this.byWeight > this.ag.cap; },
+        get maxCart() { return this.ag.mgCart ? Math.floor(this.maxMg / this.ag.mgCart) : 0; },
+        r(n) { return Math.round(n); },
     };
 }
 </script>
