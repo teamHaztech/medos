@@ -12,6 +12,8 @@ enum UserRole: string
     case Pharmacist    = 'pharmacist';
     case LabTech       = 'lab_tech';
     case BillingStaff  = 'billing_staff';
+    case Dentist       = 'dentist';
+    case Dietitian     = 'dietitian';
 
     /**
      * Get a human-readable label for the role.
@@ -27,6 +29,8 @@ enum UserRole: string
             self::Pharmacist    => 'Pharmacist',
             self::LabTech       => 'Lab Technician',
             self::BillingStaff  => 'Billing Staff',
+            self::Dentist       => 'Dentist',
+            self::Dietitian     => 'Dietitian',
         };
     }
 
@@ -40,6 +44,8 @@ enum UserRole: string
             self::Nurse,
             self::LabTech,
             self::Pharmacist,
+            self::Dentist,
+            self::Dietitian,
         ]);
     }
 }

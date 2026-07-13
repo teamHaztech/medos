@@ -144,6 +144,8 @@
                             <option value="pharmacist">Pharmacist</option>
                             <option value="lab_tech">Lab Technician</option>
                             <option value="billing_staff">Billing Staff</option>
+                            <option value="dentist">Dentist</option>
+                            <option value="dietitian">Dietitian</option>
                             <option value="hospital_admin">Hospital Admin</option>
                         </select>
                     </div>
@@ -199,6 +201,8 @@
                             <option value="pharmacist">Pharmacist</option>
                             <option value="lab_tech">Lab Technician</option>
                             <option value="billing_staff">Billing Staff</option>
+                            <option value="dentist">Dentist</option>
+                            <option value="dietitian">Dietitian</option>
                             <option value="hospital_admin">Hospital Admin</option>
                         </select>
                     </div>

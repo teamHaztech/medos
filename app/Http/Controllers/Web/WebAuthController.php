@@ -34,6 +34,8 @@ class WebAuthController extends Controller
             'billing_staff' => 'web.billing.index',
             'receptionist'  => 'web.admin.appointments',
             'nurse'         => 'web.ip.dashboard',
+            'dentist'       => 'web.dental.index',
+            'dietitian'     => 'web.dietary.index',
             default         => 'web.admin.dashboard', // super_admin, hospital_admin
         };
     }

@@ -8,6 +8,8 @@
     $isBillingStaff = $role === 'billing_staff';
     $isReceptionist = $role === 'receptionist';
     $isNurse = $role === 'nurse';
+    $isDentist = $role === 'dentist';
+    $isDietitian = $role === 'dietitian';
 @endphp
 
 {{-- ============================================= --}}
@@ -299,6 +301,38 @@
 <a href="{{ route('web.pharmacy.stock') }}" class="sidebar-link {{ request()->routeIs('web.pharmacy.stock*') ? 'active' : '' }}">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
     Stock Management
+</a>
+@endif
+
+{{-- ============================================= --}}
+{{-- DENTIST — dental practice workspace            --}}
+{{-- ============================================= --}}
+@if($isDentist)
+<a href="{{ route('web.dental.index') }}" class="sidebar-link {{ request()->routeIs('web.dental.*') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2C8 2 6 5 6 9c0 3 1 5 1.5 8S8 21 9 21s1-2 1.5-3.5S11 15 12 15s1 1 1.5 2.5S14 21 15 21s.5-1 1-4 1.5-5 1.5-8c0-4-2-7-6-7z"/></svg>
+    Dental
+</a>
+<a href="{{ route('web.admin.patients') }}" class="sidebar-link {{ request()->routeIs('web.admin.patients*') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z"/></svg>
+    Patients
+</a>
+<a href="{{ route('web.admin.appointments') }}" class="sidebar-link {{ request()->routeIs('web.admin.appointments*') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+    Appointments
+</a>
+@endif
+
+{{-- ============================================= --}}
+{{-- DIETITIAN — clinical nutrition workspace       --}}
+{{-- ============================================= --}}
+@if($isDietitian)
+<a href="{{ route('web.dietary.index') }}" class="sidebar-link {{ request()->routeIs('web.dietary.*') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18v4H3V3zm2 6h14l-1 12H6L5 9zm4 3v6m6-6v6"/></svg>
+    Clinical Nutrition
+</a>
+<a href="{{ route('web.admin.patients') }}" class="sidebar-link {{ request()->routeIs('web.admin.patients*') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z"/></svg>
+    Patients
 </a>
 @endif
 
