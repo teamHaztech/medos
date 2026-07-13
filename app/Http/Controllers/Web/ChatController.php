@@ -1927,10 +1927,12 @@ class ChatController extends Controller
         $slotTaken = false;
         \DB::beginTransaction();
         try {
-            // Lock check: is slot still free?
+            // Lock check: is slot still free? lockForUpdate serialises concurrent
+            // bookings (row lock on MySQL; SQLite serialises on the transaction write).
             $slotTaken = Appointment::where('doctor_id', $state['doctor_id'])
                 ->where('slot_start', $slotStart)
                 ->whereNotIn('status', ['cancelled', 'no_show'])
+                ->lockForUpdate()
                 ->exists();
 
         if ($slotTaken) {

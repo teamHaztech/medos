@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -238,7 +239,7 @@ class IntegrationController extends Controller
             return response()->json(['success' => false, 'message' => 'The doctor is not working at that time.'], 422);
         }
 
-        // Slot must be free.
+        // Fast, friendly pre-check (the authoritative guard is the atomic re-check below).
         $taken = Appointment::where('doctor_id', $doctor->id)
             ->where('slot_start', $slotStart)
             ->whereNotIn('status', ['cancelled', 'no_show'])
@@ -249,33 +250,57 @@ class IntegrationController extends Controller
 
         $duration = $doctor->consultation_duration_default ?? 15;
 
-        $encounter = Encounter::create([
-            'id'               => Str::uuid()->toString(),
-            'hospital_id'      => $hid,
-            'patient_id'       => $patient->id,
-            'doctor_id'        => $doctor->id,
-            'encounter_number' => 'ENC-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4)),
-            'type'             => 'consultation',
-            'status'           => 'booked',
-            'channel'          => 'web',
-            'intake_data'      => array_filter(['chief_complaint' => $v['notes'] ?? null, 'source' => 'api'], fn ($x) => $x !== null),
-        ]);
+        // Book atomically so two concurrent requests can't both take the same slot.
+        // The encounter insert grabs the DB write lock first (serialising SQLite
+        // writers); we then re-check the slot under lockForUpdate before inserting the
+        // appointment. If the slot was taken in the meantime we throw to roll back.
+        try {
+            [$encounter, $appointment, $token] = DB::transaction(function () use ($hid, $doctor, $patient, $slotStart, $duration, $v) {
+                $encounter = Encounter::create([
+                    'id'               => Str::uuid()->toString(),
+                    'hospital_id'      => $hid,
+                    'patient_id'       => $patient->id,
+                    'doctor_id'        => $doctor->id,
+                    'encounter_number' => 'ENC-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4)),
+                    'type'             => 'consultation',
+                    'status'           => 'booked',
+                    'channel'          => 'web',
+                    'intake_data'      => array_filter(['chief_complaint' => $v['notes'] ?? null, 'source' => 'api'], fn ($x) => $x !== null),
+                ]);
 
-        $token = Appointment::generateToken($doctor->id, $doctor->department, $slotStart);
+                $clash = Appointment::where('doctor_id', $doctor->id)
+                    ->where('slot_start', $slotStart)
+                    ->whereNotIn('status', ['cancelled', 'no_show'])
+                    ->lockForUpdate()
+                    ->exists();
+                if ($clash) {
+                    throw new \RuntimeException('SLOT_TAKEN');
+                }
 
-        $appointment = Appointment::create([
-            'id'                         => Str::uuid()->toString(),
-            'hospital_id'                => $hid,
-            'encounter_id'               => $encounter->id,
-            'patient_id'                 => $patient->id,
-            'doctor_id'                  => $doctor->id,
-            'status'                     => 'scheduled',
-            'slot_start'                 => $slotStart,
-            'slot_end'                   => $slotStart->copy()->addMinutes($duration),
-            'predicted_duration_minutes' => $duration,
-            'booking_source'             => 'api',
-            'notes'                      => $token,
-        ]);
+                $token = Appointment::generateToken($doctor->id, $doctor->department, $slotStart);
+
+                $appointment = Appointment::create([
+                    'id'                         => Str::uuid()->toString(),
+                    'hospital_id'                => $hid,
+                    'encounter_id'               => $encounter->id,
+                    'patient_id'                 => $patient->id,
+                    'doctor_id'                  => $doctor->id,
+                    'status'                     => 'scheduled',
+                    'slot_start'                 => $slotStart,
+                    'slot_end'                   => $slotStart->copy()->addMinutes($duration),
+                    'predicted_duration_minutes' => $duration,
+                    'booking_source'             => 'api',
+                    'notes'                      => $token,
+                ]);
+
+                return [$encounter, $appointment, $token];
+            });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'SLOT_TAKEN') {
+                return response()->json(['success' => false, 'message' => 'That slot was just booked by someone else.'], 409);
+            }
+            throw $e;
+        }
 
         return response()->json(['success' => true, 'data' => [
             'appointment_id' => $appointment->id,
