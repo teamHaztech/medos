@@ -17,6 +17,8 @@ use App\Modules\AIReceptionist\Services\EmergencyDetector;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Modules\AIReceptionist\Services\NightMedicalAdviceService;
+use App\Modules\AIReceptionist\Services\FirstAidAssistantService;
 
 class ChatController extends Controller
 {
@@ -120,6 +122,41 @@ class ChatController extends Controller
             // Emergency detection
             $emergencyDetector = new EmergencyDetector();
             $emergency = $emergencyDetector->detect($message, $lang);
+            /*
+|--------------------------------------------------------------------------
+| Night Medical Advice
+|--------------------------------------------------------------------------
+*/
+
+$nightAdvice = new NightMedicalAdviceService();
+
+if ($nightAdvice->isNightAdviceRequest($message)) {
+
+    $reply = $nightAdvice->generateReport($message);
+
+    return response()->json([
+        'replies' => $this->wrap([$reply]),
+        'state'   => $state,
+    ]);
+}
+
+/*
+|--------------------------------------------------------------------------
+| First Aid Assistant
+|--------------------------------------------------------------------------
+*/
+
+$firstAid = new FirstAidAssistantService();
+
+if ($firstAid->isFirstAidRequest($message)) {
+
+    $reply = $firstAid->generateReport($message);
+
+    return response()->json([
+        'replies' => $this->wrap([$reply]),
+        'state'   => $state,
+    ]);
+}
             if ($emergency['is_emergency']) {
                 $state['step'] = 'emergency';
                 $replies[] = $this->t('emergency_alert', $lang);
