@@ -62,6 +62,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::post('settings/modules', [AdminWebController::class, 'updateModules'])->name('settings.modules');
         Route::post('settings/departments', [AdminWebController::class, 'saveDepartments'])->name('settings.departments');
         Route::post('settings/areas', [AdminWebController::class, 'saveAreas'])->name('settings.areas');
+        Route::post('settings/gst', [AdminWebController::class, 'saveGstDetails'])->name('settings.gst');
         Route::post('settings/ai', [AdminWebController::class, 'saveAiSettings'])->name('settings.ai');
         Route::post('settings/whatsapp', [AdminWebController::class, 'saveWhatsappSettings'])->name('settings.whatsapp');
         Route::post('settings/billing-integration', [AdminWebController::class, 'saveBillingIntegration'])->name('settings.billing-integration');

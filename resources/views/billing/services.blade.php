@@ -46,11 +46,11 @@
                         <td class="table-cell text-slate-500 font-mono text-xs">{{ $s->code ?? '—' }}</td>
                         <td class="table-cell"><span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ $s->categoryLabel() }}</span></td>
                         <td class="table-cell font-medium">{{ $cur }}{{ number_format($s->price, 2) }}</td>
-                        <td class="table-cell">{{ $s->is_taxable ? 'Taxable' : '—' }}</td>
+                        <td class="table-cell">@if($s->is_taxable || $s->gst_rate > 0)<span class="text-xs">GST {{ rtrim(rtrim(number_format($s->gst_rate, 2), '0'), '.') }}%</span>@if($s->hsn_sac)<span class="block text-xs text-slate-400">HSN {{ $s->hsn_sac }}</span>@endif @else<span class="text-xs text-slate-400">Exempt</span>@endif</td>
                         <td class="table-cell">@if($s->is_active)<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</span>@else<span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">Inactive</span>@endif</td>
                         <td class="table-cell">
                             <div class="flex items-center gap-2">
-                                <button type="button" @click="openEdit({ id: '{{ $s->id }}', name: @js($s->name), code: @js($s->code ?? ''), category: '{{ $s->category }}', price: {{ (float) $s->price }}, is_taxable: {{ $s->is_taxable ? 'true' : 'false' }}, is_active: {{ $s->is_active ? 'true' : 'false' }} })" class="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium">Edit</button>
+                                <button type="button" @click="openEdit({ id: '{{ $s->id }}', name: @js($s->name), code: @js($s->code ?? ''), category: '{{ $s->category }}', price: {{ (float) $s->price }}, is_taxable: {{ $s->is_taxable ? 'true' : 'false' }}, gst_rate: {{ (float) $s->gst_rate }}, hsn_sac: @js($s->hsn_sac ?? ''), is_active: {{ $s->is_active ? 'true' : 'false' }} })" class="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium">Edit</button>
                                 <form method="POST" action="{{ route('web.billing.services.destroy', $s->id) }}" onsubmit="return confirm('Remove {{ $s->name }}?')">@csrf @method('DELETE')<button class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 font-medium">Remove</button></form>
                             </div>
                         </td>
@@ -74,7 +74,14 @@
                 <select name="category" x-model="edit.category" class="input-field">@foreach($cats as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach</select>
             </div>
             <div><label class="block text-xs font-semibold text-slate-600 mb-1">Price ({{ $cur }}) *</label><input type="number" step="0.01" min="0" name="price" required x-model="edit.price" class="input-field"></div>
-            <div class="flex items-end gap-4">
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1">GST rate (%)</label>
+                <select name="gst_rate" x-model.number="edit.gst_rate" class="input-field">
+                    <option value="0">0% (Exempt)</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option>
+                </select>
+                <p class="text-xs text-slate-400 mt-1">Clinical services are usually exempt; pharmacy/consumables are taxable.</p>
+            </div>
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1">HSN / SAC code</label><input type="text" name="hsn_sac" x-model="edit.hsn_sac" maxlength="20" class="input-field" placeholder="e.g. 3004"></div>
+            <div class="col-span-2 flex items-end gap-4">
                 <label class="inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="is_taxable" value="1" x-model="edit.is_taxable" class="rounded border-slate-300 text-blue-600"> Taxable</label>
                 <label class="inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="is_active" value="1" x-model="edit.is_active" class="rounded border-slate-300 text-blue-600"> Active</label>
             </div>
@@ -91,9 +98,9 @@
 function serviceMaster() {
     return {
         editOpen: false,
-        edit: { id:'', name:'', code:'', category:'other', price:0, is_taxable:false, is_active:true },
+        edit: { id:'', name:'', code:'', category:'other', price:0, is_taxable:false, gst_rate:0, hsn_sac:'', is_active:true },
         get editAction() { return this.edit.id ? '{{ url('billing/services') }}/' + this.edit.id : '{{ route('web.billing.services.store') }}'; },
-        openAdd() { this.edit = { id:'', name:'', code:'', category:'other', price:0, is_taxable:false, is_active:true }; this.editOpen = true; },
+        openAdd() { this.edit = { id:'', name:'', code:'', category:'other', price:0, is_taxable:false, gst_rate:0, hsn_sac:'', is_active:true }; this.editOpen = true; },
         openEdit(s) { this.edit = Object.assign({}, s); this.editOpen = true; },
     };
 }

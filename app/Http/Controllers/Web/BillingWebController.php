@@ -378,6 +378,8 @@ class BillingWebController extends Controller
             'category'   => 'required|string|max:40',
             'price'      => 'required|numeric|min:0',
             'is_taxable' => 'nullable|boolean',
+            'gst_rate'   => 'nullable|numeric|min:0|max:28',
+            'hsn_sac'    => 'nullable|string|max:20',
             'is_active'  => 'nullable|boolean',
         ];
     }
@@ -390,6 +392,8 @@ class BillingWebController extends Controller
             'category'   => $v['category'],
             'price'      => $v['price'],
             'is_taxable' => (bool) ($v['is_taxable'] ?? false),
+            'gst_rate'   => (float) ($v['gst_rate'] ?? 0),
+            'hsn_sac'    => $v['hsn_sac'] ?? null,
             'is_active'  => (bool) ($v['is_active'] ?? true),
         ];
     }

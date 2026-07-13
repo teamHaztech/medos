@@ -12,12 +12,13 @@ class ServiceCharge extends Model
     protected $table = 'service_charges';
 
     protected $fillable = [
-        'id', 'hospital_id', 'name', 'code', 'category', 'price', 'is_taxable', 'is_active',
+        'id', 'hospital_id', 'name', 'code', 'category', 'price', 'is_taxable', 'gst_rate', 'hsn_sac', 'is_active',
     ];
 
     protected $casts = [
         'price'      => 'decimal:2',
         'is_taxable' => 'boolean',
+        'gst_rate'   => 'decimal:2',
         'is_active'  => 'boolean',
     ];
 

@@ -41,14 +41,18 @@ class ChargeCapture
         // Rate-card price resolution when no explicit price was supplied.
         $price     = array_key_exists('unit_price', $p) ? (float) $p['unit_price'] : null;
         $taxable   = $p['is_taxable'] ?? false;
+        $gstRate   = array_key_exists('gst_rate', $p) ? (float) $p['gst_rate'] : null;
+        $hsnSac    = $p['hsn_sac'] ?? null;
         $code      = $p['code'] ?? null;
         $serviceId = $p['service_charge_id'] ?? null;
 
-        if ($price === null && ($code || $serviceId)) {
+        if (($price === null || $gstRate === null) && ($code || $serviceId)) {
             $rate = $this->priceFor($hid, $code, null, null, $serviceId);
             if ($rate) {
-                $price     = $rate['price'];
-                $taxable   = $rate['is_taxable'];
+                $price     = $price ?? $rate['price'];
+                $taxable   = $p['is_taxable'] ?? $rate['is_taxable'];
+                $gstRate   = $gstRate ?? $rate['gst_rate'];
+                $hsnSac    = $hsnSac ?? $rate['hsn_sac'];
                 $code      = $code ?? $rate['code'];
                 $serviceId = $serviceId ?? $rate['service_charge_id'];
             }
@@ -68,6 +72,8 @@ class ChargeCapture
             'unit_price'        => $price,
             'total'             => round($qty * $price, 2),
             'is_taxable'        => (bool) $taxable,
+            'gst_rate'          => (float) ($gstRate ?? 0),
+            'hsn_sac'           => $hsnSac,
             'posted_by_name'    => $p['posted_by_name'] ?? null,
             'posted_at'         => now(),
         ];
@@ -260,36 +266,66 @@ class ChargeCapture
         }
     }
 
-    /** Build line items + totals from a charge set, preserving an existing bill's discount/insurance. */
+    /**
+     * Build line items + GST totals from a charge set, preserving an existing bill's
+     * discount/insurance. GST is per line (healthcare services are exempt; pharmacy /
+     * consumables carry their own rate) and split into CGST + SGST (intra-state supply).
+     */
     private function computeInvoice($charges, ?Bill $bill): array
     {
-        $items = $charges->map(fn (ChargeItem $c) => [
-            'description' => $c->description,
-            'code'        => $c->code,
-            'category'    => $c->source,
-            'quantity'    => (float) $c->quantity,
-            'unit_price'  => (float) $c->unit_price,
-            'total'       => round((float) $c->quantity * (float) $c->unit_price, 2),
-            'taxable'     => (bool) $c->is_taxable,
-        ])->values()->all();
+        $fallbackRate = (float) RegionService::taxRate(); // legacy: taxable line w/ no explicit GST
 
-        $subtotal    = round(collect($items)->sum('total'), 2);
-        $taxRate     = round((float) RegionService::taxRate(), 2);
-        $taxableBase = round(collect($items)->where('taxable', true)->sum('total'), 2);
-        $taxAmount   = round($taxableBase * $taxRate / 100, 2);
-        $discount    = $bill ? round((float) $bill->discount_amount, 2) : 0.0;
-        $insurance   = $bill ? round((float) $bill->insurance_covered, 2) : 0.0;
-        $total       = round($subtotal + $taxAmount - $discount, 2);
-        $payable     = max(0, round($total - $insurance, 2));
+        $items = [];
+        $subtotal = 0.0;
+        $gstTotal = 0.0;
+
+        foreach ($charges as $c) {
+            $lineTotal = round((float) $c->quantity * (float) $c->unit_price, 2);
+            $rate = (float) $c->gst_rate;
+            if ($rate <= 0 && $c->is_taxable) {
+                $rate = $fallbackRate;
+            }
+            $lineGst = round($lineTotal * $rate / 100, 2);
+            $subtotal += $lineTotal;
+            $gstTotal += $lineGst;
+
+            $items[] = [
+                'description' => $c->description,
+                'code'        => $c->code,
+                'category'    => $c->source,
+                'hsn_sac'     => $c->hsn_sac,
+                'quantity'    => (float) $c->quantity,
+                'unit_price'  => (float) $c->unit_price,
+                'total'       => $lineTotal,
+                'taxable'     => (bool) $c->is_taxable,
+                'gst_rate'    => $rate,
+                'gst_amount'  => $lineGst,
+            ];
+        }
+
+        $subtotal = round($subtotal, 2);
+        $gstTotal = round($gstTotal, 2);
+        $cgst     = round($gstTotal / 2, 2);
+        $sgst     = round($gstTotal - $cgst, 2); // absorb rounding into SGST
+        $igst     = 0.0;                          // intra-state supply (hospital + patient same state)
+
+        $discount  = $bill ? round((float) $bill->discount_amount, 2) : 0.0;
+        $insurance = $bill ? round((float) $bill->insurance_covered, 2) : 0.0;
+        $total     = round($subtotal + $gstTotal - $discount, 2);
+        $payable   = max(0, round($total - $insurance, 2));
 
         return [
-            'items' => $items, 'subtotal' => $subtotal, 'tax_rate' => $taxRate,
-            'tax_amount' => $taxAmount, 'total' => $total, 'payable' => $payable,
+            'items' => $items, 'subtotal' => $subtotal, 'tax_rate' => $fallbackRate,
+            'tax_amount' => $gstTotal, 'total' => $total, 'payable' => $payable,
+            'cgst' => $cgst, 'sgst' => $sgst, 'igst' => $igst,
             'update' => [
                 'line_items'      => $items,
                 'subtotal'        => $subtotal,
-                'tax_rate'        => $taxRate,
-                'tax_amount'      => $taxAmount,
+                'tax_rate'        => $fallbackRate,
+                'tax_amount'      => $gstTotal,
+                'cgst_amount'     => $cgst,
+                'sgst_amount'     => $sgst,
+                'igst_amount'     => $igst,
                 'total_amount'    => $total,
                 'patient_payable' => $payable,
             ],
@@ -309,6 +345,9 @@ class ChargeCapture
             'subtotal'          => $inv['subtotal'],
             'tax_rate'          => $inv['tax_rate'],
             'tax_amount'        => $inv['tax_amount'],
+            'cgst_amount'       => $inv['cgst'],
+            'sgst_amount'       => $inv['sgst'],
+            'igst_amount'       => $inv['igst'],
             'discount_amount'   => 0,
             'insurance_covered' => 0,
             'total_amount'      => $inv['total'],
@@ -500,6 +539,8 @@ class ChargeCapture
             'name'              => $svc->name,
             'price'             => (float) $svc->price,
             'is_taxable'        => (bool) $svc->is_taxable,
+            'gst_rate'          => (float) $svc->gst_rate,
+            'hsn_sac'           => $svc->hsn_sac,
             'code'              => $svc->code,
             'service_charge_id' => $svc->id,
         ];

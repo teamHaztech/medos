@@ -22,7 +22,7 @@ class ChargeItem extends Model
     protected $fillable = [
         'id', 'hospital_id', 'patient_id', 'encounter_id', 'admission_id',
         'service_charge_id', 'bill_id', 'source', 'source_ref', 'description', 'code',
-        'quantity', 'unit_price', 'total', 'is_taxable', 'status', 'posted_by_name', 'posted_at',
+        'quantity', 'unit_price', 'total', 'is_taxable', 'gst_rate', 'hsn_sac', 'status', 'posted_by_name', 'posted_at',
     ];
 
     protected $casts = [
@@ -30,6 +30,7 @@ class ChargeItem extends Model
         'unit_price' => 'decimal:2',
         'total'      => 'decimal:2',
         'is_taxable' => 'boolean',
+        'gst_rate'   => 'decimal:2',
         'posted_at'  => 'datetime',
     ];
 

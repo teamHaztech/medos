@@ -172,6 +172,26 @@
         </form>
     </div>
 
+    {{-- GST / Tax identity --}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        <div class="mb-4">
+            <h3 class="text-base font-semibold text-slate-800">GST / Tax Details</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Your GSTIN and state print on tax invoices. GST is charged per service (set each service's rate in Billing → Services).</p>
+        </div>
+        <form method="POST" action="{{ route('web.admin.settings.gst') }}" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            @csrf
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">GSTIN</label>
+                <input type="text" name="gstin" value="{{ $gst['gstin'] ?? '' }}" maxlength="20" class="input-field" placeholder="e.g. 29ABCDE1234F1Z5" style="text-transform:uppercase">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">State (place of supply)</label>
+                <input type="text" name="state" value="{{ $gst['state'] ?? '' }}" maxlength="60" class="input-field" placeholder="e.g. Karnataka">
+            </div>
+            <div class="sm:col-span-2"><button type="submit" class="btn-primary text-sm">Save GST details</button></div>
+        </form>
+    </div>
+
     {{-- Department Add/Edit modal --}}
     <x-modal show="deptModal" title-expr="deptIndex === -1 ? 'Add Department' : 'Edit Department'" max="md">
         <div class="space-y-4">

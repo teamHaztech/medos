@@ -42,18 +42,24 @@
         $status = is_object($bill->payment_status) ? $bill->payment_status->value : $bill->payment_status;
         $cancelled = ! is_null($bill->cancelled_at);
         $refunded = round((float) abs(($bill->payments ?? collect())->where('amount', '<', 0)->sum('amount')), 2);
+        $cfg = is_array($hospital?->config) ? $hospital->config : json_decode($hospital?->config ?? '{}', true);
+        $gstin = $cfg['gstin'] ?? null;
+        $gstState = $cfg['gst_state'] ?? null;
+        $hasGst = (float) $bill->tax_amount > 0 || $gstin;
+        $docTitle = $cancelled ? 'CANCELLED / VOID' : ($hasGst ? 'TAX INVOICE' : 'RECEIPT');
     @endphp
 
-    <button class="print-btn" onclick="window.print()">Print Receipt</button>
+    <button class="print-btn" onclick="window.print()">Print {{ $hasGst ? 'Invoice' : 'Receipt' }}</button>
 
     <div class="header">
         <h1>{{ $hospital->name ?? 'Hospital' }}</h1>
         <p>{{ $hospital->address ?? '' }}{{ $hospital->city ? ', ' . $hospital->city : '' }}</p>
         <p>Phone: {{ $hospital->phone ?? '-' }}</p>
+        @if($gstin)<p><strong>GSTIN: {{ $gstin }}</strong>{{ $gstState ? ' · State: '.$gstState : '' }}</p>@endif
     </div>
 
     <hr class="divider">
-    <div class="title" style="{{ $cancelled ? 'color:#dc2626;' : '' }}">{{ $cancelled ? 'CANCELLED / VOID' : 'RECEIPT' }}</div>
+    <div class="title" style="{{ $cancelled ? 'color:#dc2626;' : '' }}">{{ $docTitle }}</div>
     @if($cancelled)
     <div style="border:2px solid #dc2626; color:#dc2626; text-align:center; font-weight:700; padding:8px; border-radius:6px; margin:8px 0;">
         THIS BILL WAS CANCELLED — NOT A VALID RECEIPT{{ $bill->cancel_reason ? ' · '.$bill->cancel_reason : '' }}
@@ -92,8 +98,10 @@
         <thead>
             <tr>
                 <th>Description</th>
+                @if($hasGst)<th class="center">HSN/SAC</th>@endif
                 <th class="center">Qty</th>
                 <th class="right">Rate</th>
+                @if($hasGst)<th class="center">GST%</th>@endif
                 <th class="right">Amount</th>
             </tr>
         </thead>
@@ -101,8 +109,10 @@
             @foreach($bill->line_items ?? [] as $item)
             <tr>
                 <td>{{ $item['description'] ?? '-' }}</td>
-                <td class="center">{{ $item['quantity'] ?? 1 }}</td>
+                @if($hasGst)<td class="center">{{ $item['hsn_sac'] ?? '—' }}</td>@endif
+                <td class="center">{{ rtrim(rtrim(number_format($item['quantity'] ?? 1, 2), '0'), '.') }}</td>
                 <td class="right">{{ $currency }}{{ number_format($item['unit_price'] ?? 0, 2) }}</td>
+                @if($hasGst)<td class="center">{{ ($item['gst_rate'] ?? 0) > 0 ? rtrim(rtrim(number_format($item['gst_rate'], 2), '0'), '.').'%' : 'Exempt' }}</td>@endif
                 <td class="right">{{ $currency }}{{ number_format($item['total'] ?? 0, 2) }}</td>
             </tr>
             @endforeach
@@ -116,10 +126,27 @@
             <span>Subtotal:</span>
             <span>{{ $currency }}{{ number_format($bill->subtotal, 2) }}</span>
         </div>
+        @if(($bill->cgst_amount ?? 0) > 0 || ($bill->sgst_amount ?? 0) > 0)
+        <div class="row">
+            <span>CGST:</span>
+            <span>{{ $currency }}{{ number_format($bill->cgst_amount, 2) }}</span>
+        </div>
+        <div class="row">
+            <span>SGST:</span>
+            <span>{{ $currency }}{{ number_format($bill->sgst_amount, 2) }}</span>
+        </div>
+        @if(($bill->igst_amount ?? 0) > 0)
+        <div class="row">
+            <span>IGST:</span>
+            <span>{{ $currency }}{{ number_format($bill->igst_amount, 2) }}</span>
+        </div>
+        @endif
+        @else
         <div class="row">
             <span>{{ $taxName }}:</span>
             <span>{{ $currency }}{{ number_format($bill->tax_amount, 2) }}</span>
         </div>
+        @endif
         <div class="row">
             <span>Discount:{{ $bill->discount_reason ? ' ('.$bill->discount_reason.')' : '' }}</span>
             <span>-{{ $currency }}{{ number_format($bill->discount_amount, 2) }}</span>

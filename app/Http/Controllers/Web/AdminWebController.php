@@ -501,6 +501,10 @@ class AdminWebController extends Controller
             'waiting' => 'Floor 2, Waiting Area',
             'lab'     => 'Sample Collection Counter',
         ], is_array($cfg['areas'] ?? null) ? $cfg['areas'] : []);
+        $gst = [
+            'gstin' => $cfg['gstin'] ?? '',
+            'state' => $cfg['gst_state'] ?? '',
+        ];
         $aiCfg = [
             'provider' => $cfg['ai']['provider'] ?? 'anthropic',
             'model'    => $cfg['ai']['model'] ?? 'claude-sonnet-4-20250514',
@@ -533,7 +537,24 @@ class AdminWebController extends Controller
             'bill.cancelled' => 'Cancelled',
         ];
 
-        return view('admin.settings', compact('hospital', 'moduleList', 'departments', 'areas', 'aiCfg', 'waCfg', 'biCfg', 'biEvents'));
+        return view('admin.settings', compact('hospital', 'moduleList', 'departments', 'areas', 'gst', 'aiCfg', 'waCfg', 'biCfg', 'biEvents'));
+    }
+
+    /** Persist the hospital's GST identity (GSTIN + state) for tax invoices. */
+    public function saveGstDetails(Request $request)
+    {
+        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $v = $request->validate([
+            'gstin' => 'nullable|string|max:20',
+            'state' => 'nullable|string|max:60',
+        ]);
+
+        $config = is_array($hospital->config) ? $hospital->config : json_decode($hospital->config ?? '{}', true);
+        $config['gstin']     = strtoupper(trim($v['gstin'] ?? ''));
+        $config['gst_state'] = trim($v['state'] ?? '');
+        $hospital->update(['config' => $config]);
+
+        return redirect()->route('web.admin.settings')->with('success', 'GST details saved.');
     }
 
     /** Persist the hospital's patient-facing areas (waiting area, lab/collection area). */
