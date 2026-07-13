@@ -5,7 +5,7 @@
 @php use App\Modules\Dietary\Models\TherapeuticDiet as TD; use App\Modules\Dietary\Models\DietOrder as DOrder; use App\Modules\Dietary\Models\NutritionAssessment as NA; @endphp
 
 @section('content')
-<div x-data="nutrition()">
+<div x-data="nutrition()" x-init="init()">
     @if(session('success'))<div class="mb-4 px-4 py-2.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="mb-4 px-4 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">{{ session('error') }}</div>@endif
 
@@ -268,8 +268,13 @@ function nutrition() {
         patientSearch: '', patientResults: [], selectedPatient: null,
         ord: { ward: '', diet_id: '', texture: 'regular', route: 'oral', kcal_target: '', protein_target_g: '', start_date: '{{ now()->toDateString() }}' },
         asSearch: '', asResults: [], asPatient: null,
+        focusPatient: @js($focusPatient ? ['id' => $focusPatient->id, 'name' => $focusPatient->name, 'phone' => $focusPatient->phone] : null),
         diet: { id: '', code: '', name: '', category: 'therapeutic', default_texture: 'regular', indications: '', restrictions: '', default_kcal: null, default_protein_g: null, is_active: true },
-        openOrder() { this.selectedPatient = null; this.patientSearch = ''; this.patientResults = []; this.ord = { ward: '', diet_id: '', texture: 'regular', route: 'oral', kcal_target: '', protein_target_g: '', start_date: '{{ now()->toDateString() }}' }; this.orderModal = true; },
+        init() {
+            // Arrived from a "Consult" link with a patient → open the assessment for them.
+            if (this.focusPatient) { this.asPatient = this.focusPatient; this.assessModal = true; }
+        },
+        openOrder() { this.selectedPatient = this.focusPatient || null; this.patientSearch = ''; this.patientResults = []; this.ord = { ward: '', diet_id: '', texture: 'regular', route: 'oral', kcal_target: '', protein_target_g: '', start_date: '{{ now()->toDateString() }}' }; this.orderModal = true; },
         openAssess() { this.asPatient = null; this.asSearch = ''; this.asResults = []; this.assessModal = true; },
         openDiet(d) { this.diet = d ? { ...d } : { id: '', code: '', name: '', category: 'therapeutic', default_texture: 'regular', indications: '', restrictions: '', default_kcal: null, default_protein_g: null, is_active: true }; this.dietModal = true; },
         applyDiet() {

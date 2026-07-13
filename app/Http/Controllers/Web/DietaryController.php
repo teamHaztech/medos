@@ -17,9 +17,17 @@ class DietaryController extends Controller
         return Auth::user()->hospital_id;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $hid = $this->hid();
+
+        // Optional patient focus (e.g. "Consult" from an appointment) → the view
+        // pre-opens the nutrition assessment for this patient.
+        $focusPatient = null;
+        if ($request->filled('patient')) {
+            $focusPatient = \App\Modules\Patient\Models\Patient::where('hospital_id', $hid)
+                ->find($request->query('patient'));
+        }
 
         $diets = TherapeuticDiet::where('hospital_id', $hid)->orderBy('name')->get();
 
@@ -45,7 +53,7 @@ class DietaryController extends Controller
             'high_risk' => NutritionAssessment::where('hospital_id', $hid)->where('risk', 'high')->count(),
         ];
 
-        return view('dietary.index', compact('diets', 'orders', 'assessments', 'census', 'counts'));
+        return view('dietary.index', compact('diets', 'orders', 'assessments', 'census', 'counts', 'focusPatient'));
     }
 
     public function orderDiet(Request $request)

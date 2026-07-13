@@ -137,6 +137,12 @@
                         <td class="table-cell">
                             @php $st = is_object($apt->status) ? $apt->status->value : ($apt->status ?? ''); @endphp
                             <div class="flex items-center gap-2">
+                                @if(($consultModule ?? null) && $apt->patient_id && ! in_array($st, ['cancelled', 'no_show', 'completed']))
+                                    <a href="{{ url($consultModule) }}?patient={{ $apt->patient_id }}"
+                                        class="text-xs px-2 py-1 rounded bg-teal-100 text-teal-700 hover:bg-teal-200 font-semibold transition-colors">
+                                        Consult →
+                                    </a>
+                                @endif
                                 @if(in_array($st, ['scheduled', 'confirmed']))
                                     <button type="button"
                                         @click="checkIn('{{ $apt->id }}')"

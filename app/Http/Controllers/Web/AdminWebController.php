@@ -439,6 +439,14 @@ class AdminWebController extends Controller
         $selfStaffId = $user->staff?->id;
         $isPractitioner = in_array($role, ['doctor', 'dentist', 'dietitian'], true) && $selfStaffId;
 
+        // A specialty practitioner can jump from an appointment straight into their
+        // module for that patient (dentist → Dental, dietitian → Clinical Nutrition).
+        $consultModule = match ($role) {
+            'dentist'   => 'dental',
+            'dietitian' => 'dietary',
+            default     => null,
+        };
+
         if ($isPractitioner) {
             $query->where('doctor_id', $selfStaffId);
         } elseif ($doctorId = $request->get('doctor')) {
@@ -475,7 +483,7 @@ class AdminWebController extends Controller
 
         $tests = $this->queueTests();
 
-        return view('admin.appointments', compact('appointments', 'doctors', 'labBookings', 'view', 'date', 'search', 'board', 'tests', 'isPractitioner'));
+        return view('admin.appointments', compact('appointments', 'doctors', 'labBookings', 'view', 'date', 'search', 'board', 'tests', 'isPractitioner', 'consultModule'));
     }
 
     public function staff()
