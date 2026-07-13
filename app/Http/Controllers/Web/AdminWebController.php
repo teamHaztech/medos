@@ -497,6 +497,10 @@ class AdminWebController extends Controller
             ['name' => 'Pediatrics', 'active' => true],
             ['name' => 'Orthopedics', 'active' => true],
         ];
+        $areas = array_merge([
+            'waiting' => 'Floor 2, Waiting Area',
+            'lab'     => 'Sample Collection Counter',
+        ], is_array($cfg['areas'] ?? null) ? $cfg['areas'] : []);
         $aiCfg = [
             'provider' => $cfg['ai']['provider'] ?? 'anthropic',
             'model'    => $cfg['ai']['model'] ?? 'claude-sonnet-4-20250514',
@@ -529,7 +533,26 @@ class AdminWebController extends Controller
             'bill.cancelled' => 'Cancelled',
         ];
 
-        return view('admin.settings', compact('hospital', 'moduleList', 'departments', 'aiCfg', 'waCfg', 'biCfg', 'biEvents'));
+        return view('admin.settings', compact('hospital', 'moduleList', 'departments', 'areas', 'aiCfg', 'waCfg', 'biCfg', 'biEvents'));
+    }
+
+    /** Persist the hospital's patient-facing areas (waiting area, lab/collection area). */
+    public function saveAreas(Request $request)
+    {
+        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $v = $request->validate([
+            'waiting' => 'nullable|string|max:120',
+            'lab'     => 'nullable|string|max:120',
+        ]);
+
+        $config = is_array($hospital->config) ? $hospital->config : json_decode($hospital->config ?? '{}', true);
+        $config['areas'] = [
+            'waiting' => trim($v['waiting'] ?? '') ?: 'Waiting Area',
+            'lab'     => trim($v['lab'] ?? '') ?: 'Sample Collection Counter',
+        ];
+        $hospital->update(['config' => $config]);
+
+        return redirect()->route('web.admin.settings')->with('success', 'Patient areas saved.');
     }
 
     /** Persist which modules are enabled for this hospital. */

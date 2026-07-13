@@ -61,6 +61,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::post('settings/hours', [AdminWebController::class, 'saveOperatingHours'])->name('settings.hours');
         Route::post('settings/modules', [AdminWebController::class, 'updateModules'])->name('settings.modules');
         Route::post('settings/departments', [AdminWebController::class, 'saveDepartments'])->name('settings.departments');
+        Route::post('settings/areas', [AdminWebController::class, 'saveAreas'])->name('settings.areas');
         Route::post('settings/ai', [AdminWebController::class, 'saveAiSettings'])->name('settings.ai');
         Route::post('settings/whatsapp', [AdminWebController::class, 'saveWhatsappSettings'])->name('settings.whatsapp');
         Route::post('settings/billing-integration', [AdminWebController::class, 'saveBillingIntegration'])->name('settings.billing-integration');
@@ -580,6 +581,10 @@ Route::middleware(['auth', 'super_admin'])->prefix('super-admin')->name('web.sup
     Route::delete('hospitals/{hospitalId}/staff/{staffId}', [\App\Http\Controllers\Web\SuperAdminController::class, 'removeStaffFromHospital'])->name('hospitals.staff.remove');
     Route::post('hospitals/{id}/admin', [\App\Http\Controllers\Web\SuperAdminController::class, 'addAdminToHospital'])->name('hospitals.admin.add');
     Route::post('hospitals/{hospitalId}/users/{userId}/reset-password', [\App\Http\Controllers\Web\SuperAdminController::class, 'resetUserPassword'])->name('hospitals.users.reset');
+    // IAM — all user accounts across hospitals
+    Route::get('users', [\App\Http\Controllers\Web\SuperAdminController::class, 'users'])->name('users.index');
+    Route::post('users/{userId}/toggle', [\App\Http\Controllers\Web\SuperAdminController::class, 'toggleUserActive'])->name('users.toggle');
+    Route::delete('users/{userId}', [\App\Http\Controllers\Web\SuperAdminController::class, 'deleteUser'])->name('users.delete');
 });
 
 // Hospital switcher (super admin only)

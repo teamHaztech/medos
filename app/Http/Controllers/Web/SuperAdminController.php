@@ -452,4 +452,95 @@ class SuperAdminController extends Controller
                 ->with('error', 'Could not fully delete "' . $name . '" because it has linked records — it has been deactivated instead.');
         }
     }
+
+    // ---------------------------------------------------------------
+    // IAM — user accounts across all hospitals
+    // ---------------------------------------------------------------
+
+    /**
+     * All user accounts, grouped by hospital, with orphan / unknown-account
+     * detection so the super admin can spot and remove accounts that aren't
+     * tied to a known hospital or use an unrecognised role.
+     */
+    public function users(Request $request)
+    {
+        $hospitals   = Hospital::orderBy('name')->get()->keyBy('id');
+        $validRoles  = array_map(fn ($c) => $c->value, \App\Modules\Core\Enums\UserRole::cases());
+
+        $grouped = [];        // hospital_id => [users]
+        $unknown = collect(); // orphan / unrecognised accounts
+        $system  = collect(); // super admins
+
+        foreach (User::orderBy('name')->get() as $u) {
+            $roleVal = $u->role instanceof \BackedEnum ? $u->role->value : (string) $u->role;
+            $u->role_str      = $roleVal;
+            $u->role_known    = in_array($roleVal, $validRoles, true);
+            $u->hospital_name = $u->hospital_id ? ($hospitals[$u->hospital_id]->name ?? null) : null;
+            $u->is_orphan     = ! $u->role_known
+                || ($roleVal !== 'super_admin' && ($u->hospital_id === null || ! isset($hospitals[$u->hospital_id])));
+
+            if ($roleVal === 'super_admin') {
+                $system->push($u);
+            } elseif ($u->is_orphan) {
+                $unknown->push($u);
+            } else {
+                $grouped[$u->hospital_id][] = $u;
+            }
+        }
+
+        $allUsers = User::count();
+        $counts = [
+            'total'     => $allUsers,
+            'active'    => User::where('is_active', true)->count(),
+            'inactive'  => User::where('is_active', false)->count(),
+            'unknown'   => $unknown->count(),
+            'hospitals' => count($grouped),
+        ];
+
+        return view('superadmin.users', compact('hospitals', 'grouped', 'unknown', 'system', 'counts'));
+    }
+
+    /** Activate / deactivate a user account. */
+    public function toggleUserActive(string $userId)
+    {
+        $target = User::findOrFail($userId);
+
+        if ($target->id === auth()->id()) {
+            return back()->with('error', 'You cannot change your own account status.');
+        }
+
+        $roleVal = $target->role instanceof \BackedEnum ? $target->role->value : (string) $target->role;
+        $newState = ! $target->is_active;
+
+        if (! $newState && $roleVal === 'super_admin'
+            && User::where('role', 'super_admin')->where('is_active', true)->count() <= 1) {
+            return back()->with('error', 'Cannot deactivate the last active super admin.');
+        }
+
+        $target->update(['is_active' => $newState]);
+
+        return back()->with('success', $target->email . ($newState ? ' activated.' : ' deactivated.'));
+    }
+
+    /** Permanently delete a user account (e.g. an unknown / test account). */
+    public function deleteUser(string $userId)
+    {
+        $target = User::findOrFail($userId);
+
+        if ($target->id === auth()->id()) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
+
+        $roleVal = $target->role instanceof \BackedEnum ? $target->role->value : (string) $target->role;
+        if ($roleVal === 'super_admin' && User::where('role', 'super_admin')->count() <= 1) {
+            return back()->with('error', 'Cannot delete the last super admin.');
+        }
+
+        $email = $target->email;
+        // Clear the loose staff back-link so no staff row points at a deleted user.
+        DB::table('staff')->where('user_id', $target->id)->update(['user_id' => null]);
+        $target->delete();
+
+        return back()->with('success', 'Account ' . $email . ' deleted.');
+    }
 }

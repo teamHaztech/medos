@@ -159,7 +159,7 @@ class KioskController extends Controller
                     'token'       => $token ?? 'LAB',
                     'tests'       => $tests,
                     'when'        => $slot ? $slot->format('D, M d \a\t g:i A') : 'Walk-in today',
-                    'room'        => 'Sample Collection Counter',
+                    'room'        => $this->hospitalArea($group->first()->hospital_id, 'lab', 'Sample Collection Counter'),
                 ]);
             }
 
@@ -205,8 +205,21 @@ class KioskController extends Controller
             'department'    => $appointment->doctor?->department ?? 'General',
             'token'         => $appointment->notes ?? 'N/A',
             'estimatedWait' => $estimatedWait . ' minutes',
-            'room'          => 'Floor 2, Waiting Area',
+            'room'          => $this->hospitalArea($appointment->hospital_id, 'waiting', 'Floor 2, Waiting Area'),
         ]);
+    }
+
+    /** Resolve a hospital's configured patient area (waiting|lab), falling back to a default. */
+    private function hospitalArea(?string $hospitalId, string $type, string $default): string
+    {
+        if (! $hospitalId) {
+            return $default;
+        }
+        $hospital = \App\Modules\Core\Models\Hospital::find($hospitalId);
+        $cfg = is_array($hospital?->config) ? $hospital->config : json_decode($hospital?->config ?? '{}', true);
+        $val = trim((string) (($cfg['areas'] ?? [])[$type] ?? ''));
+
+        return $val !== '' ? $val : $default;
     }
 
     public function register()

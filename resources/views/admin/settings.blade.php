@@ -152,6 +152,26 @@
         </div>
     </div>
 
+    {{-- Patient Areas / Rooms --}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        <div class="mb-4">
+            <h3 class="text-base font-semibold text-slate-800">Patient Areas</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Your hospital's waiting and sample-collection areas — shown to patients on their token/check-in slip. Set your own floor/room names.</p>
+        </div>
+        <form method="POST" action="{{ route('web.admin.settings.areas') }}" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            @csrf
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">OPD waiting area</label>
+                <input type="text" name="waiting" value="{{ $areas['waiting'] ?? '' }}" maxlength="120" class="input-field" placeholder="e.g. Floor 2, Waiting Area">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Lab / sample collection area</label>
+                <input type="text" name="lab" value="{{ $areas['lab'] ?? '' }}" maxlength="120" class="input-field" placeholder="e.g. Ground Floor, Sample Collection Counter">
+            </div>
+            <div class="sm:col-span-2"><button type="submit" class="btn-primary text-sm">Save areas</button></div>
+        </form>
+    </div>
+
     {{-- Department Add/Edit modal --}}
     <x-modal show="deptModal" title-expr="deptIndex === -1 ? 'Add Department' : 'Edit Department'" max="md">
         <div class="space-y-4">
