@@ -78,6 +78,21 @@
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
     My Packages
 </a>
+{{-- Specialty module for a doctor whose department has one (e.g. a dentist in the
+     Dental dept, a nutrition doctor in Clinical Nutrition). --}}
+@php $docDept = auth()->user()?->staff?->department; @endphp
+@if($docDept === 'Dental' && (!isset($moduleOn) || $moduleOn('dental')))
+<a href="{{ route('web.dental.index') }}" class="sidebar-link {{ request()->routeIs('web.dental.*') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2C8 2 6 5 6 9c0 3 1 5 1.5 8S8 21 9 21s1-2 1.5-3.5S11 15 12 15s1 1 1.5 2.5S14 21 15 21s.5-1 1-4 1.5-5 1.5-8c0-4-2-7-6-7z"/></svg>
+    Dental
+</a>
+@endif
+@if($docDept === 'Clinical Nutrition' && (!isset($moduleOn) || $moduleOn('dietary')))
+<a href="{{ route('web.dietary.index') }}" class="sidebar-link {{ request()->routeIs('web.dietary.*') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18v4H3V3zm2 6h14l-1 12H6L5 9zm4 3v6m6-6v6"/></svg>
+    Clinical Nutrition
+</a>
+@endif
 @endif
 
 {{-- ============================================= --}}
