@@ -236,7 +236,7 @@ class KioskController extends Controller
 
         $doctors = Staff::where('hospital_id', $hospital->id)
             ->where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
             ->orderBy('department')
             ->orderBy('name')
             ->get(['id', 'name', 'department', 'specialization'])
@@ -275,6 +275,7 @@ class KioskController extends Controller
             'dermatology'         => ['Dermatology', 'General Medicine'],
             'ent'                 => ['ENT', 'General Medicine'],
             'dental'              => ['Dental'],
+            'nutrition'           => ['Clinical Nutrition'],
             'gastroenterology'    => ['General Medicine', 'Gastroenterology'],
             'neurology'           => ['General Medicine', 'Neurology'],
             'ophthalmology'       => ['General Medicine', 'Ophthalmology'],
@@ -290,7 +291,7 @@ class KioskController extends Controller
         // Get all doctors, grouped by relevance
         $allDoctors = Staff::where('hospital_id', $hospital->id)
             ->where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
             ->orderBy('department')->orderBy('name')
             ->get(['id', 'name', 'department', 'specialization', 'consultation_duration_default']);
 
@@ -481,7 +482,7 @@ class KioskController extends Controller
         if (!$doctor && !empty($validated['department'])) {
             $doctor = Staff::where('hospital_id', $hospital->id)
                 ->where('is_active', true)
-                ->whereIn('role', ['doctor', 'hospital_admin'])
+                ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
                 ->where('department', $validated['department'])
                 ->inRandomOrder()
                 ->first();
@@ -497,7 +498,7 @@ class KioskController extends Controller
 
             $doctor = Staff::where('hospital_id', $hospital->id)
                 ->where('is_active', true)
-                ->whereIn('role', ['doctor', 'hospital_admin'])
+                ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
                 ->where(function ($q) use ($specialty) {
                     $q->where('department', 'like', '%' . str_replace('_', ' ', $specialty) . '%')
                       ->orWhere('specialization', 'like', '%' . str_replace('_', ' ', $specialty) . '%');
@@ -509,7 +510,7 @@ class KioskController extends Controller
         if (!$doctor) {
             $doctor = Staff::where('hospital_id', $hospital->id)
                 ->where('is_active', true)
-                ->whereIn('role', ['doctor', 'hospital_admin'])
+                ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
                 ->first();
         }
 
@@ -683,7 +684,7 @@ class KioskController extends Controller
         if (!$doctor) {
             $doctor = Staff::whereRaw("LOWER(name) LIKE ?", ['%' . strtolower($doctorId) . '%'])
                 ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
-                ->whereIn('role', ['doctor', 'hospital_admin'])->first();
+                ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])->first();
         }
         if (!$doctor) abort(404, 'Doctor not found');
 
@@ -721,7 +722,7 @@ class KioskController extends Controller
         if (!$doctor) {
             $doctor = Staff::whereRaw("LOWER(name) LIKE ?", ['%' . strtolower($doctorId) . '%'])
                 ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
-                ->whereIn('role', ['doctor', 'hospital_admin'])
+                ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
                 ->first();
         }
         if (!$doctor) abort(404, 'Doctor not found');
@@ -771,7 +772,7 @@ class KioskController extends Controller
     private function buildQueueDoctors()
     {
         return Staff::where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
             ->get()
             ->map(function ($doctor) {
                 $appointments = Appointment::where('doctor_id', $doctor->id)

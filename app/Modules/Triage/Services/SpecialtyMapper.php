@@ -41,6 +41,12 @@ class SpecialtyMapper
             'dental', 'tooth', 'teeth', 'gum', 'cavity', 'oral',
             'daant', 'asnan',
         ],
+        'nutrition' => [
+            'diet', 'nutrition', 'dietitian', 'dietician', 'nutritionist',
+            'weight loss', 'weight gain', 'obesity', 'obese', 'overweight',
+            'underweight', 'malnutrition', 'meal plan', 'food intake', 'eating habit',
+            'khaana', 'aahaar', 'ghiza', 'wazan',
+        ],
         'psychiatry' => [
             'mental health', 'anxiety', 'depression', 'stress', 'insomnia', 'panic',
             'psychiatric', 'bipolar', 'schizophrenia', 'mansik', 'iqtibas',

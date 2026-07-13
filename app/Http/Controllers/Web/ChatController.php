@@ -440,7 +440,7 @@ class ChatController extends Controller
         }
 
         // Symptom detection — treat as booking intent
-        $symptoms = ['fever', 'pain', 'headache', 'cough', 'cold', 'stomach', 'vomit', 'diarrhea', 'skin', 'rash', 'eye', 'ear', 'tooth', 'chest', 'breathing', 'diabetes', 'sugar', 'bp', 'blood pressure', 'bukhar', 'dard', 'sir dard', 'pet', 'khasi', 'zukam', 'ulti', 'sardi', 'حمى', 'ألم', 'صداع'];
+        $symptoms = ['fever', 'pain', 'headache', 'cough', 'cold', 'stomach', 'vomit', 'diarrhea', 'skin', 'rash', 'eye', 'ear', 'tooth', 'chest', 'breathing', 'diabetes', 'sugar', 'bp', 'blood pressure', 'diet', 'nutrition', 'weight loss', 'obesity', 'bukhar', 'dard', 'sir dard', 'pet', 'khasi', 'zukam', 'ulti', 'sardi', 'حمى', 'ألم', 'صداع'];
         foreach ($symptoms as $s) {
             if (str_contains($lower, $s)) return 'book_direct';
         }
@@ -1284,6 +1284,7 @@ class ChatController extends Controller
             'orthopedics' => ['Orthopedics', 'General Medicine'], 'pediatrics' => ['Pediatrics', 'General Medicine'],
             'gynecology' => ['Gynecology', 'General Medicine'], 'dermatology' => ['Dermatology', 'General Medicine'],
             'ent' => ['ENT', 'General Medicine'], 'dental' => ['Dental'],
+            'nutrition' => ['Clinical Nutrition'],
             'gastroenterology' => ['General Medicine'], 'neurology' => ['General Medicine'],
             'ophthalmology' => ['General Medicine'], 'pulmonology' => ['General Medicine'],
             'endocrinology' => ['General Medicine'],
@@ -1291,16 +1292,20 @@ class ChatController extends Controller
 
         $depts = $specialtyToDept[$state['specialty']] ?? ['General Medicine'];
 
+        // Bookable practitioners include specialist roles (dentist / dietitian) so a
+        // "tooth pain" or "diet" complaint routes to the hospital's dentist / dietitian.
+        $bookableRoles = ['doctor', 'hospital_admin', 'dentist', 'dietitian'];
+
         $doctors = Staff::where('hospital_id', $hospital->id)
             ->where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])
+            ->whereIn('role', $bookableRoles)
             ->whereIn('department', $depts)
             ->get(['id', 'name', 'department', 'consultation_duration_default']);
 
         if ($doctors->isEmpty()) {
             $doctors = Staff::where('hospital_id', $hospital->id)
                 ->where('is_active', true)
-                ->whereIn('role', ['doctor', 'hospital_admin'])
+                ->whereIn('role', $bookableRoles)
                 ->limit(3)->get(['id', 'name', 'department', 'consultation_duration_default']);
         }
 
