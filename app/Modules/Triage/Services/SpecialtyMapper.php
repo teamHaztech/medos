@@ -43,8 +43,9 @@ class SpecialtyMapper
         ],
         'nutrition' => [
             'diet', 'nutrition', 'dietitian', 'dietician', 'nutritionist',
+            'food', 'food doctor', 'diet doctor', 'diet plan', 'food intake', 'eating habit',
             'weight loss', 'weight gain', 'obesity', 'obese', 'overweight',
-            'underweight', 'malnutrition', 'meal plan', 'food intake', 'eating habit',
+            'underweight', 'malnutrition', 'meal plan',
             'khaana', 'aahaar', 'ghiza', 'wazan',
         ],
         'psychiatry' => [
@@ -55,6 +56,7 @@ class SpecialtyMapper
         'gastroenterology' => [
             'stomach', 'digestion', 'gastric', 'ulcer', 'liver', 'hepatitis',
             'abdominal pain', 'vomiting', 'diarrhea', 'constipation', 'acidity',
+            'food poisoning', 'food poison',
             'pet dard', 'ulti', 'dast', 'qabz', 'maeda', 'alam fi albatn',
         ],
         'nephrology/urology' => [
