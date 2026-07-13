@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Core\Models\AccountActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -52,10 +53,20 @@ class WebAuthController extends Controller
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
 
-            $role = is_object(Auth::user()->role) ? Auth::user()->role->value : Auth::user()->role;
+            $user = Auth::user();
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
+            AccountActivity::record($user, 'login', $request);
+
+            $role = is_object($user->role) ? $user->role->value : $user->role;
 
             return redirect()->intended(route($this->landingRoute($role)));
         }
+
+        // Record the failed attempt for the security log.
+        AccountActivity::record(null, 'failed_login', $request, $credentials['email']);
 
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
@@ -67,6 +78,8 @@ class WebAuthController extends Controller
      */
     public function logout(Request $request)
     {
+        AccountActivity::record(Auth::user(), 'logout', $request);
+
         Auth::logout();
 
         $request->session()->invalidate();

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Billing\Models\Bill;
+use App\Modules\Core\Models\AccountActivity;
+use App\Modules\Core\Models\AuditLog;
 use App\Modules\Core\Models\Hospital;
 use App\Modules\Core\Models\Staff;
 use App\Modules\Core\Services\RegionService;
@@ -520,6 +522,37 @@ class SuperAdminController extends Controller
         $target->update(['is_active' => $newState]);
 
         return back()->with('success', $target->email . ($newState ? ' activated.' : ' deactivated.'));
+    }
+
+    /**
+     * Drill-down for a single account: profile, login/logout security history, and
+     * recent audited actions — the "click an account and see what's going on" view.
+     */
+    public function userDetail(string $userId)
+    {
+        $user = User::findOrFail($userId);
+
+        $hospitalName = $user->hospital_id
+            ? Hospital::where('id', $user->hospital_id)->value('name')
+            : null;
+
+        $activity = AccountActivity::where('user_id', $user->id)
+            ->orderByDesc('created_at')->limit(100)->get();
+
+        $actions = collect();
+        if (\Illuminate\Support\Facades\Schema::hasTable('audit_logs')) {
+            $actions = AuditLog::where('user_id', $user->id)
+                ->orderByDesc('created_at')->limit(50)->get();
+        }
+
+        $stats = [
+            'logins'      => AccountActivity::where('user_id', $user->id)->where('action', 'login')->count(),
+            'last_login'  => $user->last_login_at,
+            'last_ip'     => $user->last_login_ip,
+            'actions'     => $actions->count(),
+        ];
+
+        return view('superadmin.user-detail', compact('user', 'hospitalName', 'activity', 'actions', 'stats'));
     }
 
     /** Permanently delete a user account (e.g. an unknown / test account). */

@@ -583,6 +583,7 @@ Route::middleware(['auth', 'super_admin'])->prefix('super-admin')->name('web.sup
     Route::post('hospitals/{hospitalId}/users/{userId}/reset-password', [\App\Http\Controllers\Web\SuperAdminController::class, 'resetUserPassword'])->name('hospitals.users.reset');
     // IAM — all user accounts across hospitals
     Route::get('users', [\App\Http\Controllers\Web\SuperAdminController::class, 'users'])->name('users.index');
+    Route::get('users/{userId}', [\App\Http\Controllers\Web\SuperAdminController::class, 'userDetail'])->name('users.show');
     Route::post('users/{userId}/toggle', [\App\Http\Controllers\Web\SuperAdminController::class, 'toggleUserActive'])->name('users.toggle');
     Route::delete('users/{userId}', [\App\Http\Controllers\Web\SuperAdminController::class, 'deleteUser'])->name('users.delete');
 });

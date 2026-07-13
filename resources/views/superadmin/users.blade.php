@@ -51,8 +51,8 @@
             @foreach($unknown as $u)
             <tr class="{{ $u->is_active ? '' : 'opacity-60' }}">
                 <td class="px-4 py-2.5">
-                    <p class="text-sm font-medium text-slate-800">{{ $u->name }}</p>
-                    <p class="text-xs text-slate-400">{{ $u->email }}</p>
+                    <a href="{{ route('web.superadmin.users.show', $u->id) }}" class="text-sm font-medium text-slate-800 hover:text-blue-600">{{ $u->name }}</a>
+                    <p class="text-xs text-slate-400">{{ $u->email }}@if($u->last_login_at) · last seen {{ $u->last_login_at->diffForHumans() }}@endif</p>
                 </td>
                 <td class="px-4 py-2.5">
                     <span class="text-xs px-2 py-0.5 rounded-full {{ $u->role_known ? ($roleColors[$u->role_str] ?? 'bg-slate-100 text-slate-600') : 'bg-red-100 text-red-700' }}">{{ sa_role_label($u->role_str) }}</span>
