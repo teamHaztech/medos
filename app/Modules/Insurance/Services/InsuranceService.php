@@ -228,7 +228,7 @@ class InsuranceService extends BaseModuleService
 
         // Check for existing pre-auth
         $preAuth = InsuranceTransaction::where('encounter_id', $encounter->id)
-            ->where('transaction_type', TransactionType::PreAuthorization->value)
+            ->where('type', TransactionType::PreAuthorization->value)
             ->where('status', 'approved')
             ->first();
 

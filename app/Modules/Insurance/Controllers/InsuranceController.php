@@ -193,11 +193,11 @@ class InsuranceController extends Controller
         }
 
         if ($request->filled('type')) {
-            $query->where('transaction_type', $request->input('type'));
+            $query->where('type', $request->input('type'));
         }
 
         if ($request->filled('provider')) {
-            $query->where('provider_name', $request->input('provider'));
+            $query->where('insurer_code', $request->input('provider'));
         }
 
         $transactions = $query->with(['patient', 'encounter'])

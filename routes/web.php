@@ -235,6 +235,14 @@ Route::middleware(['auth', 'module:billing'])->prefix('billing')->name('web.bill
     Route::get('{id}/print', [\App\Http\Controllers\Web\BillingWebController::class, 'printReceipt'])->name('print');
 });
 
+// Insurance claims (bill-centric)
+Route::middleware(['auth', 'module:billing'])->prefix('claims')->name('web.claims.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\InsuranceWebController::class, 'index'])->name('index');
+    Route::post('file/{billId}', [\App\Http\Controllers\Web\InsuranceWebController::class, 'fileClaim'])->name('file');
+    Route::post('{claimId}/approve', [\App\Http\Controllers\Web\InsuranceWebController::class, 'approveClaim'])->name('approve');
+    Route::post('{claimId}/deny', [\App\Http\Controllers\Web\InsuranceWebController::class, 'denyClaim'])->name('deny');
+});
+
 // Print views
 Route::middleware('auth')->group(function () {
     Route::get('prescriptions/{encounterId}/print', [\App\Http\Controllers\Web\BillingWebController::class, 'printPrescription'])->name('prescription.print');

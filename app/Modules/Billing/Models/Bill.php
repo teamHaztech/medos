@@ -34,6 +34,9 @@ class Bill extends Model
         'discount_amount',
         'discount_reason',
         'insurance_covered',
+        'insurance_transaction_id',
+        'insurer_name',
+        'policy_number',
         'deposit_applied',
         'patient_payable',
         'total_amount',
@@ -107,6 +110,14 @@ class Bill extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    /**
+     * The insurance claim linked to this bill (if any).
+     */
+    public function insuranceClaim(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Insurance\Models\InsuranceTransaction::class, 'insurance_transaction_id');
     }
 
     // ---------------------------------------------------------------

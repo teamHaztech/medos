@@ -73,7 +73,7 @@ class BillingWebController extends Controller
     public function show(string $id)
     {
         $bill = Bill::where('hospital_id', Auth::user()->hospital_id)
-            ->with(['patient', 'encounter.doctor', 'payments'])
+            ->with(['patient', 'encounter.doctor', 'payments', 'insuranceClaim'])
             ->findOrFail($id);
 
         // Charge-capture ledger for this bill's encounter (pending + billed), so staff

@@ -227,6 +227,10 @@
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
     Billing
 </a>
+<a href="{{ route('web.claims.index') }}" class="sidebar-link {{ request()->routeIs('web.claims.*') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    Insurance Claims
+</a>
 @endif
 @if(!isset($moduleOn) || $moduleOn('ai_receptionist'))
 <a href="/chat?hospital_id={{ auth()->user()?->hospital_id }}" target="_blank" class="sidebar-link">

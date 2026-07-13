@@ -157,6 +157,81 @@
                 </div>
             </div>
             @endif
+
+            {{-- Insurance claim --}}
+            @php $claim = $bill->insuranceClaim; @endphp
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-6" x-data="{ fileOpen:false, approveOpen:false, denyOpen:false }">
+                <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Insurance</h3>
+                    @if(! $claim && ! $bill->isCancelled())<button type="button" @click="fileOpen=true" class="btn-secondary text-sm">File claim</button>@endif
+                </div>
+                <div class="p-5">
+                    @if($claim)
+                    @php $cs = ['submitted'=>'bg-blue-100 text-blue-700','pending'=>'bg-amber-100 text-amber-700','approved'=>'bg-green-100 text-green-700','partially_approved'=>'bg-green-100 text-green-700','denied'=>'bg-red-100 text-red-700']; @endphp
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-800">{{ $claim->insurer_name ?? $claim->insurer_code }}</p>
+                            <p class="text-xs text-slate-400">Policy {{ $claim->policy_number ?? '—' }}{{ $claim->member_id ? ' · Member '.$claim->member_id : '' }}</p>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded-full {{ $cs[$claim->status] ?? 'bg-slate-100 text-slate-600' }}">{{ ucfirst(str_replace('_',' ', $claim->status)) }}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-sm mt-3">
+                        <div><span class="text-slate-400 text-xs">Requested</span><p class="font-medium text-slate-700">{{ $currency }}{{ number_format($claim->requested_amount, 2) }}</p></div>
+                        <div><span class="text-slate-400 text-xs">Approved</span><p class="font-medium text-slate-700">{{ $claim->approved_amount !== null ? $currency.number_format($claim->approved_amount, 2) : '—' }}</p></div>
+                    </div>
+                    @if($claim->denial_reason)<p class="text-xs text-red-600 mt-2">Denied: {{ $claim->denial_reason }}</p>@endif
+                    @if($claim->external_reference_id)<p class="text-xs text-slate-400 mt-2">Ref: {{ $claim->external_reference_id }}</p>@endif
+                    @if(in_array($claim->status, ['submitted','pending']))
+                    <div class="flex gap-2 mt-4">
+                        <button type="button" @click="approveOpen=true" class="btn-primary text-sm">Approve</button>
+                        <button type="button" @click="denyOpen=true" class="btn-secondary text-sm">Deny</button>
+                    </div>
+                    @elseif($claim->status === 'approved')
+                    <p class="text-xs text-green-600 mt-3">Coverage of {{ $currency }}{{ number_format($claim->approved_amount, 2) }} applied — patient pays {{ $currency }}{{ number_format($bill->patient_payable, 2) }}.</p>
+                    @endif
+                    @else
+                    <p class="text-sm text-slate-400">No claim filed. File a claim to submit this bill to the patient's insurer.</p>
+                    @endif
+                </div>
+
+                {{-- File claim modal --}}
+                <x-modal show="fileOpen" title="File Insurance Claim" max="lg">
+                    <form method="POST" action="{{ route('web.claims.file', $bill->id) }}" class="space-y-4">
+                        @csrf
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="block text-sm font-medium text-slate-700 mb-1">Insurer</label><input type="text" name="insurer_name" required maxlength="150" class="input-field" placeholder="e.g. Star Health"></div>
+                            <div><label class="block text-sm font-medium text-slate-700 mb-1">Insurer code <span class="text-slate-400 font-normal">(optional)</span></label><input type="text" name="insurer_code" maxlength="60" class="input-field"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="block text-sm font-medium text-slate-700 mb-1">Policy number</label><input type="text" name="policy_number" required maxlength="100" class="input-field"></div>
+                            <div><label class="block text-sm font-medium text-slate-700 mb-1">Member ID <span class="text-slate-400 font-normal">(optional)</span></label><input type="text" name="member_id" maxlength="100" class="input-field"></div>
+                        </div>
+                        <div><label class="block text-sm font-medium text-slate-700 mb-1">Claim amount ({{ $currency }})</label><input type="number" step="0.01" name="requested_amount" value="{{ number_format((float)$bill->total_amount, 2, '.', '') }}" required min="0" class="input-field"></div>
+                        <div class="flex justify-end gap-2 pt-1"><button type="button" @click="fileOpen=false" class="btn-secondary text-sm">Cancel</button><button type="submit" class="btn-primary">File claim</button></div>
+                    </form>
+                </x-modal>
+
+                @if($claim)
+                {{-- Approve modal --}}
+                <x-modal show="approveOpen" title="Approve Claim" max="md">
+                    <form method="POST" action="{{ route('web.claims.approve', $claim->id) }}" class="space-y-4">
+                        @csrf
+                        <div><label class="block text-sm font-medium text-slate-700 mb-1">Approved amount ({{ $currency }})</label><input type="number" step="0.01" name="approved_amount" value="{{ number_format((float)$claim->requested_amount, 2, '.', '') }}" required min="0" class="input-field"></div>
+                        <div><label class="block text-sm font-medium text-slate-700 mb-1">Authorization ref <span class="text-slate-400 font-normal">(optional)</span></label><input type="text" name="external_reference_id" maxlength="150" class="input-field"></div>
+                        <p class="text-xs text-slate-400">Applied as insurance coverage — reduces what the patient pays.</p>
+                        <div class="flex justify-end gap-2 pt-1"><button type="button" @click="approveOpen=false" class="btn-secondary text-sm">Cancel</button><button type="submit" class="btn-primary">Approve & apply</button></div>
+                    </form>
+                </x-modal>
+                {{-- Deny modal --}}
+                <x-modal show="denyOpen" title="Deny Claim" max="md">
+                    <form method="POST" action="{{ route('web.claims.deny', $claim->id) }}" class="space-y-4">
+                        @csrf
+                        <div><label class="block text-sm font-medium text-slate-700 mb-1">Reason</label><textarea name="denial_reason" rows="3" required maxlength="500" class="input-field" placeholder="Reason for denial"></textarea></div>
+                        <div class="flex justify-end gap-2 pt-1"><button type="button" @click="denyOpen=false" class="btn-secondary text-sm">Cancel</button><button type="submit" class="btn-primary">Mark denied</button></div>
+                    </form>
+                </x-modal>
+                @endif
+            </div>
         </div>
 
         {{-- Right: Totals + Payment --}}

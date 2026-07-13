@@ -508,9 +508,10 @@ class ChargeCapture
     /**
      * Recompute amount_paid / balance_due / payment_status from the payment ledger.
      * Mirrors BillingWebController::recomputeBill so the ledger stays the single
-     * source of truth for payment state.
+     * source of truth for payment state. Public so other flows (e.g. applying an
+     * approved insurance claim) recompute through the same math.
      */
-    private function recomputePayments(Bill $bill): void
+    public function recomputePayments(Bill $bill): void
     {
         $paid     = round((float) $bill->payments()->sum('amount'), 2);
         $refunded = round((float) abs($bill->payments()->where('amount', '<', 0)->sum('amount')), 2);
