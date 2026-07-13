@@ -21,6 +21,7 @@
         <button type="button" @click="tab='census'" :class="tab==='census'?'bg-blue-600 text-white':'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Kitchen Census</button>
         <button type="button" @click="tab='assess'" :class="tab==='assess'?'bg-blue-600 text-white':'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Nutrition Assessments</button>
         <button type="button" @click="tab='catalog'" :class="tab==='catalog'?'bg-blue-600 text-white':'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Diet Catalogue</button>
+        <button type="button" @click="tab='toolkit'" :class="tab==='toolkit'?'bg-blue-600 text-white':'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Nutrition Toolkit</button>
         <div class="ml-auto flex gap-2">
             <button type="button" @click="openAssess()" class="btn-secondary text-sm">+ Assessment</button>
             <button type="button" @click="openOrder()" class="btn-primary">+ Order diet</button>
@@ -130,6 +131,81 @@
                     @endforeach
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    {{-- NUTRITION TOOLKIT --}}
+    <div x-show="tab==='toolkit'" style="display:none" x-data="calc()">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {{-- Inputs --}}
+            <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-5">
+                <h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Requirement Calculator</h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Sex</label><select x-model="sex" class="input-field"><option value="male">Male</option><option value="female">Female</option></select></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Age (yrs)</label><input type="number" x-model.number="age" min="1" max="120" class="input-field"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Weight (kg)</label><input type="number" step="0.1" x-model.number="weight" class="input-field"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Height (cm)</label><input type="number" step="0.1" x-model.number="height" class="input-field"></div>
+                    <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Activity level</label>
+                        <select x-model="activity" class="input-field">
+                            <option value="1.2">Sedentary (bed rest / little activity)</option>
+                            <option value="1.375">Light (1–3 days/wk)</option>
+                            <option value="1.55">Moderate (3–5 days/wk)</option>
+                            <option value="1.725">Active (6–7 days/wk)</option>
+                            <option value="1.9">Very active / physical job</option>
+                        </select>
+                    </div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Calorie goal</label>
+                        <select x-model="goal" class="input-field"><option value="maintenance">Maintain</option><option value="loss">Weight loss</option><option value="gain">Weight gain</option></select>
+                    </div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Protein need (clinical)</label>
+                        <select x-model="condition" class="input-field">
+                            <option value="maintenance">Healthy adult (0.8–1.0)</option>
+                            <option value="older">Older adult (1.0–1.2)</option>
+                            <option value="muscle">Muscle gain / athlete (1.4)</option>
+                            <option value="catabolic">Catabolic / critical (1.5–2.0)</option>
+                            <option value="ckd_nd">CKD, no dialysis (0.6–0.8)</option>
+                            <option value="ckd_dialysis">CKD on dialysis (1.0–1.2)</option>
+                            <option value="pregnancy">Pregnancy / lactation (1.1)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Results --}}
+            <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-3 content-start">
+                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">BMI</p><p class="text-2xl font-bold text-slate-800" x-text="bmi ? bmi.toFixed(1) : '—'"></p><p class="text-xs" :class="bmiColor" x-text="bmiCat"></p></div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Ideal body weight</p><p class="text-2xl font-bold text-slate-800"><span x-text="ibw ? r(ibw) : '—'"></span> <span class="text-sm text-slate-400">kg</span></p></div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">BMR</p><p class="text-2xl font-bold text-slate-800"><span x-text="bmr ? r(bmr) : '—'"></span></p><p class="text-xs text-slate-400">kcal/day at rest</p></div>
+                <div class="bg-white rounded-xl border-2 border-blue-200 bg-blue-50/40 p-4"><p class="text-xs text-blue-600 font-semibold">Daily calorie target</p><p class="text-3xl font-black text-blue-700"><span x-text="calorieGoal ? r(calorieGoal) : '—'"></span></p><p class="text-xs text-slate-500">kcal · TDEE <span x-text="tdee?r(tdee):'—'"></span></p></div>
+                <div class="bg-white rounded-xl border-2 border-green-200 bg-green-50/40 p-4"><p class="text-xs text-green-700 font-semibold">Protein target</p><p class="text-3xl font-black text-green-700"><span x-text="protein ? r(protein) : '—'"></span> <span class="text-sm">g</span></p><p class="text-xs text-slate-500">≈ <span x-text="proteinRange"></span> g/day</p></div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Fluid target</p><p class="text-2xl font-bold text-slate-800"><span x-text="fluid ? (fluid/1000).toFixed(1) : '—'"></span> <span class="text-sm text-slate-400">L</span></p><p class="text-xs text-slate-400">≈ 30 ml/kg</p></div>
+                <div class="col-span-2 md:col-span-3 text-xs text-slate-400 px-1">BMR by Mifflin-St Jeor; protein by clinical g/kg factor. Clinical judgement required — adjust for oedema, obesity (use adjusted/ideal weight), and organ function.</div>
+            </div>
+        </div>
+
+        {{-- Quick advice tables --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div class="px-5 py-3 border-b border-slate-200"><h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Protein Requirements (g/kg/day)</h4></div>
+                <table class="w-full text-sm">
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach([['Healthy adult (maintenance)','0.8 – 1.0'],['Older adult (≥65 yrs)','1.0 – 1.2'],['Muscle gain / athlete','1.2 – 1.6'],['Acute illness / catabolic','1.2 – 1.5'],['Critical illness / burns / trauma','1.5 – 2.0'],['CKD, not on dialysis','0.6 – 0.8'],['CKD, on dialysis','1.0 – 1.2'],['Pregnancy / lactation','1.1 – 1.3']] as $r)
+                        <tr><td class="px-4 py-2 text-slate-700">{{ $r[0] }}</td><td class="px-4 py-2 text-right font-semibold text-slate-800">{{ $r[1] }}</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div class="px-5 py-3 border-b border-slate-200"><h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Therapeutic Diet — Quick Advice</h4></div>
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 border-b border-slate-200"><tr><th class="table-header">Condition</th><th class="table-header">Diet & key points</th></tr></thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach([['Diabetes','Consistent-carbohydrate; even carbs across meals, high fibre, limit sugar'],['Hypertension / cardiac','Low sodium (<2 g/day), DASH pattern, limit saturated fat'],['Chronic kidney disease','Low protein (see table), restrict K⁺, phosphate, sodium; fluid per output'],['Liver disease','Adequate calories, moderate protein, low sodium if ascites'],['Post-op / wound healing','High-protein high-calorie, vitamin C & zinc'],['Dysphagia','IDDSI texture-modified (soft/minced/pureed), thickened fluids'],['Obesity','500 kcal deficit, high protein/fibre for satiety']] as $r)
+                        <tr><td class="px-4 py-2 text-slate-800 font-medium align-top">{{ $r[0] }}</td><td class="px-4 py-2 text-slate-600">{{ $r[1] }}</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -287,6 +363,27 @@ function nutrition() {
         async searchPatients() { this.patientResults = this.patientSearch.trim().length < 2 ? [] : await this._find(this.patientSearch.trim()); },
         async searchAssess() { this.asResults = this.asSearch.trim().length < 2 ? [] : await this._find(this.asSearch.trim()); },
         pickPatient(p) { this.selectedPatient = p; this.patientResults = []; this.patientSearch = ''; },
+    };
+}
+
+function calc() {
+    return {
+        sex: 'male', age: 35, weight: 65, height: 165, activity: '1.375', goal: 'maintenance', condition: 'maintenance',
+        proteinFactors: { maintenance: 0.9, older: 1.1, muscle: 1.4, catabolic: 1.7, ckd_nd: 0.7, ckd_dialysis: 1.1, pregnancy: 1.2 },
+        get w() { return parseFloat(this.weight) || 0; },
+        get h() { return parseFloat(this.height) || 0; },
+        get a() { return parseFloat(this.age) || 0; },
+        get bmi() { if (!this.w || !this.h) return 0; const m = this.h / 100; return this.w / (m * m); },
+        get bmiCat() { const b = this.bmi; if (!b) return '—'; if (b < 18.5) return 'Underweight'; if (b < 25) return 'Normal'; if (b < 30) return 'Overweight'; return 'Obese'; },
+        get bmiColor() { const b = this.bmi; if (b >= 18.5 && b < 25) return 'text-green-600'; if (!b) return 'text-slate-400'; return b < 18.5 || b >= 30 ? 'text-red-600' : 'text-amber-600'; },
+        get ibw() { const inches = this.h / 2.54; const base = this.sex === 'male' ? 50 : 45.5; return Math.max(0, base + 2.3 * (inches - 60)); },
+        get bmr() { if (!this.w || !this.h || !this.a) return 0; const base = 10 * this.w + 6.25 * this.h - 5 * this.a; return this.sex === 'male' ? base + 5 : base - 161; },
+        get tdee() { return this.bmr * parseFloat(this.activity); },
+        get calorieGoal() { let t = this.tdee; if (this.goal === 'loss') t -= 500; if (this.goal === 'gain') t += 500; return Math.max(0, t); },
+        get protein() { return this.w * (this.proteinFactors[this.condition] || 0.9); },
+        get proteinRange() { const f = this.proteinFactors[this.condition] || 0.9; return Math.round(this.w * (f - 0.1)) + '–' + Math.round(this.w * (f + 0.1)); },
+        get fluid() { return this.w * 30; },
+        r(n) { return Math.round(n); },
     };
 }
 </script>
