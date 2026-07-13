@@ -120,7 +120,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
 // Inpatient (IP) + ADT — wards, beds, admissions, case sheet
 // ---------------------------------------------------------------
 
-Route::middleware('auth')->prefix('ip')->name('web.ip.')->group(function () {
+Route::middleware(['auth', 'module:inpatient'])->prefix('ip')->name('web.ip.')->group(function () {
     Route::get('/', [InpatientController::class, 'dashboard'])->name('dashboard');
     Route::get('adt', [InpatientController::class, 'adt'])->name('adt');
     Route::get('admissions', [InpatientController::class, 'admissions'])->name('admissions');
@@ -180,7 +180,7 @@ Route::middleware('auth')->prefix('doctor')->name('web.doctor.')->group(function
 // Lab Module
 // ---------------------------------------------------------------
 
-Route::middleware('auth')->prefix('lab')->name('web.lab.')->group(function () {
+Route::middleware(['auth', 'module:lab'])->prefix('lab')->name('web.lab.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\LabController::class, 'dashboard'])->name('dashboard');
     Route::get('bookings', [\App\Http\Controllers\Web\LabController::class, 'bookings'])->name('bookings');
     Route::get('slots', [\App\Http\Controllers\Web\LabController::class, 'slots'])->name('slots');
@@ -197,7 +197,7 @@ Route::middleware('auth')->prefix('lab')->name('web.lab.')->group(function () {
 // Pharmacy Module
 // ---------------------------------------------------------------
 
-Route::middleware('auth')->prefix('pharmacy')->name('web.pharmacy.')->group(function () {
+Route::middleware(['auth', 'module:pharmacy'])->prefix('pharmacy')->name('web.pharmacy.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\PharmacyController::class, 'dashboard'])->name('dashboard');
     Route::post('{id}/dispense', [\App\Http\Controllers\Web\PharmacyController::class, 'dispense'])->name('dispense');
     Route::get('stock', [\App\Http\Controllers\Web\PharmacyController::class, 'stock'])->name('stock');

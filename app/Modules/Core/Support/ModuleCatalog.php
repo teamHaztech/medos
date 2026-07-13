@@ -30,6 +30,11 @@ class ModuleCatalog
         'clinical_pathways'    => ['name' => 'Clinical Pathways', 'description' => 'Care-pathway templates and tracking', 'category' => 'Clinical'],
         'consent'              => ['name' => 'Consent Management', 'description' => 'Consent forms and compliance', 'category' => 'Clinical'],
 
+        // Core operations (turn off for a small clinic that doesn't run them)
+        'lab'                  => ['name' => 'Laboratory', 'description' => 'Lab orders, results and sample collection', 'category' => 'Core Operations'],
+        'pharmacy'             => ['name' => 'Pharmacy', 'description' => 'Dispensing and stock management', 'category' => 'Core Operations'],
+        'inpatient'            => ['name' => 'Inpatient / IPD', 'description' => 'Wards, beds, admissions and the IP case sheet', 'category' => 'Core Operations'],
+
         // Operations & quality
         'inventory'            => ['name' => 'Inventory', 'description' => 'Stock ledger and reorder alerts', 'category' => 'Operations & Quality'],
         'incidents'            => ['name' => 'Incident Reporting', 'description' => 'Safety incidents and CAPA', 'category' => 'Operations & Quality'],
@@ -45,6 +50,7 @@ class ModuleCatalog
     public const NEW_MODULE_KEYS = [
         'vaccination', 'dietary', 'dental', 'clinical_pathways', 'consent',
         'inventory', 'incidents', 'housekeeping', 'voice_calls',
+        'lab', 'pharmacy', 'inpatient',
     ];
 
     /** @return array<string, array> grouped by category, preserving order. */
