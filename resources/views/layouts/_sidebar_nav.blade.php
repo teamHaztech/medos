@@ -353,6 +353,10 @@
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18v4H3V3zm2 6h14l-1 12H6L5 9zm4 3v6m6-6v6"/></svg>
     Clinical Nutrition
 </a>
+<a href="{{ route('web.admin.appointments') }}" class="sidebar-link {{ request()->routeIs('web.admin.appointments*') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+    Appointments
+</a>
 <a href="{{ route('web.admin.patients') }}" class="sidebar-link {{ request()->routeIs('web.admin.patients*') ? 'active' : '' }}">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4z"/></svg>
     Patients
