@@ -496,9 +496,21 @@ class AdminWebController extends Controller
         return view('admin.staff', compact('staff'));
     }
 
+    /**
+     * The hospital a hospital-scoped admin screen should act on. Normally the
+     * logged-in user's own hospital; for a platform-level Super Admin (who has
+     * no home hospital) it falls back to the first active hospital so Settings
+     * and Analytics still show real data instead of an empty screen.
+     */
+    private function effectiveHospitalId(): ?string
+    {
+        return Auth::user()->hospital_id
+            ?: Hospital::where('is_active', true)->orderBy('created_at')->value('id');
+    }
+
     public function settings()
     {
-        $hospital = Hospital::find(Auth::user()->hospital_id);
+        $hospital = Hospital::find($this->effectiveHospitalId());
         $enabled = $hospital?->modules_enabled;
         $moduleList = collect(\App\Modules\Core\Support\ModuleCatalog::MODULES)
             ->map(fn ($m, $k) => [
@@ -593,7 +605,7 @@ class AdminWebController extends Controller
     /** Persist the hospital's GST identity (GSTIN + state) for tax invoices. */
     public function saveGstDetails(Request $request)
     {
-        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
         $v = $request->validate([
             'gstin' => 'nullable|string|max:20',
             'state' => 'nullable|string|max:60',
@@ -610,7 +622,7 @@ class AdminWebController extends Controller
     /** Persist the hospital's patient-facing areas (waiting area, lab/collection area). */
     public function saveAreas(Request $request)
     {
-        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
         $v = $request->validate([
             'waiting'         => 'nullable|string|max:120',
             'lab'             => 'nullable|string|max:120',
@@ -637,7 +649,7 @@ class AdminWebController extends Controller
     /** Persist which modules are enabled for this hospital. */
     public function updateModules(Request $request)
     {
-        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
         $valid = \App\Modules\Core\Support\ModuleCatalog::keys();
         $submitted = (array) $request->input('modules', []);
 
@@ -660,7 +672,7 @@ class AdminWebController extends Controller
 
     public function saveSettings(Request $request)
     {
-        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
 
         $v = $request->validate([
             'name'    => 'required|string|max:255',
@@ -691,7 +703,7 @@ class AdminWebController extends Controller
 
     public function saveOperatingHours(Request $request)
     {
-        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
 
         $request->validate(['hours' => 'required|array']);
 
@@ -705,7 +717,7 @@ class AdminWebController extends Controller
     /** Persist the hospital's department list to config. */
     public function saveDepartments(Request $request)
     {
-        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
         $request->validate([
             'departments'          => 'array',
             'departments.*.name'   => 'required|string|max:100',
@@ -725,7 +737,7 @@ class AdminWebController extends Controller
     /** Persist AI provider settings (key is kept server-side; blank leaves it unchanged). */
     public function saveAiSettings(Request $request)
     {
-        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
         $v = $request->validate([
             'provider' => 'required|string|max:40',
             'model'    => 'required|string|max:80',
@@ -748,7 +760,7 @@ class AdminWebController extends Controller
     /** Persist WhatsApp integration settings (token kept server-side; blank leaves it unchanged). */
     public function saveWhatsappSettings(Request $request)
     {
-        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
         $v = $request->validate([
             'number'   => 'nullable|string|max:30',
             'provider' => 'required|string|max:40',
@@ -771,7 +783,7 @@ class AdminWebController extends Controller
     /** Persist the hospital's external billing-software integration config. */
     public function saveBillingIntegration(Request $request)
     {
-        $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
         $v = $request->validate([
             'enabled'        => 'nullable|boolean',
             'connector'      => 'required|string|max:60',
@@ -1129,7 +1141,7 @@ class AdminWebController extends Controller
 
     public function analytics(Request $request, RevenueInsights $insights)
     {
-        $hospitalId = Auth::user()->hospital_id;
+        $hospitalId = $this->effectiveHospitalId();
         $period     = $request->get('period', 'month');
         $r          = $insights->range($period);
 
