@@ -20,11 +20,43 @@
         <button type="button" @click="tab='items'" :class="tab==='items' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Items</button>
         <button type="button" @click="tab='movements'" :class="tab==='movements' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Movements</button>
         <button type="button" @click="tab='expiring'" :class="tab==='expiring' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Expiring ({{ $counts['expiring'] }})</button>
-        <div class="ml-auto flex gap-2">
+        <div class="ml-auto flex flex-wrap gap-2">
+            <a href="{{ route('web.inventory.export') }}" class="btn-secondary">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Export
+            </a>
+            <button type="button" @click="showImport = true" class="btn-secondary">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-6l-4-4m0 0L8 6m4-4v12"/></svg>
+                Import
+            </button>
             <button type="button" @click="openItem()" class="btn-primary">+ Add item</button>
             <button type="button" @click="openMove('')" class="btn-primary">Record stock</button>
         </div>
     </div>
+
+    {{-- Bulk-import result --}}
+    @if(session('import_result'))
+        @php $ir = session('import_result'); @endphp
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-slate-700">Import result</h3>
+                <span class="text-xs text-slate-400">{{ count($ir['created']) }} added · {{ count($ir['skipped']) }} skipped · {{ count($ir['errors']) }} errors</span>
+            </div>
+            @if(count($ir['created']))
+                <p class="text-xs text-slate-500">Added: {{ collect($ir['created'])->pluck('name')->take(30)->implode(', ') }}{{ count($ir['created']) > 30 ? '…' : '' }}</p>
+            @endif
+            @if(count($ir['skipped']))
+                <p class="text-xs text-amber-600 mt-1"><b>Skipped</b> (already exist): {{ collect($ir['skipped'])->pluck('name')->take(30)->implode(', ') }}</p>
+            @endif
+            @if(count($ir['errors']))
+                <div class="text-xs text-red-600 mt-1"><b>Errors:</b>
+                    <ul class="list-disc list-inside">
+                        @foreach($ir['errors'] as $e)<li>Row {{ $e['row'] ?? '?' }}{{ !empty($e['name']) ? ' ('.$e['name'].')' : '' }} — {{ $e['reason'] }}</li>@endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+    @endif
 
     {{-- ITEMS --}}
     <div x-show="tab==='items'" class="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -166,13 +198,45 @@
             </div>
         </form>
     </x-modal>
+
+    {{-- Import Items Modal --}}
+    <x-modal show="showImport" title="Import Inventory Items (CSV)" max="2xl">
+        <form method="POST" action="{{ route('web.inventory.import.run') }}" enctype="multipart/form-data" class="space-y-4">
+            @csrf
+            <div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                <p class="text-sm font-medium text-slate-700 mb-1">Columns: <span class="font-mono text-xs">name, code, category, unit, reorder_min, reorder_max, current_stock</span></p>
+                <ul class="text-xs text-slate-500 space-y-0.5 list-disc list-inside">
+                    <li><b>name</b> is required. <b>category</b>: {{ implode(', ', array_keys(\App\Modules\Inventory\Models\InventoryItem::CATEGORIES)) }} (unknown → other).</li>
+                    <li><b>unit</b>: {{ implode(', ', \App\Modules\Inventory\Models\InventoryItem::UNITS) }} (unknown → piece).</li>
+                    <li>Items with a duplicate name are skipped — safe to re-run the same file.</li>
+                </ul>
+                <a href="{{ route('web.inventory.import.template') }}" class="btn-primary mt-2 text-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Download CSV template
+                </a>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Upload CSV file</label>
+                <input type="file" name="file" accept=".csv,.txt" class="block w-full text-sm text-slate-600 border border-slate-300 rounded-lg p-2">
+            </div>
+            <div class="text-center text-xs text-slate-400">— or paste rows below —</div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Paste CSV rows</label>
+                <textarea name="rows" rows="5" class="input-field font-mono text-xs" placeholder="name,code,category,unit,reorder_min,reorder_max,current_stock&#10;Surgical Gloves (M),GLV-M,surgical,box,10,100,50"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" @click="showImport = false" class="btn-secondary">Cancel</button>
+                <button type="submit" class="btn-primary">Import Items</button>
+            </div>
+        </form>
+    </x-modal>
 </div>
 
 @push('scripts')
 <script>
 function inv() {
     return {
-        tab: 'items', moveModal: false, itemModal: false,
+        tab: 'items', moveModal: false, itemModal: false, showImport: false,
         mv: { item_id: '', type: 'receipt', quantity: '' },
         item: { id: '', name: '', code: '', category: 'consumable', unit: 'piece', reorder_min: 0, reorder_max: 0, current_stock: 0, is_active: true },
         openMove(itemId) { this.mv = { item_id: itemId || '', type: 'receipt', quantity: '' }; this.moveModal = true; },

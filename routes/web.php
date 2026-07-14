@@ -371,6 +371,9 @@ Route::middleware(['auth', 'module:housekeeping'])->prefix('housekeeping')->name
 // ---------------------------------------------------------------
 Route::middleware(['auth', 'module:inventory'])->prefix('inventory')->name('web.inventory.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\InventoryController::class, 'index'])->name('index');
+    Route::get('export', [\App\Http\Controllers\Web\InventoryController::class, 'exportItems'])->name('export');
+    Route::get('import/template', [\App\Http\Controllers\Web\InventoryController::class, 'importTemplate'])->name('import.template');
+    Route::post('import', [\App\Http\Controllers\Web\InventoryController::class, 'importItems'])->name('import.run');
     Route::post('move', [\App\Http\Controllers\Web\InventoryController::class, 'move'])->name('move');
     Route::post('items', [\App\Http\Controllers\Web\InventoryController::class, 'storeItem'])->name('items.store');
     Route::put('items/{id}', [\App\Http\Controllers\Web\InventoryController::class, 'updateItem'])->name('items.update');
