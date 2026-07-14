@@ -9,11 +9,66 @@
     {{-- Header --}}
     <div class="flex items-center justify-between mb-6">
         <p class="text-sm text-slate-500">Manage hospital staff members and their roles</p>
-        <button @click="showAddModal = true" class="btn-primary">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Add Staff
-        </button>
+        <div class="flex items-center gap-2">
+            <button @click="showImportModal = true" class="btn-secondary">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-6l-4-4m0 0L8 6m4-4v12"/></svg>
+                Import
+            </button>
+            <button @click="showAddModal = true" class="btn-primary">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add Staff
+            </button>
+        </div>
     </div>
+
+    {{-- Bulk-import result (created logins shown once — share securely) --}}
+    @if(session('import_result'))
+        @php $ir = session('import_result'); @endphp
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-slate-700">Import result</h3>
+                <span class="text-xs text-slate-400">{{ count($ir['created']) }} created · {{ count($ir['skipped']) }} skipped · {{ count($ir['errors']) }} errors</span>
+            </div>
+            @if(count($ir['created']))
+                <p class="text-xs text-slate-500 mb-2">Share these logins securely — passwords are shown only once. Ask staff to change them after first login.</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200">
+                                <th class="text-left text-xs font-medium text-slate-500 pb-2">Name</th>
+                                <th class="text-left text-xs font-medium text-slate-500 pb-2">Email</th>
+                                <th class="text-left text-xs font-medium text-slate-500 pb-2">Password</th>
+                                <th class="text-left text-xs font-medium text-slate-500 pb-2">Role</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            @foreach($ir['created'] as $c)
+                                <tr>
+                                    <td class="py-2 font-medium text-slate-700">{{ $c['name'] }}</td>
+                                    <td class="py-2 font-mono text-xs text-slate-600">{{ $c['email'] }}</td>
+                                    <td class="py-2 font-mono text-xs text-slate-600">{{ $c['password'] }}</td>
+                                    <td class="py-2 capitalize text-slate-600">{{ str_replace('_', ' ', $c['role']) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+            @if(count($ir['skipped']))
+                <p class="text-xs text-amber-600 mt-3"><b>Skipped</b> (already exist): {{ collect($ir['skipped'])->pluck('email')->implode(', ') }}</p>
+            @endif
+            @if(count($ir['errors']))
+                <div class="text-xs text-red-600 mt-2">
+                    <b>Errors:</b>
+                    <ul class="list-disc list-inside mt-1">
+                        @foreach($ir['errors'] as $e)
+                            <li>Row {{ $e['row'] ?? '?' }}{{ !empty($e['email']) ? ' ('.$e['email'].')' : '' }} — {{ $e['reason'] }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+    @endif
 
     {{-- Staff Table --}}
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -238,6 +293,42 @@
                 </div>
             </form>
     </x-modal>
+
+    {{-- Import Staff Modal --}}
+    <x-modal show="showImportModal" title="Import Staff from CSV" max="2xl">
+            <form method="POST" action="{{ route('web.admin.staff.import') }}" enctype="multipart/form-data" class="space-y-4">
+                @csrf
+                <div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                    <p class="text-sm font-medium text-slate-700 mb-1">Columns: <span class="font-mono text-xs">name, email, password, role, department, phone</span></p>
+                    <ul class="text-xs text-slate-500 space-y-0.5 list-disc list-inside">
+                        <li><b>name</b> and <b>email</b> are required. Blank <b>password</b> → auto-generated (shown after import).</li>
+                        <li><b>role</b>: doctor, nurse, receptionist, pharmacist, lab_tech, billing_staff, dentist, dietitian, hospital_admin (blank → receptionist).</li>
+                        <li>Duplicate emails are skipped — safe to re-run the same file when setting up a new hospital.</li>
+                    </ul>
+                    <a href="{{ route('web.admin.staff.import.template') }}" class="btn-primary mt-2 text-sm">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Download CSV template
+                    </a>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Upload CSV file</label>
+                    <input type="file" name="file" accept=".csv,.txt" class="block w-full text-sm text-slate-600 border border-slate-300 rounded-lg p-2">
+                </div>
+
+                <div class="text-center text-xs text-slate-400">— or paste rows below —</div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Paste CSV rows</label>
+                    <textarea name="rows" rows="5" class="input-field font-mono text-xs" placeholder="name,email,password,role,department,phone&#10;Dr. Asha Rao,asha@example.com,,doctor,Cardiology,9876500001&#10;Nurse John,john@example.com,,nurse,,9876500002"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" @click="showImportModal = false" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Import Staff</button>
+                </div>
+            </form>
+    </x-modal>
 </div>
 @endsection
 
@@ -246,6 +337,7 @@
 function staffPage() {
     return {
         showAddModal: false,
+        showImportModal: false,
         showEditModal: false,
         editingStaff: {},
 
