@@ -123,7 +123,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-semibold text-slate-700">Vitals</h3>
-                @if($admission->isActive())<button @click="vOpen = true" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Record</button>@endif
+                @if($admission->isActive())<button @click="vOpen = true" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Record</button>@endif
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
@@ -156,7 +156,7 @@
                 <h3 class="text-sm font-semibold text-slate-700">Intake / Output
                     <span class="ml-1 text-xs font-normal {{ $admission->fluidBalance() < 0 ? 'text-amber-600' : 'text-slate-400' }}">(balance {{ $admission->fluidBalance() > 0 ? '+' : '' }}{{ number_format($admission->fluidBalance()) }} ml)</span>
                 </h3>
-                @if($admission->isActive())<button @click="ioOpen = true" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Record</button>@endif
+                @if($admission->isActive())<button @click="ioOpen = true" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Record</button>@endif
             </div>
             <div class="space-y-2 max-h-72 overflow-y-auto">
                 @forelse($admission->intakeOutputs as $io)
@@ -181,7 +181,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-semibold text-slate-700">Doctor &amp; Nurse Notes / Orders</h3>
-            @if($admission->isActive())<button @click="noteOpen = true" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add Note</button>@endif
+            @if($admission->isActive())<button @click="noteOpen = true" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Add Note</button>@endif
         </div>
         <div class="space-y-3">
             @forelse($admission->notes as $n)

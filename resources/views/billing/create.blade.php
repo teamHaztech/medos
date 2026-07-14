@@ -39,7 +39,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Line Items</h3>
-                <button type="button" @click="addItem()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add Item</button>
+                <button type="button" @click="addItem()" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Add Item</button>
             </div>
 
             <div class="overflow-x-auto">

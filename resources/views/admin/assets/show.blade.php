@@ -74,7 +74,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-semibold text-slate-700">Warranty / AMC / CMC History</h3>
-                <button @click="openWAdd()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add</button>
+                <button @click="openWAdd()" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Add</button>
             </div>
             <div class="space-y-3">
                 @forelse($asset->warranties as $w)
@@ -89,10 +89,10 @@
                             </div>
                             <div class="flex items-center gap-2">
                                 <button type="button" @click="openRenew({ id:'{{ $w->id }}' })" class="text-green-600 hover:text-green-800 text-xs">Renew</button>
-                                <button type="button" @click="openWEdit({ id:'{{ $w->id }}', warranty_type: @js($w->warranty_type), start_date: '{{ optional($w->start_date)->toDateString() }}', end_date: '{{ optional($w->end_date)->toDateString() }}', vendor_contact: @js($w->vendor_contact ?? ''), terms: @js($w->terms ?? ''), reminder_days_before_expiry: {{ $w->reminder_days_before_expiry }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                                <button type="button" @click="openWEdit({ id:'{{ $w->id }}', warranty_type: @js($w->warranty_type), start_date: '{{ optional($w->start_date)->toDateString() }}', end_date: '{{ optional($w->end_date)->toDateString() }}', vendor_contact: @js($w->vendor_contact ?? ''), terms: @js($w->terms ?? ''), reminder_days_before_expiry: {{ $w->reminder_days_before_expiry }} })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
                                 <form method="POST" action="{{ route('web.admin.assets.warranties.destroy', $w->id) }}" onsubmit="return confirm('Remove this warranty?')">
                                     @csrf @method('DELETE')
-                                    <button class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+                                    <button class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button>
                                 </form>
                             </div>
                         </div>
@@ -115,7 +115,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-semibold text-slate-700">Maintenance History</h3>
-                <button @click="mOpen = true" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add</button>
+                <button @click="mOpen = true" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Add</button>
             </div>
             <div class="space-y-3">
                 @forelse($asset->maintenanceLogs as $m)
@@ -129,7 +129,7 @@
                                 @if($m->cost)<span class="text-xs text-slate-600">{{ $cur }}{{ number_format($m->cost, 2) }}</span>@endif
                                 <form method="POST" action="{{ route('web.admin.assets.maintenance.destroy', $m->id) }}" onsubmit="return confirm('Remove this log?')">
                                     @csrf @method('DELETE')
-                                    <button class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+                                    <button class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button>
                                 </form>
                             </div>
                         </div>
@@ -151,7 +151,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-semibold text-slate-700">Calibration Records</h3>
-                <button @click="cOpen = true" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add</button>
+                <button @click="cOpen = true" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Add</button>
             </div>
             <div class="space-y-3">
                 @forelse($asset->calibrations as $cal)
@@ -166,7 +166,7 @@
                             </div>
                             <form method="POST" action="{{ route('web.admin.assets.calibrations.destroy', $cal->id) }}" onsubmit="return confirm('Remove this calibration record?')">
                                 @csrf @method('DELETE')
-                                <button class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+                                <button class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button>
                             </form>
                         </div>
                         <p class="text-xs text-slate-500 mt-1">
@@ -189,7 +189,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-semibold text-slate-700">Service Requests / Breakdowns</h3>
-                <button @click="srOpen = true" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Report</button>
+                <button @click="srOpen = true" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Report</button>
             </div>
             <div class="space-y-3">
                 @forelse($asset->serviceRequests as $t)
@@ -235,7 +235,7 @@
                 <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Terms / coverage</label><textarea name="terms" x-model="w.terms" rows="2" class="input-field"></textarea></div>
                 <div class="col-span-2 flex items-center gap-3 pt-2">
                     <button type="submit" class="btn-primary px-5 py-2.5" x-text="wMode === 'edit' ? 'Save Changes' : 'Add Warranty'"></button>
-                    <button type="button" @click="wOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="wOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>
@@ -250,7 +250,7 @@
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Terms</label><textarea name="terms" rows="2" class="input-field"></textarea></div>
                 <div class="flex items-center gap-3 pt-1">
                     <button type="submit" class="btn-primary px-5 py-2.5">Renew</button>
-                    <button type="button" @click="rOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="rOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>
@@ -270,7 +270,7 @@
                 <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Notes</label><textarea name="notes" rows="2" class="input-field"></textarea></div>
                 <div class="col-span-2 flex items-center gap-3 pt-2">
                     <button type="submit" class="btn-primary px-5 py-2.5">Add Log</button>
-                    <button type="button" @click="mOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="mOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>
@@ -291,7 +291,7 @@
                 <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Notes</label><textarea name="notes" rows="2" class="input-field"></textarea></div>
                 <div class="col-span-2 flex items-center gap-3 pt-2">
                     <button type="submit" class="btn-primary px-5 py-2.5">Add Calibration</button>
-                    <button type="button" @click="cOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="cOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>
@@ -305,7 +305,7 @@
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Disposal method</label><input type="text" name="disposal_method" class="input-field" placeholder="Returned to vendor, scrapped, e-waste..."></div>
                 <div class="flex items-center gap-3 pt-1">
                     <button type="submit" class="btn-primary px-5 py-2.5">Decommission</button>
-                    <button type="button" @click="dOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="dOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>
@@ -322,7 +322,7 @@
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Reported by</label><input type="text" name="reported_by" class="input-field" placeholder="{{ auth()->user()->name ?? '' }}"></div>
                 <div class="flex items-center gap-3 pt-1">
                     <button type="submit" class="btn-primary px-5 py-2.5">Submit</button>
-                    <button type="button" @click="srOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="srOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>
@@ -344,7 +344,7 @@
                 <p class="text-xs text-slate-400">Marking Resolved/Closed logs a corrective maintenance entry automatically.</p>
                 <div class="flex items-center gap-3 pt-1">
                     <button type="submit" class="btn-primary px-5 py-2.5">Save</button>
-                    <button type="button" @click="stOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="stOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>

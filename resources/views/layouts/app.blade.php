@@ -102,10 +102,15 @@
                     {{-- Doctor/Staff name --}}
                     <span class="hidden sm:inline-block text-sm font-medium text-slate-700">{{ auth()->user()?->name ?? 'User' }}</span>
 
-                    {{-- Hospital + Region --}}
+                    {{-- Hospital + Region (Super Admin is platform-level, not tied to a hospital) --}}
+                    @php $topRole = is_object(auth()->user()?->role) ? auth()->user()->role->value : (auth()->user()?->role ?? ''); @endphp
                     <span class="hidden md:inline-flex items-center gap-1.5 text-sm text-slate-400">
-                        <span>{{ auth()->user()?->hospital?->country === 'AE' ? '🇦🇪' : '🇮🇳' }}</span>
-                        {{ auth()->user()?->hospital?->name ?? 'MedOS Hospital' }}
+                        @if($topRole === 'super_admin')
+                            <span>🏥</span> All Hospitals
+                        @else
+                            <span>{{ auth()->user()?->hospital?->country === 'AE' ? '🇦🇪' : '🇮🇳' }}</span>
+                            {{ auth()->user()?->hospital?->name ?? 'MedOS Hospital' }}
+                        @endif
                     </span>
 
                     {{-- Role badge --}}

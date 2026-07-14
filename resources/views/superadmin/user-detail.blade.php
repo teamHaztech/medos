@@ -33,7 +33,7 @@
         </div>
         <div class="flex items-center gap-2">
             <form method="POST" action="{{ route('web.superadmin.users.toggle', $user->id) }}">@csrf<button type="submit" class="btn-secondary text-sm">{{ $user->is_active ? 'Deactivate' : 'Activate' }}</button></form>
-            <form method="POST" action="{{ route('web.superadmin.users.delete', $user->id) }}" onsubmit="return confirm('Permanently delete {{ $user->email }}?')">@csrf @method('DELETE')<button type="submit" class="text-sm font-medium text-red-500 hover:text-red-700 px-3 py-2">Delete</button></form>
+            <form method="POST" action="{{ route('web.superadmin.users.delete', $user->id) }}" onsubmit="return confirm('Permanently delete {{ $user->email }}?')">@csrf @method('DELETE')<button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Delete</button></form>
         </div>
     </div>
 </div>

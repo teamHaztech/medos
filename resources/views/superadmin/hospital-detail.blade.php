@@ -133,7 +133,7 @@
                         <td class="px-4 py-3 text-right">
                             <form method="POST" action="{{ route('web.superadmin.hospitals.staff.remove', [$hospital->id, $s->id]) }}" class="inline" onsubmit="return confirm('Remove this staff from {{ $hospital->name }}?')">
                                 @csrf @method('DELETE')
-                                <button type="submit" class="text-xs text-red-600 hover:text-red-800 font-medium">Remove</button>
+                                <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button>
                             </form>
                         </td>
                     </tr>
@@ -154,7 +154,7 @@
                         <td class="px-4 py-3 text-right">
                             <form method="POST" action="{{ route('web.superadmin.hospitals.staff.remove', [$hospital->id, $s->id]) }}" class="inline" onsubmit="return confirm('Remove this staff from {{ $hospital->name }}?')">
                                 @csrf @method('DELETE')
-                                <button type="submit" class="text-xs text-red-600 hover:text-red-800 font-medium">Remove</button>
+                                <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button>
                             </form>
                         </td>
                     </tr>

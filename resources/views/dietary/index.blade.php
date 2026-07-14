@@ -126,7 +126,7 @@
                         <td class="px-4 py-2.5 text-xs text-slate-600">{{ TD::TEXTURES[$d->default_texture] ?? $d->default_texture }}</td>
                         <td class="px-4 py-2.5 text-xs text-slate-600 text-center">{{ $d->default_kcal ?? '—' }} / {{ $d->default_protein_g ?? '—' }}g</td>
                         <td class="px-4 py-2.5 text-xs text-slate-500 max-w-xs truncate">{{ $d->restrictions ?? '—' }}</td>
-                        <td class="px-4 py-2.5 text-right"><button type="button" @click="openDiet({ id: @js($d->id), code: @js($d->code), name: @js($d->name), category: @js($d->category), default_texture: @js($d->default_texture), indications: @js($d->indications ?? ''), restrictions: @js($d->restrictions ?? ''), default_kcal: {{ $d->default_kcal ?: 'null' }}, default_protein_g: {{ $d->default_protein_g ?: 'null' }}, is_active: {{ $d->is_active ? 'true' : 'false' }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
+                        <td class="px-4 py-2.5 text-right"><button type="button" @click="openDiet({ id: @js($d->id), code: @js($d->code), name: @js($d->name), category: @js($d->category), default_texture: @js($d->default_texture), indications: @js($d->indications ?? ''), restrictions: @js($d->restrictions ?? ''), default_kcal: {{ $d->default_kcal ?: 'null' }}, default_protein_g: {{ $d->default_protein_g ?: 'null' }}, is_active: {{ $d->is_active ? 'true' : 'false' }} })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button></td>
                     </tr>
                     @endforeach
                 </tbody>

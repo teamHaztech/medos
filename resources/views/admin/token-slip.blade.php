@@ -38,7 +38,7 @@
     <div class="flex items-center gap-3 mt-5 print:hidden">
         <button type="button" onclick="window.print()" class="btn-primary">Print Slip</button>
         <a href="{{ route('web.admin.counter') }}" class="btn-secondary">Issue Another</a>
-        <a href="{{ route('web.billing.show', $bill->id) }}" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">View Receipt</a>
+        <a href="{{ route('web.billing.show', $bill->id) }}" class="btn-secondary">View Receipt</a>
     </div>
 </div>
 @endsection

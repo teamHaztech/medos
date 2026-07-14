@@ -49,10 +49,10 @@
                         <td class="table-cell">{{ $v->assets_count }}</td>
                         <td class="table-cell">
                             <div class="flex items-center gap-2">
-                                <button type="button" @click="openEdit({ id:'{{ $v->id }}', name: @js($v->name), contact_person: @js($v->contact_person ?? ''), phone: @js($v->phone ?? ''), email: @js($v->email ?? ''), address: @js($v->address ?? ''), service_type: @js($v->service_type ?? '') })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                                <button type="button" @click="openEdit({ id:'{{ $v->id }}', name: @js($v->name), contact_person: @js($v->contact_person ?? ''), phone: @js($v->phone ?? ''), email: @js($v->email ?? ''), address: @js($v->address ?? ''), service_type: @js($v->service_type ?? '') })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
                                 <form method="POST" action="{{ route('web.admin.vendors.destroy', $v->id) }}" onsubmit="return confirm('Remove this vendor?')">
                                     @csrf @method('DELETE')
-                                    <button class="text-red-400 hover:text-red-600 text-sm">Remove</button>
+                                    <button class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button>
                                 </form>
                             </div>
                         </td>
@@ -77,7 +77,7 @@
                 <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Address</label><input type="text" name="address" x-model="edit.address" class="input-field"></div>
                 <div class="col-span-2 flex items-center gap-3 pt-2">
                     <button type="submit" class="btn-primary px-5 py-2.5" x-text="mode === 'edit' ? 'Save Changes' : 'Add Vendor'"></button>
-                    <button type="button" @click="editOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="editOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>

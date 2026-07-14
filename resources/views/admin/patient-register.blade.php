@@ -15,7 +15,7 @@
             @include('admin._patient_fields')
             <div class="flex items-center gap-3 pt-6 mt-6 border-t border-slate-100">
                 <button type="submit" class="btn-primary px-6">Register Patient</button>
-                <a href="{{ route('web.admin.patients') }}" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</a>
+                <a href="{{ route('web.admin.patients') }}" class="btn-secondary">Cancel</a>
             </div>
         </div>
     </form>

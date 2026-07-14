@@ -130,7 +130,7 @@
 
         <div class="flex items-center gap-3">
             <button type="submit" class="btn-primary px-6 py-2.5" :disabled="!canBook" :class="!canBook ? 'opacity-40 cursor-not-allowed' : ''">Book Appointment</button>
-            <a href="{{ route('web.admin.appointments') }}" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</a>
+            <a href="{{ route('web.admin.appointments') }}" class="btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

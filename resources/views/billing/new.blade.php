@@ -118,7 +118,7 @@
 
         <div class="flex items-center gap-3">
             <button type="submit" class="btn-primary px-6" :disabled="!canSave" :class="!canSave ? 'opacity-40 cursor-not-allowed' : ''">Create Bill</button>
-            <a href="{{ route('web.billing.index') }}" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</a>
+            <a href="{{ route('web.billing.index') }}" class="btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

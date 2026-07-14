@@ -76,14 +76,14 @@
                             <div class="flex items-center gap-3">
                                 <button type="button"
                                     @click="edit({ id: '{{ $pkg->id }}', name: @js($pkg->name), price: '{{ $pkg->price }}', description: @js($pkg->description ?? '') })"
-                                    class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                                    class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
                                 <form method="POST" action="{{ route('web.doctor.packages.toggle', $pkg->id) }}">
                                     @csrf
                                     <button class="text-xs text-blue-600 hover:text-blue-800 font-medium">{{ $pkg->is_active ? 'Hide' : 'Activate' }}</button>
                                 </form>
                                 <form method="POST" action="{{ route('web.doctor.packages.delete', $pkg->id) }}" onsubmit="return confirm('Delete this package?')">
                                     @csrf
-                                    <button class="text-xs text-red-600 hover:text-red-800 font-medium">Delete</button>
+                                    <button class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Delete</button>
                                 </form>
                             </div>
                         </td>
@@ -113,7 +113,7 @@
                 </div>
                 <div class="flex items-center gap-3 pt-2">
                     <button type="submit" class="btn-primary px-5 py-2.5">Save Changes</button>
-                    <button type="button" @click="open = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="open = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>

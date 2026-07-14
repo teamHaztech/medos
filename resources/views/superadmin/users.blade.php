@@ -64,7 +64,7 @@
                 <td class="px-4 py-2.5 text-right">
                     <div class="flex items-center justify-end gap-2">
                         <form method="POST" action="{{ route('web.superadmin.users.toggle', $u->id) }}">@csrf<button type="submit" class="text-xs font-medium {{ $u->is_active ? 'text-slate-500 hover:text-slate-700' : 'text-green-600 hover:text-green-800' }}">{{ $u->is_active ? 'Deactivate' : 'Activate' }}</button></form>
-                        <form method="POST" action="{{ route('web.superadmin.users.delete', $u->id) }}" onsubmit="return confirm('Permanently delete {{ $u->email }}? This cannot be undone.')">@csrf @method('DELETE')<button type="submit" class="text-xs font-medium text-red-500 hover:text-red-700">Delete</button></form>
+                        <form method="POST" action="{{ route('web.superadmin.users.delete', $u->id) }}" onsubmit="return confirm('Permanently delete {{ $u->email }}? This cannot be undone.')">@csrf @method('DELETE')<button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Delete</button></form>
                     </div>
                 </td>
             </tr>
@@ -99,7 +99,7 @@
                     <td class="px-4 py-2.5 text-right">
                         <div class="flex items-center justify-end gap-2">
                             <form method="POST" action="{{ route('web.superadmin.users.toggle', $u->id) }}">@csrf<button type="submit" class="text-xs font-medium {{ $u->is_active ? 'text-slate-500 hover:text-slate-700' : 'text-green-600 hover:text-green-800' }}">{{ $u->is_active ? 'Deactivate' : 'Activate' }}</button></form>
-                            <form method="POST" action="{{ route('web.superadmin.users.delete', $u->id) }}" onsubmit="return confirm('Permanently delete {{ $u->email }}?')">@csrf @method('DELETE')<button type="submit" class="text-xs font-medium text-red-500 hover:text-red-700">Delete</button></form>
+                            <form method="POST" action="{{ route('web.superadmin.users.delete', $u->id) }}" onsubmit="return confirm('Permanently delete {{ $u->email }}?')">@csrf @method('DELETE')<button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Delete</button></form>
                         </div>
                     </td>
                 </tr>

@@ -85,7 +85,7 @@
                                     specialization: @js($member->specialization ?? ''),
                                     qualification: @js($member->qualification ?? ''),
                                     consultation_duration_default: {{ $member->consultation_duration_default ?? 15 }}
-                                })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                                })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
                                 <form method="POST" action="{{ route('web.admin.staff.reset-password', $member->id) }}" onsubmit="return confirm('Generate a new password for {{ $member->name }}? You will see the new password to share.')">
                                     @csrf
                                     <button type="submit" class="text-sm text-amber-600 hover:text-amber-800 font-medium">Reset</button>

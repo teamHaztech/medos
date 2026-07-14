@@ -72,7 +72,7 @@
                         <p class="text-sm text-slate-500" x-text="snapshot.patient.phone"></p>
                         <p x-show="snapshot.patient.health_id" class="text-xs text-slate-400 mt-0.5" x-text="'Health ID: ' + snapshot.patient.health_id"></p>
                     </div>
-                    <button type="button" @click="reset()" class="text-slate-400 hover:text-slate-600 text-sm">New inquiry</button>
+                    <button type="button" @click="reset()" class="btn-secondary">New inquiry</button>
                 </div>
                 <p x-show="snapshot.last_visit" class="text-xs text-slate-400 mt-2" x-text="'Last visit: ' + snapshot.last_visit"></p>
             </div>

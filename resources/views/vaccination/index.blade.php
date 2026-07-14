@@ -83,7 +83,7 @@ use App\Modules\Vaccination\Models\PatientVaccination;
                                         <span class="text-slate-400">On-demand</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-2 text-right"><button type="button" @click="open({ id: @js($vac->id), name: @js($vac->name), code: @js($vac->code ?? ''), category: @js($vac->category), route: @js($vac->route), total_doses: {{ $vac->total_doses }}, dose_interval_days: {{ $vac->dose_interval_days ?: "''" }}, is_active: {{ $vac->is_active ? 'true' : 'false' }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
+                                <td class="px-4 py-2 text-right"><button type="button" @click="open({ id: @js($vac->id), name: @js($vac->name), code: @js($vac->code ?? ''), category: @js($vac->category), route: @js($vac->route), total_doses: {{ $vac->total_doses }}, dose_interval_days: {{ $vac->dose_interval_days ?: "''" }}, is_active: {{ $vac->is_active ? 'true' : 'false' }} })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button></td>
                             </tr>
                             @endforeach
                         </tbody>

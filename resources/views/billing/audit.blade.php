@@ -179,7 +179,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-slate-800">Charge Ledger — latest 50 (audit trail)</h3>
-            <a href="{{ route('web.billing.audit.charges', $q) }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">⤓ Download full ledger</a>
+            <a href="{{ route('web.billing.audit.charges', $q) }}" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">⤓ Download full ledger</a>
         </div>
         <div class="overflow-x-auto">
         <table class="w-full">

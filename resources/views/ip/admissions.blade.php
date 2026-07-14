@@ -118,7 +118,7 @@
                 </div>
                 <div class="col-span-2 flex items-center gap-3 pt-2">
                     <button type="submit" class="btn-primary px-5 py-2.5">Admit</button>
-                    <button type="button" @click="admitOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="admitOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>

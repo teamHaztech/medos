@@ -107,7 +107,7 @@
 
                 <div class="flex items-center gap-3 pt-2">
                     <button type="submit" class="btn-primary px-5" :disabled="!canSubmit" :class="!canSubmit ? 'opacity-40 cursor-not-allowed' : ''">Add to Queue</button>
-                    <button type="button" @click="open = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="open = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>

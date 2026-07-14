@@ -107,7 +107,7 @@
                title="Download this hospital's data as a restorable .sql file">⤓ Backup</a>
             <button type="button"
                 @click="openEdit({ id:'{{ $h->id }}', name: @js($h->name), slug: @js($h->slug), country: @js($h->country ?? 'IN'), city: @js($h->city ?? ''), state: @js($h->state ?? ''), address: @js($h->address ?? ''), phone: @js($h->phone ?? ''), email: @js($h->email ?? ''), is_active: {{ $h->is_active ? 'true' : 'false' }} })"
-                class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
             @if($h->is_active)
             <form method="POST" action="{{ route('web.superadmin.hospitals.delete', $h->id) }}" class="inline" onsubmit="return confirm('Deactivate {{ $h->name }}?')">
                 @csrf @method('DELETE')
@@ -173,7 +173,7 @@
             </div>
             <div class="col-span-2 flex items-center gap-3 pt-2">
                 <button type="submit" class="btn-primary px-5 py-2.5">Save Changes</button>
-                <button type="button" @click="editOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                <button type="button" @click="editOpen = false" class="btn-secondary">Cancel</button>
             </div>
         </form>
 </x-modal>

@@ -104,10 +104,10 @@
                             <div class="flex items-center gap-2">
                                 <button type="button"
                                     @click="openEdit({ id:'{{ $a->id }}', asset_name: @js($a->asset_name), asset_type: @js($a->asset_type ?? ''), serial_number: @js($a->serial_number ?? ''), model: @js($a->model ?? ''), manufacturer: @js($a->manufacturer ?? ''), department: @js($a->department ?? ''), location: @js($a->location ?? ''), purchase_date: '{{ optional($a->purchase_date)->toDateString() }}', purchase_cost: '{{ $a->purchase_cost }}', useful_life_years: '{{ $a->useful_life_years }}', salvage_value: '{{ $a->salvage_value }}', vendor_id: '{{ $a->vendor_id }}', status: @js($a->status), notes: @js($a->notes ?? '') })"
-                                    class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                                    class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
                                 <form method="POST" action="{{ route('web.admin.assets.destroy', $a->id) }}" onsubmit="return confirm('Remove this asset from the register?')">
                                     @csrf @method('DELETE')
-                                    <button class="text-red-400 hover:text-red-600 text-sm">Remove</button>
+                                    <button class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button>
                                 </form>
                             </div>
                         </td>
@@ -160,7 +160,7 @@
                 <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Notes</label><textarea name="notes" x-model="edit.notes" rows="2" class="input-field"></textarea></div>
                 <div class="col-span-2 flex items-center gap-3 pt-2">
                     <button type="submit" class="btn-primary px-5 py-2.5" x-text="mode === 'edit' ? 'Save Changes' : 'Add Asset'"></button>
-                    <button type="button" @click="editOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="editOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>

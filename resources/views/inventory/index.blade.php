@@ -45,7 +45,7 @@
                         <td class="px-4 py-2.5 text-center text-xs text-slate-500">{{ $it->reorder_min }} / {{ $it->reorder_max }}</td>
                         <td class="px-4 py-2.5 text-right space-x-2">
                             <button type="button" @click="openMove(@js($it->id))" class="text-xs font-medium text-blue-600 hover:text-blue-800">Stock</button>
-                            <button type="button" @click="openItem({ id: @js($it->id), name: @js($it->name), code: @js($it->code ?? ''), category: @js($it->category), unit: @js($it->unit), reorder_min: {{ (int) $it->reorder_min }}, reorder_max: {{ (int) $it->reorder_max }}, current_stock: {{ (int) $it->current_stock }}, is_active: {{ $it->is_active ? 'true' : 'false' }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                            <button type="button" @click="openItem({ id: @js($it->id), name: @js($it->name), code: @js($it->code ?? ''), category: @js($it->category), unit: @js($it->unit), reorder_min: {{ (int) $it->reorder_min }}, reorder_max: {{ (int) $it->reorder_max }}, current_stock: {{ (int) $it->current_stock }}, is_active: {{ $it->is_active ? 'true' : 'false' }} })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
                         </td>
                     </tr>
                     @endforeach

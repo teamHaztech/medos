@@ -49,7 +49,7 @@
             </div>
             <div class="col-span-2 flex items-center gap-3 pt-2">
                 <button type="submit" class="btn-primary px-5 py-2.5">Save Test</button>
-                <button type="button" @click="showAdd = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                <button type="button" @click="showAdd = false" class="btn-secondary">Cancel</button>
             </div>
         </form>
     </x-modal>
@@ -83,10 +83,10 @@
                                 <div class="flex items-center gap-2">
                                     <button type="button"
                                         @click="openEdit({ id:'{{ $test->id }}', name: @js($test->name), type: @js($test->type), category: @js($test->category ?? ''), price: '{{ $test->price }}', turnaround_time: @js($test->turnaround_time ?? ''), instructions: @js($test->instructions ?? '') })"
-                                        class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                                        class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
                                     <form method="POST" action="{{ route('web.admin.tests.delete', $test->id) }}" onsubmit="return confirm('Remove this test?')">
                                         @csrf @method('DELETE')
-                                        <button class="text-sm font-medium text-red-600 hover:text-red-800">Remove</button>
+                                        <button class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button>
                                     </form>
                                 </div>
                             </td>
@@ -133,7 +133,7 @@
                 </div>
                 <div class="col-span-2 flex items-center gap-3 pt-2">
                     <button type="submit" class="btn-primary px-5 py-2.5">Save Changes</button>
-                    <button type="button" @click="editOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="editOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>

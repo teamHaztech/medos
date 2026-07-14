@@ -237,7 +237,7 @@
                 <input type="hidden" name="slot_start" :value="rSlot ? (rSlot.date + ' ' + rSlot.time) : ''">
                 <div class="flex items-center gap-3 pt-4">
                     <button type="submit" class="btn-primary px-5 py-2.5" :disabled="!rSlot" :class="!rSlot ? 'opacity-40 cursor-not-allowed' : ''">Confirm New Time</button>
-                    <button type="button" @click="rescheduleOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                    <button type="button" @click="rescheduleOpen = false" class="btn-secondary">Cancel</button>
                 </div>
             </form>
     </x-modal>

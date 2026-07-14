@@ -23,7 +23,7 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
                 <h4 class="text-sm font-semibold text-slate-700">Booked Patients — today &amp; upcoming</h4>
                 <p class="text-xs text-slate-400">Patients who booked a dental appointment with you. Open one to start the consultation.</p>
             </div>
-            <a href="{{ route('web.admin.appointments', ['view' => 'upcoming']) }}" class="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap">All appointments →</a>
+            <a href="{{ route('web.admin.appointments', ['view' => 'upcoming']) }}" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 whitespace-nowrap">All appointments →</a>
         </div>
         <div class="divide-y divide-slate-100">
             @forelse($appointments as $apt)
@@ -89,7 +89,7 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
                             <td class="px-4 py-2 text-sm text-slate-800">{{ $p->name }}</td>
                             <td class="px-4 py-2 text-xs text-slate-500">{{ DentalProcedure::CATEGORIES[$p->category] ?? $p->category }}</td>
                             <td class="px-4 py-2 text-sm text-slate-700 text-right">{{ $cur }}{{ number_format($p->default_fee, 2) }}</td>
-                            <td class="px-4 py-2 text-right"><button type="button" @click="open({ id: @js($p->id), code: @js($p->code), name: @js($p->name), category: @js($p->category), default_fee: {{ (float) $p->default_fee }}, is_active: {{ $p->is_active ? 'true' : 'false' }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
+                            <td class="px-4 py-2 text-right"><button type="button" @click="open({ id: @js($p->id), code: @js($p->code), name: @js($p->name), category: @js($p->category), default_fee: {{ (float) $p->default_fee }}, is_active: {{ $p->is_active ? 'true' : 'false' }} })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button></td>
                         </tr>
                         @empty
                         <tr><td colspan="5" class="px-4 py-6 text-center text-sm text-slate-400">No procedures in the fee schedule.</td></tr>
@@ -223,7 +223,7 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
                                 </td>
                                 <td class="px-4 py-2.5 text-right">
                                     @unless($t->bill_id)
-                                    <form method="POST" action="{{ route('web.dental.treatment.delete', $t->id) }}" onsubmit="return confirm('Remove this treatment?')">@csrf<button type="submit" class="text-xs text-red-400 hover:text-red-600">Remove</button></form>
+                                    <form method="POST" action="{{ route('web.dental.treatment.delete', $t->id) }}" onsubmit="return confirm('Remove this treatment?')">@csrf<button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button></form>
                                     @endunless
                                 </td>
                             </tr>

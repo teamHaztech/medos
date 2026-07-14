@@ -50,7 +50,7 @@
                         <td class="table-cell">@if($s->is_active)<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</span>@else<span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">Inactive</span>@endif</td>
                         <td class="table-cell">
                             <div class="flex items-center gap-2">
-                                <button type="button" @click="openEdit({ id: '{{ $s->id }}', name: @js($s->name), code: @js($s->code ?? ''), category: '{{ $s->category }}', price: {{ (float) $s->price }}, is_taxable: {{ $s->is_taxable ? 'true' : 'false' }}, gst_rate: {{ (float) $s->gst_rate }}, hsn_sac: @js($s->hsn_sac ?? ''), is_active: {{ $s->is_active ? 'true' : 'false' }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                                <button type="button" @click="openEdit({ id: '{{ $s->id }}', name: @js($s->name), code: @js($s->code ?? ''), category: '{{ $s->category }}', price: {{ (float) $s->price }}, is_taxable: {{ $s->is_taxable ? 'true' : 'false' }}, gst_rate: {{ (float) $s->gst_rate }}, hsn_sac: @js($s->hsn_sac ?? ''), is_active: {{ $s->is_active ? 'true' : 'false' }} })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
                                 <form method="POST" action="{{ route('web.billing.services.destroy', $s->id) }}" onsubmit="return confirm('Remove {{ $s->name }}?')">@csrf @method('DELETE')<button class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 font-medium">Remove</button></form>
                             </div>
                         </td>
@@ -87,7 +87,7 @@
             </div>
             <div class="col-span-2 flex items-center gap-3 pt-1">
                 <button type="submit" class="btn-primary px-5 py-2.5">Save</button>
-                <button type="button" @click="editOpen = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                <button type="button" @click="editOpen = false" class="btn-secondary">Cancel</button>
             </div>
         </form>
     </x-modal>

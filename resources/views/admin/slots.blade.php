@@ -45,7 +45,7 @@
                                         <input type="checkbox" :checked="schedule[day.key]?.length > 0" @change="toggleDay(day.key)" class="rounded border-slate-300 text-blue-500">
                                         <span class="text-sm font-semibold" x-text="day.label"></span>
                                     </label>
-                                    <button x-show="schedule[day.key]?.length" @click="addBlock(day.key)" class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Add Block</button>
+                                    <button x-show="schedule[day.key]?.length" @click="addBlock(day.key)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Add Block</button>
                                 </div>
 
                                 <template x-if="schedule[day.key]?.length">

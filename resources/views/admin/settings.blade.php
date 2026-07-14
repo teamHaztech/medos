@@ -144,8 +144,8 @@
                 <div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
                     <span class="flex-1 text-sm text-slate-700" x-text="dept.name || 'Untitled department'"></span>
                     <span class="text-xs px-2 py-0.5 rounded-full" :class="dept.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'" x-text="dept.active ? 'Active' : 'Inactive'"></span>
-                    <button type="button" @click="openDept(index)" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
-                    <button type="button" @click="departments.splice(index, 1)" class="text-sm font-medium text-red-500 hover:text-red-700">Remove</button>
+                    <button type="button" @click="openDept(index)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
+                    <button type="button" @click="departments.splice(index, 1)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button>
                 </div>
             </template>
             <p x-show="!departments.length" class="text-sm text-slate-400 py-2">No departments yet — add one.</p>
@@ -230,7 +230,7 @@
             </label>
             <div class="flex items-center gap-3 pt-1">
                 <button type="button" @click="saveDept()" class="btn-primary px-5 py-2.5">Save</button>
-                <button type="button" @click="deptModal = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+                <button type="button" @click="deptModal = false" class="btn-secondary">Cancel</button>
             </div>
         </div>
     </x-modal>

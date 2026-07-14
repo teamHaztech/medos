@@ -54,7 +54,7 @@
                         <input type="checkbox" :checked="ranges['{{ $key }}'].length > 0" @change="$event.target.checked ? addRange('{{ $key }}') : (ranges['{{ $key }}'] = [])" class="rounded border-slate-300">
                         <span class="text-sm font-semibold text-slate-800">{{ $label }}</span>
                     </div>
-                    <button type="button" @click="addRange('{{ $key }}')" class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Add time range</button>
+                    <button type="button" @click="addRange('{{ $key }}')" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Add time range</button>
                 </div>
                 <template x-if="ranges['{{ $key }}'].length === 0">
                     <p class="text-xs text-slate-400 pl-6">Closed</p>

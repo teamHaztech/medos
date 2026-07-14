@@ -320,7 +320,7 @@
                             </div>
                             <div class="flex items-center gap-2 pt-0.5">
                                 @if(!$isRefund && !$cancelled)
-                                <button type="button" @click="openEditPay({ id:'{{ $p->id }}', method: @js($p->method), reference: @js($p->reference ?? ''), amount: '{{ $p->amount }}', paid_at: '{{ optional($p->paid_at)->format('Y-m-d\TH:i') }}' })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                                <button type="button" @click="openEditPay({ id:'{{ $p->id }}', method: @js($p->method), reference: @js($p->reference ?? ''), amount: '{{ $p->amount }}', paid_at: '{{ optional($p->paid_at)->format('Y-m-d\TH:i') }}' })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
                                 <form method="POST" action="{{ route('web.billing.payments.refund', [$bill->id, $p->id]) }}" onsubmit="return confirm('Refund this payment?')">
                                     @csrf
                                     <button class="text-xs text-purple-600 hover:text-purple-800">Refund</button>
@@ -328,7 +328,7 @@
                                 @endif
                                 <form method="POST" action="{{ route('web.billing.payments.delete', [$bill->id, $p->id]) }}" onsubmit="return confirm('Remove this ledger entry?')">
                                     @csrf @method('DELETE')
-                                    <button class="text-xs text-red-400 hover:text-red-600">Delete</button>
+                                    <button class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Delete</button>
                                 </form>
                             </div>
                         </div>

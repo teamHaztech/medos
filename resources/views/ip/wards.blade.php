@@ -23,8 +23,8 @@
                     <span class="text-xs font-normal text-slate-400">{{ $ward->ward_type ? '· ' . $ward->ward_type : '' }}{{ $ward->floor ? ' · Floor ' . $ward->floor : '' }} · {{ $ward->beds->count() }} beds</span>
                 </h3>
                 <div class="flex items-center gap-2">
-                    <button @click="addBedFor = (addBedFor === '{{ $ward->id }}' ? null : '{{ $ward->id }}')" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Bed</button>
-                    <form method="POST" action="{{ route('web.ip.wards.destroy', $ward->id) }}" onsubmit="return confirm('Remove {{ $ward->name }}?')">@csrf @method('DELETE')<button class="text-sm text-red-400 hover:text-red-600">Remove ward</button></form>
+                    <button @click="addBedFor = (addBedFor === '{{ $ward->id }}' ? null : '{{ $ward->id }}')" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">+ Bed</button>
+                    <form method="POST" action="{{ route('web.ip.wards.destroy', $ward->id) }}" onsubmit="return confirm('Remove {{ $ward->name }}?')">@csrf @method('DELETE')<button class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove ward</button></form>
                 </div>
             </div>
 
@@ -48,7 +48,7 @@
                             @else
                                 <form method="POST" action="{{ route('web.ip.beds.update', $bed->id) }}">@csrf @method('PUT')<input type="hidden" name="status" value="available"><button class="text-[11px] text-green-600 hover:text-green-800">Free up</button></form>
                             @endif
-                            <form method="POST" action="{{ route('web.ip.beds.destroy', $bed->id) }}" onsubmit="return confirm('Remove bed {{ $bed->bed_number }}?')">@csrf @method('DELETE')<button class="text-[11px] text-red-400 hover:text-red-600">Remove</button></form>
+                            <form method="POST" action="{{ route('web.ip.beds.destroy', $bed->id) }}" onsubmit="return confirm('Remove bed {{ $bed->bed_number }}?')">@csrf @method('DELETE')<button class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">Remove</button></form>
                         </div>
                         @endif
                     </div>
