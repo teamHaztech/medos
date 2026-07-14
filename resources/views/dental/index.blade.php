@@ -14,6 +14,47 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
 @if(session('error'))<div class="mb-4 px-4 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">{{ session('error') }}</div>@endif
 
 @if(! $patient)
+    {{-- Dentist's booked patients — today & upcoming. This is the consultation
+         entry point: pick a booked patient and open their chart to consult. --}}
+    @if($isDentalPractitioner ?? false)
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden mb-6">
+        <div class="px-5 py-3 border-b border-slate-200 flex items-center justify-between gap-2">
+            <div>
+                <h4 class="text-sm font-semibold text-slate-700">Booked Patients — today &amp; upcoming</h4>
+                <p class="text-xs text-slate-400">Patients who booked a dental appointment with you. Open one to start the consultation.</p>
+            </div>
+            <a href="{{ route('web.admin.appointments', ['view' => 'upcoming']) }}" class="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap">All appointments →</a>
+        </div>
+        <div class="divide-y divide-slate-100">
+            @forelse($appointments as $apt)
+                @php
+                    $st = is_object($apt->status) ? $apt->status->value : ($apt->status ?? '');
+                    $when = \Illuminate\Support\Carbon::parse($apt->slot_start);
+                    $badge = $st === 'checked_in' ? 'bg-green-100 text-green-700' : ($st === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700');
+                @endphp
+                <div class="flex items-center gap-3 px-5 py-3">
+                    <div class="text-center shrink-0" style="min-width:4.75rem">
+                        <p class="text-sm font-bold text-slate-700">{{ $when->format('g:i A') }}</p>
+                        <p class="text-xs {{ $when->isToday() ? 'text-blue-600 font-semibold' : 'text-slate-400' }}">{{ $when->isToday() ? 'Today' : $when->format('d M') }}</p>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-slate-800 truncate">{{ $apt->patient?->name ?? 'Patient' }}</p>
+                        <p class="text-xs text-slate-400 truncate">{{ $apt->patient?->phone }}{{ $apt->notes ? ' · '.$apt->notes : '' }}</p>
+                    </div>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium shrink-0 {{ $badge }}">{{ ucfirst(str_replace('_', ' ', $st)) }}</span>
+                    @if($apt->patient_id)
+                    <a href="{{ route('web.dental.index', ['patient' => $apt->patient_id]) }}" class="btn-primary text-sm whitespace-nowrap shrink-0">Start Consultation →</a>
+                    @endif
+                </div>
+            @empty
+                <div class="px-5 py-8 text-center text-sm text-slate-400">
+                    No dental appointments booked yet. Patients who book you (online, kiosk, or reception) appear here — or open any patient below to chart a walk-in.
+                </div>
+            @endforelse
+        </div>
+    </div>
+    @endif
+
     {{-- Patient picker --}}
     <div class="max-w-xl bg-white rounded-xl border border-slate-200 p-6 mb-6" x-data="dentalSearch()">
         <label class="block text-sm font-semibold text-slate-700 mb-1">Open a patient</label>

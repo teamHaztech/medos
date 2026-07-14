@@ -29,6 +29,25 @@ class DentalController extends Controller
         // Fee schedule (procedure master) is always available for charting + the catalogue tab.
         $procedures = DentalProcedure::where('hospital_id', $hid)->orderBy('category')->orderBy('name')->get();
 
+        // The dentist's own booked patients (today + upcoming) — so they can see
+        // who's coming in and jump straight into the chart to consult. Scoped to
+        // the logged-in practitioner's staff record.
+        $appointments = collect();
+        $user    = Auth::user();
+        $staffId = $user->staff?->id;
+        $role    = is_object($user->role) ? $user->role->value : $user->role;
+        $isDentalPractitioner = $role === 'dentist' || ($user->staff?->department === 'Dental');
+        if ($staffId) {
+            $appointments = \App\Modules\Appointment\Models\Appointment::where('hospital_id', $hid)
+                ->where('doctor_id', $staffId)
+                ->whereDate('slot_start', '>=', today())
+                ->whereNotIn('status', ['cancelled', 'no_show', 'completed'])
+                ->with('patient')
+                ->orderBy('slot_start')
+                ->limit(50)
+                ->get();
+        }
+
         $patient = null;
         $chart = null;
         $treatments = collect();
@@ -52,7 +71,7 @@ class DentalController extends Controller
             }
         }
 
-        return view('dental.index', compact('patient', 'chart', 'treatments', 'visits', 'procedures', 'plan'));
+        return view('dental.index', compact('patient', 'chart', 'treatments', 'visits', 'procedures', 'plan', 'appointments', 'isDentalPractitioner'));
     }
 
     public function saveChart(Request $request)
