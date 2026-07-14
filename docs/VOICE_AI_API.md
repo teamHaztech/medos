@@ -31,9 +31,25 @@ Accept: application/json
 Content-Type: application/json
 ```
 
+**cURL — get a token**
+```bash
+curl -s https://medos.haztech.cloud/api/v1/auth/login \
+  -H "Accept: application/json" -H "Content-Type: application/json" \
+  -d '{"email":"platform-bot@yourhospital.com","password":"••••••••"}'
+```
+
+**cURL — an authenticated call** (note the two headers the bot always sends)
+```bash
+curl -s "https://medos.haztech.cloud/api/v1/customer?phone=9876543210" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer 12|abcdEXAMPLETOKEN..." \
+  -H "X-Hospital-ID: 22222222-2222-2222-2222-222222222222"
+```
+
 > Use a **super-admin (platform) account** for the bot so one token can serve all
 > hospitals (see §2). A hospital-specific account also works but is locked to that
-> one hospital. Tokens are long-lived; log in once and reuse.
+> one hospital. Tokens are **long-lived** — log in once, store the token as a secret,
+> and reuse it. To rotate/revoke, log in again or ask the MedOS admin to revoke it.
 
 ---
 
@@ -110,7 +126,7 @@ Every endpoint below needs `Authorization: Bearer …` and (for a platform token
       "date": "2026-07-15", "time": "09:00", "token": "PED-001", "status": "scheduled" }
   ] } }
 ```
-`404` if no patient has that phone in this hospital.
+`404` if no patient has that phone in this hospital → **new caller: register them with §4.8 first.**
 
 ---
 
@@ -252,19 +268,72 @@ Creates lab / imaging / procedure orders for a patient. Each test is auto-routed
 
 ---
 
+### 4.8 Register a new patient — `POST /register-patient`
+
+Registers a first-time caller so they can be booked. **Idempotent** — if the phone is
+already on file it returns the existing patient (`already_registered: true`), so it's
+safe to call whenever `/customer` returns `404`.
+
+| Field | Type | Req | Notes / values |
+|---|---|---|---|
+| `name` | string | ✅ | Full name |
+| `phone` | string | ✅ | Unique per hospital; matched by last 10 digits |
+| `gender` | string | — | `male` · `female` · `other` · `unknown` (default) |
+| `date_of_birth` | date | — | `YYYY-MM-DD` |
+| `age` | int | — | 0–120 (use when DOB is unknown) |
+| `email` | string | — | |
+| `blood_group` | string | — | e.g. `B+` |
+| `address` | string | — | |
+| `city` | string | — | |
+| `language_preference` | string | — | ISO code, e.g. `en`, `hi`, `kok`, `ar` (default `en`) |
+| `emergency_contact_name` | string | — | |
+| `emergency_contact_phone` | string | — | |
+| `health_id` | string | — | ABHA / national health ID |
+
+**Request**
+```json
+{ "name": "Meera Nair", "phone": "9812345678", "gender": "female", "age": 34, "city": "Panaji", "language_preference": "kok" }
+```
+**Response `201`** (new) / `200` (already existed)
+```json
+{ "success": true, "data": {
+  "patient_id": "uuid", "name": "Meera Nair", "phone": "9812345678", "already_registered": false } }
+```
+Use the returned `patient_id` (or the same `phone`) directly in `/book-appointment` or `/book-lab-test`.
+
+---
+
 ## 5. Typical voice-call flow
 
 1. Inbound call on a hospital's line → look up its `hospital_id` (from `GET /hospitals`) → set `X-Hospital-ID` for the rest of the call.
-2. `GET /customer?phone=<caller>` → greet by name / know if a patient exists.
-3. Caller asks for Dr. X → `GET /doctor-schedule?name=X` → read out `available_slots`.
-4. Caller picks one → `POST /book-appointment` → confirm the `token` and time.
-5. "Move my appointment" → `GET /my-appointments?phone=…` → `POST /reschedule-appointment`.
-6. "Cancel it" → `POST /cancel-appointment`.
-7. "I also need a blood test" → `POST /book-lab-test`.
+2. `GET /customer?phone=<caller>` → greet by name if found.
+3. **If `404` (new caller)** → collect name (+ optional details) → `POST /register-patient` → you now have a `patient_id`.
+4. Caller asks for Dr. X → `GET /doctor-schedule?name=X` → read out `available_slots`.
+5. Caller picks one → `POST /book-appointment` → confirm the `token` and time.
+6. "Move my appointment" → `GET /my-appointments?phone=…` → `POST /reschedule-appointment`.
+7. "Cancel it" → `POST /cancel-appointment`.
+8. "I also need a blood test / scan" → `POST /book-lab-test`.
 
 ## 6. Notes & limits
 
 - **Rate limit:** 30 requests / minute per token (`429` if exceeded). Cache `/hospitals` and `/doctor-schedule`.
-- **Patients must exist** before booking (match by `phone`). Registering new patients is a separate flow — ask us to expose it if the bot needs to create patients.
+- **New callers** are handled by `POST /register-patient` (§4.8) — call it whenever `/customer` returns `404`, then book.
 - All times are the **hospital's local time**.
 - Bookings/reschedules are **atomic** — two simultaneous requests can't take the same slot (the loser gets `409`).
+
+## 7. Endpoint quick reference
+
+| Method | Path | Purpose | Auth header(s) |
+|---|---|---|---|
+| POST | `/auth/login` | Get a bearer token | — |
+| GET | `/hospitals` | List hospitals → map phone line to `hospital_id` | Bearer |
+| GET | `/customer?phone=` | Look up a patient | Bearer + X-Hospital-ID |
+| POST | `/register-patient` | Register a new caller | Bearer + X-Hospital-ID |
+| GET | `/doctor-schedule?name=&days=` | Doctor availability | Bearer + X-Hospital-ID |
+| GET | `/my-appointments?phone=\|patient_id=` | List a patient's appointments | Bearer + X-Hospital-ID |
+| POST | `/book-appointment` | Book a consultation | Bearer + X-Hospital-ID |
+| POST | `/reschedule-appointment` | Move to a new slot | Bearer + X-Hospital-ID |
+| POST | `/cancel-appointment` | Cancel | Bearer + X-Hospital-ID |
+| POST | `/book-lab-test` | Book lab / imaging / procedure | Bearer + X-Hospital-ID |
+
+*(X-Hospital-ID is required only for a super-admin/platform token; a hospital token ignores it.)*

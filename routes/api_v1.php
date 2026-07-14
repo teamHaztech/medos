@@ -84,6 +84,7 @@ Route::middleware(['auth:sanctum', 'resolve.hospital'])->group(function () {
         Route::get('customer', [\App\Http\Controllers\Api\IntegrationController::class, 'customer'])->name('customer');
         Route::get('doctor-schedule', [\App\Http\Controllers\Api\IntegrationController::class, 'doctorSchedule'])->name('doctor-schedule');
         Route::get('my-appointments', [\App\Http\Controllers\Api\IntegrationController::class, 'myAppointments'])->name('my-appointments');
+        Route::post('register-patient', [\App\Http\Controllers\Api\IntegrationController::class, 'registerPatient'])->name('register-patient');
         Route::post('book-appointment', [\App\Http\Controllers\Api\IntegrationController::class, 'bookAppointment'])->name('book-appointment');
         Route::post('reschedule-appointment', [\App\Http\Controllers\Api\IntegrationController::class, 'rescheduleAppointment'])->name('reschedule-appointment');
         Route::post('cancel-appointment', [\App\Http\Controllers\Api\IntegrationController::class, 'cancelAppointment'])->name('cancel-appointment');

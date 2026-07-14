@@ -23,6 +23,7 @@ use Illuminate\Support\Str;
  *   GET  /api/v1/customer?phone=
  *   GET  /api/v1/doctor-schedule?name=&days=
  *   GET  /api/v1/my-appointments?phone=|patient_id=&include_past=
+ *   POST /api/v1/register-patient
  *   POST /api/v1/book-appointment
  *   POST /api/v1/reschedule-appointment
  *   POST /api/v1/cancel-appointment
@@ -620,6 +621,84 @@ class IntegrationController extends Controller
             'patient'         => $patient->name,
             'orders'          => $orders,
             'unmatched_tests' => $unmatched, // booked as generic lab tests — verify names
+        ]], 201);
+    }
+
+    // ---------------------------------------------------------------
+    // 8. Register a new patient (first-time caller)
+    // ---------------------------------------------------------------
+    public function registerPatient(Request $request): JsonResponse
+    {
+        $v = $request->validate([
+            'name'                    => 'required|string|max:255',
+            'phone'                   => 'required|string|max:20',
+            'gender'                  => 'nullable|in:male,female,other,unknown',
+            'date_of_birth'           => 'nullable|date_format:Y-m-d',
+            'age'                     => 'nullable|integer|min:0|max:120',
+            'email'                   => 'nullable|email|max:255',
+            'blood_group'             => 'nullable|string|max:5',
+            'address'                 => 'nullable|string|max:500',
+            'city'                    => 'nullable|string|max:100',
+            'language_preference'     => 'nullable|string|max:10',
+            'emergency_contact_name'  => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:20',
+            'health_id'               => 'nullable|string|max:50',
+        ]);
+        $hid = $this->hid();
+
+        $phone = preg_replace('/\s+/', '', $v['phone']);
+
+        // Idempotent: if this caller is already on file, return them (don't duplicate).
+        $existing = $this->matchPatientByPhone($hid, $phone);
+        if ($existing) {
+            return response()->json(['success' => true, 'data' => [
+                'patient_id'         => $existing->id,
+                'name'               => $existing->name,
+                'phone'              => $existing->phone,
+                'already_registered' => true,
+            ]]);
+        }
+
+        $id = Str::uuid()->toString();
+        $attrs = [
+            'id'                      => $id,
+            'hospital_id'             => $hid,
+            'name'                    => $v['name'],
+            'phone'                   => $phone,
+            'gender'                  => $v['gender'] ?? 'unknown',
+            'email'                   => $v['email'] ?? null,
+            'date_of_birth'           => $v['date_of_birth'] ?? null,
+            'age_approximate'         => $v['age'] ?? null,
+            'language_preference'     => $v['language_preference'] ?? 'en',
+            'blood_group'             => $v['blood_group'] ?? null,
+            'address'                 => $v['address'] ?? null,
+            'city'                    => $v['city'] ?? null,
+            'emergency_contact_name'  => $v['emergency_contact_name'] ?? null,
+            'emergency_contact_phone' => $v['emergency_contact_phone'] ?? null,
+            'abha_number'             => ! empty($v['health_id']) ? preg_replace('/[\s-]/', '', $v['health_id']) : null,
+            'created_via'             => 'api',
+            'created_at'              => now(),
+            'updated_at'              => now(),
+        ];
+
+        try {
+            DB::table('patients')->insert($attrs);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Unique (hospital_id, phone) race — return whoever won.
+            $again = $this->matchPatientByPhone($hid, $phone);
+            if ($again) {
+                return response()->json(['success' => true, 'data' => [
+                    'patient_id' => $again->id, 'name' => $again->name, 'phone' => $again->phone, 'already_registered' => true,
+                ]]);
+            }
+            throw $e;
+        }
+
+        return response()->json(['success' => true, 'data' => [
+            'patient_id'         => $id,
+            'name'               => $v['name'],
+            'phone'              => $phone,
+            'already_registered' => false,
         ]], 201);
     }
 
