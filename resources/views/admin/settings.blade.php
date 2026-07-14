@@ -134,18 +134,18 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-base font-semibold text-slate-800">Departments</h3>
-            <div class="flex items-center gap-3">
-                <button type="button" @click="openDept(-1)" class="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add Department</button>
+            <div class="flex items-center gap-2">
+                <button type="button" @click="openDept(-1)" class="btn-secondary text-sm">+ Add Department</button>
                 <button type="button" @click="saveDepts()" class="btn-primary text-sm">Save</button>
             </div>
         </div>
         <div class="space-y-2">
             <template x-for="(dept, index) in departments" :key="index">
                 <div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-                    <span class="flex-1 text-sm text-slate-700" x-text="dept.name"></span>
+                    <span class="flex-1 text-sm text-slate-700" x-text="dept.name || 'Untitled department'"></span>
                     <span class="text-xs px-2 py-0.5 rounded-full" :class="dept.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'" x-text="dept.active ? 'Active' : 'Inactive'"></span>
-                    <button type="button" @click="openDept(index)" class="text-xs text-blue-600 hover:text-blue-800">Edit</button>
-                    <button type="button" @click="departments.splice(index, 1)" class="text-xs text-red-500 hover:text-red-700">Remove</button>
+                    <button type="button" @click="openDept(index)" class="text-xs font-medium text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50">Edit</button>
+                    <button type="button" @click="departments.splice(index, 1)" class="text-xs font-medium text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50">Remove</button>
                 </div>
             </template>
             <p x-show="!departments.length" class="text-sm text-slate-400 py-2">No departments yet — add one.</p>
@@ -153,22 +153,46 @@
     </div>
 
     {{-- Patient Areas / Rooms --}}
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6"
+         x-data="{ extra: {{ \Illuminate\Support\Js::from($areas['extra'] ?? []) }} }">
         <div class="mb-4">
             <h3 class="text-base font-semibold text-slate-800">Patient Areas</h3>
             <p class="text-xs text-slate-400 mt-0.5">Your hospital's waiting and sample-collection areas — shown to patients on their token/check-in slip. Set your own floor/room names.</p>
         </div>
-        <form method="POST" action="{{ route('web.admin.settings.areas') }}" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form method="POST" action="{{ route('web.admin.settings.areas') }}" class="space-y-4">
             @csrf
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">OPD waiting area</label>
-                <input type="text" name="waiting" value="{{ $areas['waiting'] ?? '' }}" maxlength="120" class="input-field" placeholder="e.g. Floor 2, Waiting Area">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">OPD waiting area</label>
+                    <input type="text" name="waiting" value="{{ $areas['waiting'] ?? '' }}" maxlength="120" class="input-field" placeholder="e.g. Floor 2, Waiting Area">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Lab / sample collection area</label>
+                    <input type="text" name="lab" value="{{ $areas['lab'] ?? '' }}" maxlength="120" class="input-field" placeholder="e.g. Ground Floor, Sample Collection Counter">
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Lab / sample collection area</label>
-                <input type="text" name="lab" value="{{ $areas['lab'] ?? '' }}" maxlength="120" class="input-field" placeholder="e.g. Ground Floor, Sample Collection Counter">
+
+            {{-- Additional custom areas --}}
+            <template x-for="(area, i) in extra" :key="i">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Area name</label>
+                        <input type="text" :name="`extra[${i}][label]`" x-model="area.label" maxlength="60" class="input-field" placeholder="e.g. Radiology / X-Ray">
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Location / room</label>
+                            <input type="text" :name="`extra[${i}][value]`" x-model="area.value" maxlength="120" class="input-field" placeholder="e.g. Ground Floor, Room 5">
+                        </div>
+                        <button type="button" @click="extra.splice(i, 1)" class="text-xs font-medium text-red-500 hover:text-red-700 px-2 py-2 rounded hover:bg-red-50 shrink-0">Remove</button>
+                    </div>
+                </div>
+            </template>
+
+            <div class="flex items-center gap-2 pt-1">
+                <button type="button" @click="extra.push({ label: '', value: '' })" class="btn-secondary text-sm">+ Add area</button>
+                <button type="submit" class="btn-primary text-sm">Save areas</button>
             </div>
-            <div class="sm:col-span-2"><button type="submit" class="btn-primary text-sm">Save areas</button></div>
         </form>
     </div>
 

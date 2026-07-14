@@ -522,17 +522,34 @@ class AdminWebController extends Controller
             ];
         } else {
             $departments = collect($rawDepartments)
-                ->map(fn ($d) => is_array($d)
-                    ? ['name' => $d['name'] ?? '', 'active' => (bool) ($d['active'] ?? $d['is_active'] ?? true)]
-                    : ['name' => (string) $d, 'active' => true])
-                ->filter(fn ($d) => trim($d['name']) !== '')
+                ->map(function ($d) {
+                    if (! is_array($d)) {
+                        return ['name' => trim((string) $d), 'active' => true];
+                    }
+                    // Accept any legacy key that has historically held the label.
+                    $name = $d['name'] ?? $d['department'] ?? $d['title']
+                        ?? $d['label'] ?? $d['dept_name'] ?? '';
+                    $active = $d['active'] ?? $d['is_active'] ?? $d['enabled'] ?? true;
+
+                    return ['name' => trim((string) $name), 'active' => (bool) $active];
+                })
+                ->filter(fn ($d) => $d['name'] !== '')
                 ->values()
                 ->all();
         }
-        $areas = array_merge([
-            'waiting' => 'Floor 2, Waiting Area',
-            'lab'     => 'Sample Collection Counter',
-        ], is_array($cfg['areas'] ?? null) ? $cfg['areas'] : []);
+        $areasCfg = is_array($cfg['areas'] ?? null) ? $cfg['areas'] : [];
+        $areas = [
+            'waiting' => $areasCfg['waiting'] ?? 'Floor 2, Waiting Area',
+            'lab'     => $areasCfg['lab'] ?? 'Sample Collection Counter',
+            // Additional custom areas the hospital adds themselves.
+            'extra'   => collect($areasCfg['extra'] ?? [])
+                ->map(fn ($a) => is_array($a)
+                    ? ['label' => trim((string) ($a['label'] ?? '')), 'value' => trim((string) ($a['value'] ?? ''))]
+                    : ['label' => '', 'value' => trim((string) $a)])
+                ->filter(fn ($a) => $a['label'] !== '' || $a['value'] !== '')
+                ->values()
+                ->all(),
+        ];
         $gst = [
             'gstin' => $cfg['gstin'] ?? '',
             'state' => $cfg['gst_state'] ?? '',
@@ -594,14 +611,22 @@ class AdminWebController extends Controller
     {
         $hospital = Hospital::findOrFail(Auth::user()->hospital_id);
         $v = $request->validate([
-            'waiting' => 'nullable|string|max:120',
-            'lab'     => 'nullable|string|max:120',
+            'waiting'         => 'nullable|string|max:120',
+            'lab'             => 'nullable|string|max:120',
+            'extra'           => 'nullable|array|max:20',
+            'extra.*.label'   => 'nullable|string|max:60',
+            'extra.*.value'   => 'nullable|string|max:120',
         ]);
 
         $config = is_array($hospital->config) ? $hospital->config : json_decode($hospital->config ?? '{}', true);
         $config['areas'] = [
             'waiting' => trim($v['waiting'] ?? '') ?: 'Waiting Area',
             'lab'     => trim($v['lab'] ?? '') ?: 'Sample Collection Counter',
+            'extra'   => collect($v['extra'] ?? [])
+                ->map(fn ($a) => ['label' => trim($a['label'] ?? ''), 'value' => trim($a['value'] ?? '')])
+                ->filter(fn ($a) => $a['label'] !== '' && $a['value'] !== '')
+                ->values()
+                ->all(),
         ];
         $hospital->update(['config' => $config]);
 
