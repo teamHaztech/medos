@@ -59,7 +59,7 @@
 
     {{-- TEMPLATES --}}
     <div x-show="tab==='templates'" style="display:none">
-        <div class="flex justify-end mb-3"><button type="button" @click="openTemplate()" class="btn-primary text-sm">+ Add template</button></div>
+        <div class="flex justify-end mb-3"><button type="button" @click="openTemplate()" class="btn-primary">+ Add template</button></div>
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table class="w-full">
                 <thead class="bg-slate-50 border-b border-slate-200"><tr>

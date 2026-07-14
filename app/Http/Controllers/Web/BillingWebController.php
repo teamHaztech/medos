@@ -35,9 +35,16 @@ class BillingWebController extends Controller
 
         $r = $insights->range($period);
 
-        // Billed revenue (ledger) for this window and the previous one.
-        $now  = $insights->totals($hospitalId, $sources, $r['start'], $r['end']);
-        $prev = $insights->totals($hospitalId, $sources, $r['prevStart'], $r['prevEnd']);
+        // Billed revenue from the Bill ledger (reconciles with the payment ledger below).
+        $bills = Bill::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$r['start'], $r['end']])
+            ->get(['total_amount', 'payment_status', 'created_at']);
+        $revenue     = round((float) $bills->sum('total_amount'), 2);
+        $revenuePrev = round((float) Bill::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$r['prevStart'], $r['prevEnd']])->sum('total_amount'), 2);
+        $billsThis = $bills->count();
+        $billsPrev = Bill::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$r['prevStart'], $r['prevEnd']])->count();
 
         // Collections from the payment ledger (positive = collected, negative = refund).
         $payThis = BillPayment::where('hospital_id', $hospitalId)
@@ -48,35 +55,26 @@ class BillingWebController extends Controller
         $collected = round((float) $payThis->where('amount', '>', 0)->sum('amount'), 2);
         $refunded  = round((float) abs($payThis->where('amount', '<', 0)->sum('amount')), 2);
 
-        // Bills issued in the window.
-        $bills = Bill::where('hospital_id', $hospitalId)
-            ->whereBetween('created_at', [$r['start'], $r['end']])
-            ->get(['total_amount', 'payment_status', 'created_at']);
-        $billsThis = $bills->count();
-        $billsPrev = Bill::where('hospital_id', $hospitalId)
-            ->whereBetween('created_at', [$r['prevStart'], $r['prevEnd']])->count();
-
         // Outstanding receivables — current snapshot across all open bills (not window-scoped).
         $outstanding = round((float) Bill::where('hospital_id', $hospitalId)
             ->whereIn('payment_status', ['pending', 'partial'])
             ->sum('balance_due'), 2);
 
         $kpis = [
-            'revenue'         => $now['revenue'],
-            'revenue_change'  => RevenueInsights::pctChange($now['revenue'], $prev['revenue']),
+            'revenue'         => $revenue,
+            'revenue_change'  => RevenueInsights::pctChange($revenue, $revenuePrev),
             'collected'       => $collected,
             'collected_change'=> RevenueInsights::pctChange($collected, (float) $payPrev),
-            'collection_rate' => $now['revenue'] > 0 ? (int) round(($collected / $now['revenue']) * 100) : 0,
+            'collection_rate' => $revenue > 0 ? min(100, (int) round(($collected / $revenue) * 100)) : 0,
             'outstanding'     => $outstanding,
             'refunded'        => $refunded,
             'bills'           => $billsThis,
             'bills_change'    => RevenueInsights::pctChange($billsThis, $billsPrev),
-            'avg_bill'        => $billsThis > 0 ? round($bills->sum('total_amount') / $billsThis, 2) : 0.0,
+            'avg_bill'        => $billsThis > 0 ? round($revenue / $billsThis, 2) : 0.0,
         ];
 
-        // Revenue trend (all sources).
-        $trend = collect($insights->trend($hospitalId, $sources, $r['start'], $r['end'], $r['granularity'], $r['labelFormat']))
-            ->map(fn ($b) => ['label' => $b['label'], 'value' => $b['revenue']])->all();
+        // Revenue trend from the Bill ledger.
+        $trend = $insights->series($bills, fn ($b) => $b->created_at, $r['start'], $r['end'], $r['granularity'], $r['labelFormat'], fn ($b) => (float) $b->total_amount);
 
         // How revenue is made — split by charge source, and top individual services.
         $bySource = $insights->bySource($hospitalId, $sources, $r['start'], $r['end']);
@@ -245,8 +243,8 @@ class BillingWebController extends Controller
                 ->with('info', 'A bill already exists for this encounter.');
         }
 
-        $totalAmount = $request->subtotal + $request->tax_amount - $request->discount_amount;
-        $patientPayable = $totalAmount - $request->insurance_covered;
+        $totalAmount = round((float) $request->subtotal + (float) $request->tax_amount - (float) $request->discount_amount, 2);
+        $patientPayable = max(0, round($totalAmount - (float) $request->insurance_covered, 2));
 
         $bill = Bill::create([
             'id'                => Str::uuid()->toString(),

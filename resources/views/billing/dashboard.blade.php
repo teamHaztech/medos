@@ -87,13 +87,13 @@
         <h3 class="text-sm font-semibold text-slate-700 mb-4">Top Outstanding Bills</h3>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="text-xs text-slate-400 uppercase"><tr><th class="text-left py-1">Bill #</th><th class="text-left">Patient</th><th class="text-right">Total</th><th class="text-right">Paid</th><th class="text-right">Balance</th><th></th></tr></thead>
+                <thead class="text-xs text-slate-400 uppercase"><tr><th class="text-left py-1">Bill #</th><th class="text-left">Patient</th><th class="text-right">Payable</th><th class="text-right">Paid</th><th class="text-right">Balance</th><th></th></tr></thead>
                 <tbody class="divide-y divide-slate-50">
                     @foreach($outstandingBills as $b)
                         <tr>
                             <td class="py-2 font-mono text-slate-600">{{ $b->bill_number }}</td>
                             <td class="text-slate-800">{{ $b->patient?->name ?? '-' }}</td>
-                            <td class="text-right text-slate-600">{{ $cur }}{{ number_format($b->total_amount, 2) }}</td>
+                            <td class="text-right text-slate-600">{{ $cur }}{{ number_format($b->patient_payable ?? $b->total_amount, 2) }}</td>
                             <td class="text-right text-green-700">{{ $cur }}{{ number_format($b->amount_paid, 2) }}</td>
                             <td class="text-right font-semibold text-red-600">{{ $cur }}{{ number_format($b->balance_due, 2) }}</td>
                             <td class="text-right"><a href="{{ route('web.billing.show', $b->id) }}" class="text-blue-600 hover:text-blue-800 font-medium">Collect</a></td>

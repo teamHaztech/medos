@@ -248,22 +248,26 @@
                         <span class="text-slate-500">{{ $taxName }} <span class="text-xs text-slate-400">({{ number_format($bill->tax_rate ?? 0, ($bill->tax_rate == (int) $bill->tax_rate ? 0 : 2)) }}% on taxable)</span></span>
                         <span class="text-slate-700">{{ $currency }}{{ number_format($bill->tax_amount, 2) }}</span>
                     </div>
+                    @if(($bill->discount_amount ?? 0) > 0)
                     <div class="flex justify-between">
                         <span class="text-slate-500">Discount<span class="text-xs text-slate-400">{{ $bill->discount_reason ? ' · '.$bill->discount_reason : '' }}</span></span>
                         <span class="text-green-600">-{{ $currency }}{{ number_format($bill->discount_amount, 2) }}</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-slate-500">Insurance Covered</span>
-                        <span class="text-green-600">-{{ $currency }}{{ number_format($bill->insurance_covered, 2) }}</span>
-                    </div>
+                    @endif
                     <div class="border-t border-slate-200 pt-3 flex justify-between">
                         <span class="font-semibold text-slate-800">Total</span>
                         <span class="font-bold text-lg text-slate-900">{{ $currency }}{{ number_format($bill->total_amount, 2) }}</span>
                     </div>
+                    @if(($bill->insurance_covered ?? 0) > 0)
                     <div class="flex justify-between">
-                        <span class="text-slate-500">Patient Payable</span>
-                        <span class="font-semibold text-slate-800">{{ $currency }}{{ number_format($bill->patient_payable ?? $bill->total_amount, 2) }}</span>
+                        <span class="text-slate-500">Insurance Covered</span>
+                        <span class="text-green-600">-{{ $currency }}{{ number_format($bill->insurance_covered, 2) }}</span>
                     </div>
+                    <div class="flex justify-between border-t border-slate-100 pt-2">
+                        <span class="font-semibold text-slate-800">Patient Payable</span>
+                        <span class="font-bold text-slate-900">{{ $currency }}{{ number_format($bill->patient_payable ?? $bill->total_amount, 2) }}</span>
+                    </div>
+                    @endif
                     <div class="flex justify-between">
                         <span class="text-slate-500">Amount Paid</span>
                         <span class="font-medium text-green-700">{{ $currency }}{{ number_format($bill->amount_paid ?? 0, 2) }}</span>

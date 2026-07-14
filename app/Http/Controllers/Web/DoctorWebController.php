@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Analytics\Services\RevenueInsights;
 use App\Modules\Appointment\Models\Appointment;
 use App\Modules\Billing\Models\Bill;
 use App\Modules\Patient\Models\Encounter;
@@ -110,93 +111,92 @@ class DoctorWebController extends Controller
         ]);
     }
 
-    public function stats(Request $request)
+    public function stats(Request $request, RevenueInsights $insights)
     {
         $doctorId = $this->doctorId();
-        $staff = $this->staff();
-        $period = $request->get('period', 'today');
+        $staff    = $this->staff();
+        $period   = $request->get('period', 'month');
+        $r        = $insights->range($period);
 
-        // Date range based on period
-        switch ($period) {
-            case 'week':
-                $from = now()->subDays(7)->startOfDay();
-                $to = now()->endOfDay();
-                $label = 'Last 7 Days';
-                break;
-            case 'month':
-                $from = now()->subDays(30)->startOfDay();
-                $to = now()->endOfDay();
-                $label = 'Last 30 Days';
-                break;
-            case 'all':
-                $from = Carbon::parse('2020-01-01');
-                $to = now()->endOfDay();
-                $label = 'All Time';
-                break;
-            default: // today
-                $from = today()->startOfDay();
-                $to = today()->endOfDay();
-                $label = 'Today';
-                $period = 'today';
-        }
+        // Appointments this window + previous (for deltas).
+        $apts = fn ($from, $to) => Appointment::where('doctor_id', $doctorId)->whereBetween('slot_start', [$from, $to]);
 
-        // Appointment stats for the period
-        $aptsQuery = Appointment::where('doctor_id', $doctorId)
-            ->whereBetween('slot_start', [$from, $to]);
+        $totalApts = (clone $apts($r['start'], $r['end']))->count();
+        $completed = (clone $apts($r['start'], $r['end']))->where('status', 'completed')->count();
+        $pending   = (clone $apts($r['start'], $r['end']))->whereIn('status', ['scheduled', 'confirmed', 'checked_in', 'in_progress'])->count();
+        $noShows   = (clone $apts($r['start'], $r['end']))->where('status', 'no_show')->count();
 
-        $patients = (clone $aptsQuery)->distinct('patient_id')->count('patient_id');
-        $completed = (clone $aptsQuery)->where('status', 'completed')->count();
-        $pending = (clone $aptsQuery)->whereIn('status', ['scheduled', 'confirmed', 'checked_in', 'in_progress'])->count();
-        $noShows = (clone $aptsQuery)->where('status', 'no_show')->count();
-        $totalApts = (clone $aptsQuery)->count();
+        $prevCompleted = (clone $apts($r['prevStart'], $r['prevEnd']))->where('status', 'completed')->count();
 
-        // Encounter stats
-        $encQuery = Encounter::where('doctor_id', $doctorId)
-            ->whereBetween('created_at', [$from, $to]);
+        // Encounters (the clinical unit of work).
+        $encThis = Encounter::where('doctor_id', $doctorId)->whereBetween('created_at', [$r['start'], $r['end']]);
+        $totalEncounters = (clone $encThis)->count();
+        $uniquePatients  = (clone $encThis)->distinct('patient_id')->count('patient_id');
+        $prevPatients = Encounter::where('doctor_id', $doctorId)
+            ->whereBetween('created_at', [$r['prevStart'], $r['prevEnd']])
+            ->distinct('patient_id')->count('patient_id');
 
-        $totalEncounters = (clone $encQuery)->count();
-        $uniquePatients = (clone $encQuery)->distinct('patient_id')->count('patient_id');
+        // Revenue attributed to this doctor's encounters.
+        $revenue = (float) Bill::whereHas('encounter', fn ($q) => $q->where('doctor_id', $doctorId))
+            ->whereBetween('created_at', [$r['start'], $r['end']])->sum('total_amount');
+        $revenuePrev = (float) Bill::whereHas('encounter', fn ($q) => $q->where('doctor_id', $doctorId))
+            ->whereBetween('created_at', [$r['prevStart'], $r['prevEnd']])->sum('total_amount');
 
-        // Revenue
-        $revenue = Bill::whereHas('encounter', fn ($q) => $q->where('doctor_id', $doctorId))
-            ->whereBetween('created_at', [$from, $to])
-            ->sum('total_amount');
-
-        // Average consultation duration (completed only)
+        // Average consultation duration (completed only).
         $avgDuration = 0;
         $completedApts = Appointment::where('doctor_id', $doctorId)
-            ->whereBetween('slot_start', [$from, $to])
+            ->whereBetween('slot_start', [$r['start'], $r['end']])
             ->where('status', 'completed')
-            ->whereNotNull('consultation_start_time')
-            ->whereNotNull('consultation_end_time')
+            ->whereNotNull('consultation_start_time')->whereNotNull('consultation_end_time')
             ->get(['consultation_start_time', 'consultation_end_time']);
         if ($completedApts->count() > 0) {
-            $avgDuration = round($completedApts->avg(fn ($a) =>
+            $avgDuration = (int) round($completedApts->avg(fn ($a) =>
                 abs(Carbon::parse($a->consultation_end_time)->diffInMinutes(Carbon::parse($a->consultation_start_time)))
             ));
         }
 
-        // Recent encounters for this period
+        $kpis = [
+            'patients'         => $uniquePatients,
+            'patients_change'  => RevenueInsights::pctChange($uniquePatients, $prevPatients),
+            'completed'        => $completed,
+            'completed_change' => RevenueInsights::pctChange($completed, $prevCompleted),
+            'revenue'          => round($revenue, 2),
+            'revenue_change'   => RevenueInsights::pctChange($revenue, $revenuePrev),
+            'avg_duration'     => $avgDuration,
+            'total_appts'      => $totalApts,
+            'encounters'       => $totalEncounters,
+            'no_shows'         => $noShows,
+            'pending'          => $pending,
+            'completion_rate'  => $totalApts > 0 ? (int) round($completed / $totalApts * 100) : 0,
+        ];
+
+        // Encounters-per-day trend.
+        $encRows = Encounter::where('doctor_id', $doctorId)
+            ->whereBetween('created_at', [$r['start'], $r['end']])->get(['created_at']);
+        $trend = $insights->series($encRows, fn ($e) => $e->created_at, $r['start'], $r['end'], $r['granularity'], $r['labelFormat']);
+
         $recentEncounters = Encounter::where('doctor_id', $doctorId)
-            ->whereBetween('created_at', [$from, $to])
-            ->with(['patient'])->latest()->limit(20)->get()
+            ->whereBetween('created_at', [$r['start'], $r['end']])
+            ->with(['patient'])->latest()->limit(15)->get()
             ->map(function ($e) {
                 $intake = is_array($e->intake_data) ? $e->intake_data : [];
                 $status = is_object($e->status) ? $e->status->value : ($e->status ?? '');
-                $type = is_object($e->type) ? $e->type->value : ($e->type ?? '');
+                $type   = is_object($e->type) ? $e->type->value : ($e->type ?? '');
                 return [
                     'id' => $e->id, 'date' => $e->created_at?->format('M d, Y h:i A'),
-                    'patient' => $e->patient?->name ?? 'Unknown',
-                    'patient_id' => $e->patient_id,
-                    'complaint' => $intake['chief_complaint'] ?? '-',
-                    'type' => $type, 'status' => $status,
+                    'patient' => $e->patient?->name ?? 'Unknown', 'patient_id' => $e->patient_id,
+                    'complaint' => $intake['chief_complaint'] ?? '-', 'type' => $type, 'status' => $status,
                 ];
             });
 
-        return view('doctor.stats', compact(
-            'staff', 'period', 'label', 'patients', 'completed', 'pending', 'noShows',
-            'totalApts', 'totalEncounters', 'uniquePatients', 'revenue', 'avgDuration', 'recentEncounters'
-        ));
+        return view('doctor.stats', [
+            'staff'            => $staff,
+            'period'          => $period,
+            'periodLabel'      => $r['label'],
+            'kpis'             => $kpis,
+            'trend'            => $trend,
+            'recentEncounters' => $recentEncounters,
+        ]);
     }
 
     public function myPatients(Request $request)

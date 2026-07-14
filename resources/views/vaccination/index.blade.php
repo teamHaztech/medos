@@ -62,7 +62,7 @@ use App\Modules\Vaccination\Models\PatientVaccination;
             <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <div class="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
                     <div><h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Vaccine Master & National Schedule</h4><p class="text-xs text-slate-400">{{ $vaccines->count() }} vaccines. Scheduled ones drive the DOB-based due list.</p></div>
-                    <button type="button" @click="open(null)" class="btn-primary text-sm">+ Add vaccine</button>
+                    <button type="button" @click="open(null)" class="btn-primary">+ Add vaccine</button>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full">

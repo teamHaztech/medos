@@ -1,89 +1,96 @@
 @extends('layouts.app')
 @section('title', 'My Stats')
-@section('page-title', 'My Dashboard')
+@section('page-title', 'My Stats')
 
 @section('content')
-    {{-- Period selector --}}
-    <div class="flex items-center gap-1 bg-white rounded-xl shadow-sm border border-slate-200 p-1 mb-5 w-fit">
-        @foreach(['today' => 'Today', 'week' => '7 Days', 'month' => '30 Days', 'all' => 'All Time'] as $key => $lbl)
-            <a href="{{ route('web.doctor.stats', ['period' => $key]) }}"
-               class="px-4 py-2 rounded-lg text-sm font-semibold transition-all {{ $period === $key ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' }}">
-                {{ $lbl }}
-            </a>
-        @endforeach
-    </div>
+@php
+    $c = \App\Modules\Core\Services\RegionService::currency();
+    $money = fn ($v) => $c . number_format((float) $v, ($v >= 1000 ? 0 : 2));
 
-    {{-- KPI row 1: Primary stats --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <div class="kpi-card">
-            <p class="text-3xl font-bold text-blue-600">{{ $patients }}</p>
-            <p class="text-xs text-slate-500 mt-1">Patients</p>
-        </div>
-        <div class="kpi-card">
-            <p class="text-3xl font-bold text-green-600">{{ $completed }}</p>
-            <p class="text-xs text-slate-500 mt-1">Completed</p>
-        </div>
-        <div class="kpi-card">
-            <p class="text-3xl font-bold text-amber-600">{{ $pending }}</p>
-            <p class="text-xs text-slate-500 mt-1">Pending</p>
-        </div>
-        <div class="kpi-card">
-            <p class="text-3xl font-bold text-red-500">{{ $noShows }}</p>
-            <p class="text-xs text-slate-500 mt-1">No-shows</p>
-        </div>
-    </div>
+    $trendTotal = collect($trend)->sum('value');
+    $tseries = collect($trend)->map(fn ($b) => ['label'=>$b['label'], 'value'=>$b['value'], 'tip'=>$b['label'].' — '.number_format($b['value']).' encounters'])->all();
 
-    {{-- KPI row 2: Revenue, avg time, encounters --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <div class="kpi-card">
-            <p class="text-2xl font-bold text-green-600">₹{{ number_format($revenue) }}</p>
-            <p class="text-xs text-slate-500 mt-1">Revenue</p>
-        </div>
-        <div class="kpi-card">
-            <p class="text-2xl font-bold text-purple-600">{{ $totalEncounters }}</p>
-            <p class="text-xs text-slate-500 mt-1">Consultations</p>
-        </div>
-        <div class="kpi-card">
-            <p class="text-2xl font-bold text-cyan-600">{{ $avgDuration }} <span class="text-sm font-normal">min</span></p>
-            <p class="text-xs text-slate-500 mt-1">Avg Duration</p>
-        </div>
-        <div class="kpi-card">
-            <p class="text-2xl font-bold text-slate-700">{{ $totalApts > 0 ? round($completed / $totalApts * 100) : 0 }}<span class="text-sm font-normal">%</span></p>
-            <p class="text-xs text-slate-500 mt-1">Completion Rate</p>
-        </div>
-    </div>
+    $statusStyle = ['completed'=>'bg-green-100 text-green-700','in_progress'=>'bg-blue-100 text-blue-700','cancelled'=>'bg-red-100 text-red-700'];
+@endphp
 
-    {{-- Consultations table --}}
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-slate-700">Consultations — {{ $label }}</h3>
-            <span class="text-xs text-slate-400">{{ $recentEncounters->count() }} records</span>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                        <th class="table-header">Date</th>
-                        <th class="table-header">Patient</th>
-                        <th class="table-header">Complaint</th>
-                        <th class="table-header">Type</th>
-                        <th class="table-header">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @forelse($recentEncounters as $enc)
-                    <tr class="hover:bg-slate-50 cursor-pointer" onclick="window.location='{{ route('web.doctor.patients.show', $enc['patient_id']) }}'">
-                        <td class="table-cell text-slate-500 whitespace-nowrap">{{ $enc['date'] }}</td>
-                        <td class="table-cell font-medium">{{ $enc['patient'] }}</td>
-                        <td class="table-cell">{{ $enc['complaint'] }}</td>
-                        <td class="table-cell capitalize text-slate-500">{{ str_replace('_', ' ', $enc['type']) }}</td>
-                        <td class="table-cell"><x-status-badge :status="$enc['status']" type="encounter" /></td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-slate-400">No consultations for this period</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div>
+        <h2 class="text-lg font-semibold text-slate-800">My Stats</h2>
+        <p class="text-sm text-slate-500">{{ $staff->name ?? 'Doctor' }} · {{ $periodLabel }}</p>
     </div>
+    <x-insights.period-tabs route="web.doctor.stats" :period="$period" />
+</div>
+
+{{-- KPI row --}}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <x-insights.kpi label="Patients seen" :value="number_format($kpis['patients'])" :delta="$kpis['patients_change']" accent="blue" icon="users" />
+    <x-insights.kpi label="Consultations" :value="number_format($kpis['completed'])" :delta="$kpis['completed_change']" accent="green" icon="check" />
+    <x-insights.kpi label="Revenue generated" :value="$money($kpis['revenue'])" :delta="$kpis['revenue_change']" accent="purple" icon="currency" />
+    <x-insights.kpi label="Avg consult time" :value="$kpis['avg_duration'].' min'" :sub="'per completed visit'" accent="amber" icon="clock" />
+</div>
+
+{{-- Secondary strip --}}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <p class="text-xs text-slate-500">Encounters</p>
+        <p class="text-lg font-bold text-slate-900">{{ number_format($kpis['encounters']) }}</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <p class="text-xs text-slate-500">Completion rate</p>
+        <p class="text-lg font-bold text-green-600">{{ $kpis['completion_rate'] }}%</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <p class="text-xs text-slate-500">Pending</p>
+        <p class="text-lg font-bold {{ $kpis['pending'] > 0 ? 'text-amber-600' : 'text-slate-900' }}">{{ number_format($kpis['pending']) }}</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <p class="text-xs text-slate-500">No-shows</p>
+        <p class="text-lg font-bold {{ $kpis['no_shows'] > 0 ? 'text-red-600' : 'text-slate-900' }}">{{ number_format($kpis['no_shows']) }}</p>
+    </div>
+</div>
+
+{{-- Encounters trend --}}
+<div class="mb-6">
+    <x-insights.trend :series="$tseries" accent="blue"
+        title="Patient encounters · {{ $periodLabel }}"
+        meta="{{ number_format($trendTotal) }} encounters"
+        empty="No encounters in this period yet." />
+</div>
+
+{{-- Recent encounters --}}
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-6 border-b border-slate-200">
+        <h3 class="text-sm font-semibold text-slate-700">Recent encounters</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-slate-50 border-b border-slate-200">
+                <tr>
+                    <th class="table-header">Patient</th>
+                    <th class="table-header">Chief complaint</th>
+                    <th class="table-header">Type</th>
+                    <th class="table-header">Status</th>
+                    <th class="table-header">Date</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @forelse($recentEncounters as $e)
+                <tr class="hover:bg-slate-50">
+                    <td class="table-cell font-medium">{{ $e['patient'] }}</td>
+                    <td class="table-cell text-sm text-slate-500">{{ $e['complaint'] }}</td>
+                    <td class="table-cell capitalize">{{ str_replace('_', ' ', $e['type']) }}</td>
+                    <td class="table-cell">
+                        <span class="px-2 py-0.5 rounded text-xs font-medium {{ $statusStyle[$e['status']] ?? 'bg-slate-100 text-slate-600' }}">
+                            {{ ucfirst(str_replace('_', ' ', $e['status'])) }}
+                        </span>
+                    </td>
+                    <td class="table-cell text-xs text-slate-400">{{ $e['date'] }}</td>
+                </tr>
+                @empty
+                <tr><td colspan="5" class="text-center py-8 text-sm text-slate-400">No encounters in this period.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
 @endsection

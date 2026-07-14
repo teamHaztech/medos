@@ -34,7 +34,7 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
                     <h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Fee Schedule — dental procedures</h4>
                     <p class="text-xs text-slate-400">The price list dentists chart against. {{ $procedures->count() }} procedures.</p>
                 </div>
-                <button type="button" @click="open(null)" class="btn-primary text-sm">+ Add procedure</button>
+                <button type="button" @click="open(null)" class="btn-primary">+ Add procedure</button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full">
@@ -218,7 +218,7 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
 
         {{-- VISIT NOTES --}}
         <div x-show="tab==='visits'" style="display:none">
-            <div class="flex justify-end mb-3"><button type="button" @click="visitModal=true" class="btn-secondary text-sm">+ New visit note</button></div>
+            <div class="flex justify-end mb-3"><button type="button" @click="visitModal=true" class="btn-primary">+ New visit note</button></div>
             <div class="space-y-3">
                 @forelse($visits as $vz)
                 <div class="bg-white rounded-xl border border-slate-200 p-4">

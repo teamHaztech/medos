@@ -58,7 +58,7 @@
 
     {{-- FORMS --}}
     <div x-show="tab==='forms'" style="display:none">
-        <div class="flex justify-end mb-3"><button type="button" @click="openForm()" class="btn-primary text-sm">+ Add form</button></div>
+        <div class="flex justify-end mb-3"><button type="button" @click="openForm()" class="btn-primary">+ Add form</button></div>
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table class="w-full">
                 <thead class="bg-slate-50 border-b border-slate-200"><tr>

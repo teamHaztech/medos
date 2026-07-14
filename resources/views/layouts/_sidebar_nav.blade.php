@@ -111,6 +111,10 @@
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
     All Appointments
 </a>
+<a href="{{ route('web.admin.opd-insights') }}" class="sidebar-link {{ request()->routeIs('web.admin.opd-insights') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    OPD Insights
+</a>
 <a href="{{ route('web.admin.info-desk') }}" class="sidebar-link {{ request()->routeIs('web.admin.info-desk') ? 'active' : '' }}">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
     Information Desk
@@ -157,9 +161,13 @@
 </a>
 @endif
 @if(!isset($moduleOn) || $moduleOn('inpatient'))
-<a href="{{ route('web.ip.dashboard') }}" class="sidebar-link {{ request()->routeIs('web.ip.*') ? 'active' : '' }}">
+<a href="{{ route('web.ip.dashboard') }}" class="sidebar-link {{ request()->routeIs('web.ip.*') && !request()->routeIs('web.ip.insights') ? 'active' : '' }}">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M3 12v6a1 1 0 001 1h16a1 1 0 001-1v-6M3 12V9a2 2 0 012-2h4a2 2 0 012 2v3m-6 0h6m4 0v-1a2 2 0 00-2-2h-1a2 2 0 00-2 2v1"/></svg>
     Inpatients
+</a>
+<a href="{{ route('web.ip.insights') }}" class="sidebar-link {{ request()->routeIs('web.ip.insights') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    IPD Insights
 </a>
 @endif
 <div class="pt-4 mt-4 border-t border-slate-700">
@@ -260,17 +268,25 @@
 <div class="pt-4 mt-4 border-t border-slate-700">
     <span class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Billing</span>
 </div>
-<a href="{{ route('web.billing.index') }}" class="sidebar-link {{ request()->routeIs('web.billing.*') && !request()->routeIs('web.billing.audit') ? 'active' : '' }}">
+<a href="{{ route('web.billing.index') }}" class="sidebar-link {{ request()->routeIs('web.billing.*') && !request()->routeIs('web.billing.audit') && !request()->routeIs('web.billing.insights') ? 'active' : '' }}">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
     Billing
+</a>
+<a href="{{ route('web.billing.insights') }}" class="sidebar-link {{ request()->routeIs('web.billing.insights') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    Revenue Insights
 </a>
 <a href="{{ route('web.billing.audit') }}" class="sidebar-link {{ request()->routeIs('web.billing.audit') ? 'active' : '' }}">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
     Billing Audit
 </a>
-<a href="{{ route('web.claims.index') }}" class="sidebar-link {{ request()->routeIs('web.claims.*') ? 'active' : '' }}">
+<a href="{{ route('web.claims.index') }}" class="sidebar-link {{ request()->routeIs('web.claims.*') && !request()->routeIs('web.claims.insights') ? 'active' : '' }}">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
     Insurance Claims
+</a>
+<a href="{{ route('web.claims.insights') }}" class="sidebar-link {{ request()->routeIs('web.claims.insights') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    Claims Insights
 </a>
 @endif
 @if(!isset($moduleOn) || $moduleOn('ai_receptionist'))
@@ -394,6 +410,14 @@
 <a href="{{ route('web.billing.index') }}" class="sidebar-link {{ request()->routeIs('web.billing.index') || request()->routeIs('web.billing.show') || request()->routeIs('web.billing.new') || request()->routeIs('web.billing.bill.*') ? 'active' : '' }}">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
     Bills
+</a>
+<a href="{{ route('web.billing.insights') }}" class="sidebar-link {{ request()->routeIs('web.billing.insights') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    Revenue Insights
+</a>
+<a href="{{ route('web.claims.insights') }}" class="sidebar-link {{ request()->routeIs('web.claims.insights') ? 'active' : '' }}">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    Claims Insights
 </a>
 <a href="{{ route('web.billing.services') }}" class="sidebar-link {{ request()->routeIs('web.billing.services') ? 'active' : '' }}">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>

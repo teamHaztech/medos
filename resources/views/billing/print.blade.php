@@ -147,26 +147,28 @@
             <span>{{ $currency }}{{ number_format($bill->tax_amount, 2) }}</span>
         </div>
         @endif
+        @if(($bill->discount_amount ?? 0) > 0)
         <div class="row">
             <span>Discount:{{ $bill->discount_reason ? ' ('.$bill->discount_reason.')' : '' }}</span>
             <span>-{{ $currency }}{{ number_format($bill->discount_amount, 2) }}</span>
         </div>
-        <div class="row">
-            <span>Insurance Covered:</span>
-            <span>-{{ $currency }}{{ number_format($bill->insurance_covered, 2) }}</span>
-        </div>
+        @endif
         <div class="row bold">
             <span>TOTAL:</span>
             <span>{{ $currency }}{{ number_format($bill->total_amount, 2) }}</span>
         </div>
-        @if(($bill->deposit_applied ?? 0) > 0)
+        @if(($bill->insurance_covered ?? 0) > 0)
         <div class="row">
-            <span>Deposit Applied:</span>
-            <span>-{{ $currency }}{{ number_format($bill->deposit_applied, 2) }}</span>
+            <span>Less: Insurance Covered:</span>
+            <span>-{{ $currency }}{{ number_format($bill->insurance_covered, 2) }}</span>
+        </div>
+        <div class="row bold">
+            <span>NET PAYABLE:</span>
+            <span>{{ $currency }}{{ number_format($bill->patient_payable ?? $bill->total_amount, 2) }}</span>
         </div>
         @endif
         <div class="row">
-            <span>Amount Paid:</span>
+            <span>Amount Paid:{{ ($bill->deposit_applied ?? 0) > 0 ? ' (incl. '.$currency.number_format($bill->deposit_applied, 2).' from deposit)' : '' }}</span>
             <span>{{ $currency }}{{ number_format($bill->amount_paid ?? 0, 2) }}</span>
         </div>
         @if($refunded > 0)

@@ -112,7 +112,7 @@
 
     {{-- CATALOGUE --}}
     <div x-show="tab==='catalog'" style="display:none">
-        <div class="flex justify-end mb-3"><button type="button" @click="openDiet()" class="btn-primary text-sm">+ Add diet</button></div>
+        <div class="flex justify-end mb-3"><button type="button" @click="openDiet()" class="btn-primary">+ Add diet</button></div>
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table class="w-full">
                 <thead class="bg-slate-50 border-b border-slate-200"><tr>

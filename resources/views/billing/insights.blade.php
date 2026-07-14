@@ -79,7 +79,8 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     {{-- Revenue by source --}}
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 class="text-sm font-semibold text-slate-700 mb-4">How revenue is made</h3>
+        <h3 class="text-sm font-semibold text-slate-700">How revenue is made</h3>
+        <p class="text-xs text-slate-400 mb-4">by captured charge line</p>
         @if($bySource->count())
         <div class="space-y-3">
             @foreach($bySource as $s)

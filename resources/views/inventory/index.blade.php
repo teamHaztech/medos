@@ -21,7 +21,7 @@
         <button type="button" @click="tab='movements'" :class="tab==='movements' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Movements</button>
         <button type="button" @click="tab='expiring'" :class="tab==='expiring' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Expiring ({{ $counts['expiring'] }})</button>
         <div class="ml-auto flex gap-2">
-            <button type="button" @click="openItem()" class="btn-primary text-sm">+ Add item</button>
+            <button type="button" @click="openItem()" class="btn-primary">+ Add item</button>
             <button type="button" @click="openMove('')" class="btn-primary">Record stock</button>
         </div>
     </div>

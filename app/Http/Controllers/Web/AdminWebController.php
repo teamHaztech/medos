@@ -1127,112 +1127,75 @@ class AdminWebController extends Controller
         return response()->json(['success' => true, 'message' => 'Schedule updated.']);
     }
 
-    public function analytics(Request $request)
+    public function analytics(Request $request, RevenueInsights $insights)
     {
         $hospitalId = Auth::user()->hospital_id;
-        $period = $request->get('period', 'this_month');
+        $period     = $request->get('period', 'month');
+        $r          = $insights->range($period);
 
-        // Determine date ranges based on period
-        switch ($period) {
-            case 'last_month':
-                $startDate = now()->subMonth()->startOfMonth();
-                $endDate = now()->subMonth()->endOfMonth();
-                $prevStart = now()->subMonths(2)->startOfMonth();
-                $prevEnd = now()->subMonths(2)->endOfMonth();
-                $periodLabel = 'Last Month';
-                break;
-            case 'last_3_months':
-                $startDate = now()->subMonths(3)->startOfMonth();
-                $endDate = now()->endOfDay();
-                $prevStart = now()->subMonths(6)->startOfMonth();
-                $prevEnd = now()->subMonths(3)->startOfMonth();
-                $periodLabel = 'Last 3 Months';
-                break;
-            case 'this_year':
-                $startDate = now()->startOfYear();
-                $endDate = now()->endOfDay();
-                $prevStart = now()->subYear()->startOfYear();
-                $prevEnd = now()->subYear()->endOfYear();
-                $periodLabel = 'This Year';
-                break;
-            default: // this_month
-                $startDate = now()->startOfMonth();
-                $endDate = now()->endOfDay();
-                $prevStart = now()->subMonth()->startOfMonth();
-                $prevEnd = now()->subMonth()->endOfMonth();
-                $periodLabel = 'This Month';
-                break;
-        }
+        // Billed revenue from the Bill ledger (reconciles with Billing insights).
+        $bills = Bill::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$r['start'], $r['end']])->get(['total_amount', 'created_at']);
+        $revenueThis = round((float) $bills->sum('total_amount'), 2);
+        $revenuePrev = round((float) Bill::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$r['prevStart'], $r['prevEnd']])->sum('total_amount'), 2);
 
-        // Patient counts
-        $patientsThisPeriod = Patient::where('hospital_id', $hospitalId)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->count();
-        $patientsPrevPeriod = Patient::where('hospital_id', $hospitalId)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->count();
+        $patientsThis = Patient::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$r['start'], $r['end']])->count();
+        $patientsPrev = Patient::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$r['prevStart'], $r['prevEnd']])->count();
 
-        // Revenue
-        $revenueThisPeriod = Bill::where('hospital_id', $hospitalId)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->sum('total_amount') ?? 0;
-        $revenuePrevPeriod = Bill::where('hospital_id', $hospitalId)
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->sum('total_amount') ?? 0;
+        $apptsThis = Appointment::where('hospital_id', $hospitalId)
+            ->whereBetween('slot_start', [$r['start'], $r['end']])->count();
+        $apptsPrev = Appointment::where('hospital_id', $hospitalId)
+            ->whereBetween('slot_start', [$r['prevStart'], $r['prevEnd']])->count();
 
-        // Appointments
-        $appointmentsThisPeriod = Appointment::where('hospital_id', $hospitalId)
-            ->whereBetween('slot_start', [$startDate, $endDate])
-            ->count();
-        $appointmentsPrevPeriod = Appointment::where('hospital_id', $hospitalId)
-            ->whereBetween('slot_start', [$prevStart, $prevEnd])
-            ->count();
-
-        // Avg wait time (SQLite-compatible)
+        // Avg wait time (SQLite-compatible).
         $avgWaitTime = 0;
         $waitEntries = QueueEntry::where('hospital_id', $hospitalId)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereNotNull('called_at')
-            ->get(['created_at', 'called_at']);
+            ->whereBetween('created_at', [$r['start'], $r['end']])
+            ->whereNotNull('called_at')->get(['created_at', 'called_at']);
         if ($waitEntries->count() > 0) {
-            $totalMinutes = $waitEntries->sum(fn ($e) => $e->called_at->diffInMinutes($e->created_at));
-            $avgWaitTime = round($totalMinutes / $waitEntries->count());
+            $avgWaitTime = (int) round($waitEntries->sum(fn ($e) => $e->called_at->diffInMinutes($e->created_at)) / $waitEntries->count());
         }
 
-        // Top 5 doctors by patient count
+        $kpis = [
+            'revenue'          => $revenueThis,
+            'revenue_change'   => RevenueInsights::pctChange($revenueThis, $revenuePrev),
+            'patients'         => $patientsThis,
+            'patients_change'  => RevenueInsights::pctChange($patientsThis, $patientsPrev),
+            'appointments'     => $apptsThis,
+            'appts_change'     => RevenueInsights::pctChange($apptsThis, $apptsPrev),
+            'avg_wait'         => $avgWaitTime,
+        ];
+
+        $trend = $insights->series($bills, fn ($b) => $b->created_at, $r['start'], $r['end'], $r['granularity'], $r['labelFormat'], fn ($b) => (float) $b->total_amount);
+
         $topDoctors = Appointment::where('appointments.hospital_id', $hospitalId)
-            ->whereBetween('slot_start', [$startDate, $endDate])
+            ->whereBetween('slot_start', [$r['start'], $r['end']])
             ->join('staff', 'appointments.doctor_id', '=', 'staff.id')
             ->selectRaw('staff.name, staff.department, staff.specialization, count(distinct appointments.patient_id) as patient_count, count(*) as appointment_count')
             ->groupBy('staff.id', 'staff.name', 'staff.department', 'staff.specialization')
-            ->orderByDesc('patient_count')
-            ->limit(5)
-            ->get();
+            ->orderByDesc('patient_count')->limit(6)->get();
 
-        // Department-wise patient distribution
         $departmentStats = Appointment::where('appointments.hospital_id', $hospitalId)
-            ->whereBetween('slot_start', [$startDate, $endDate])
+            ->whereBetween('slot_start', [$r['start'], $r['end']])
             ->join('staff', 'appointments.doctor_id', '=', 'staff.id')
-            ->selectRaw("coalesce(staff.department, 'General') as department, count(distinct appointments.patient_id) as patient_count")
-            ->groupBy('staff.department')
-            ->orderByDesc('patient_count')
-            ->get();
+            ->selectRaw("coalesce(nullif(staff.department, ''), 'General') as department, count(distinct appointments.patient_id) as patient_count")
+            ->groupBy('department')->orderByDesc('patient_count')->get();
 
-        // Recent 20 encounters
         $recentEncounters = Encounter::where('encounters.hospital_id', $hospitalId)
-            ->with(['patient', 'doctor'])
-            ->latest()
-            ->limit(20)
-            ->get();
+            ->with(['patient', 'doctor'])->latest()->limit(15)->get();
 
-        return view('admin.analytics', compact(
-            'period', 'periodLabel',
-            'patientsThisPeriod', 'patientsPrevPeriod',
-            'revenueThisPeriod', 'revenuePrevPeriod',
-            'appointmentsThisPeriod', 'appointmentsPrevPeriod',
-            'avgWaitTime',
-            'topDoctors', 'departmentStats', 'recentEncounters',
-        ));
+        return view('admin.analytics', [
+            'period'           => $period,
+            'periodLabel'      => $r['label'],
+            'kpis'             => $kpis,
+            'trend'            => $trend,
+            'topDoctors'       => $topDoctors,
+            'departmentStats'  => $departmentStats,
+            'recentEncounters' => $recentEncounters,
+        ]);
     }
 
     /**
