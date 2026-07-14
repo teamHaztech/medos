@@ -10,6 +10,27 @@
         $region = \App\Modules\Core\Services\RegionService::get($hospital?->country ?? 'IN');
     @endphp
 
+    {{-- Super Admin: choose which hospital these settings apply to --}}
+    @if(!empty($isSuperAdmin))
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+        <form method="GET" action="{{ route('web.admin.settings') }}" class="flex flex-wrap items-center gap-3">
+            <div>
+                <p class="text-sm font-semibold text-blue-900">You are editing settings for a specific hospital</p>
+                <p class="text-xs text-blue-700">As Super Admin you have no single hospital — pick the one to configure. Every save below applies to it.</p>
+            </div>
+            <select name="hospital_id" onchange="this.form.submit()"
+                    class="ml-auto rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm font-medium text-slate-800">
+                @foreach($manageHospitals as $mh)
+                <option value="{{ $mh->id }}" {{ (optional($hospital)->id === $mh->id) ? 'selected' : '' }}>
+                    {{ $mh->name }}{{ $mh->is_active ? '' : ' (inactive)' }}
+                </option>
+                @endforeach
+            </select>
+            <noscript><button type="submit" class="btn-primary text-xs px-3 py-2">Switch</button></noscript>
+        </form>
+    </div>
+    @endif
+
     {{-- Hospital Info + Region --}}
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6" x-data="{ saving: false, saved: false }">
         <h3 class="text-base font-semibold text-slate-800 mb-4">Hospital Information</h3>
