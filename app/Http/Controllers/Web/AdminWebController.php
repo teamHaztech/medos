@@ -535,6 +535,43 @@ class AdminWebController extends Controller
         return (is_object($user->role) ? $user->role->value : $user->role) === 'super_admin';
     }
 
+    /**
+     * Hospital Admin activity log — who signed in and what they changed, scoped
+     * to this admin's hospital. An append-only audit trail for incident response.
+     */
+    public function activityLog(Request $request)
+    {
+        $hospitalId = $this->effectiveHospitalId();
+
+        $q = \App\Modules\Core\Models\AccountActivity::where('hospital_id', $hospitalId);
+
+        if ($action = $request->get('action')) {
+            $q->where('action', $action);
+        }
+        if (($s = trim((string) $request->get('search', ''))) !== '') {
+            $q->where(fn ($w) => $w->where('user_name', 'like', "%{$s}%")
+                ->orWhere('user_email', 'like', "%{$s}%")
+                ->orWhere('description', 'like', "%{$s}%")
+                ->orWhere('ip_address', 'like', "%{$s}%"));
+        }
+        if ($request->filled('from')) {
+            $q->whereDate('created_at', '>=', $request->get('from'));
+        }
+        if ($request->filled('to')) {
+            $q->whereDate('created_at', '<=', $request->get('to'));
+        }
+
+        $activities = $q->orderByDesc('created_at')->paginate(50)->withQueryString();
+
+        return view('admin.activity-log', [
+            'activities'   => $activities,
+            'isSuperAdmin' => false,
+            'hospitals'    => collect(),
+            'actionTypes'  => \App\Modules\Core\Models\AccountActivity::ACTIONS,
+            'scopeLabel'   => Hospital::find($hospitalId)?->name ?? 'your hospital',
+        ]);
+    }
+
     /** Download a JSON backup of the admin's own hospital. */
     public function backupHospital()
     {

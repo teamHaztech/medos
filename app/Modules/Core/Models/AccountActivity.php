@@ -33,6 +33,10 @@ class AccountActivity extends Model
         'login'        => 'Signed in',
         'logout'       => 'Signed out',
         'failed_login' => 'Failed sign-in',
+        'create'       => 'Created',
+        'update'       => 'Updated',
+        'delete'       => 'Deleted',
+        'action'       => 'Action',
     ];
 
     public function user(): BelongsTo

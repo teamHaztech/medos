@@ -70,6 +70,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::post('settings/whatsapp', [AdminWebController::class, 'saveWhatsappSettings'])->name('settings.whatsapp');
         Route::post('settings/billing-integration', [AdminWebController::class, 'saveBillingIntegration'])->name('settings.billing-integration');
         Route::post('settings/billing-integration/test', [AdminWebController::class, 'testBillingIntegration'])->name('settings.billing-integration.test');
+        Route::get('activity', [AdminWebController::class, 'activityLog'])->name('activity');
         Route::get('api-keys', [AdminWebController::class, 'apiKeys'])->name('api-keys');
         Route::post('api-keys', [AdminWebController::class, 'createApiKey'])->name('api-keys.create');
         Route::post('api-keys/{id}/revoke', [AdminWebController::class, 'revokeApiKey'])->name('api-keys.revoke');
@@ -615,6 +616,7 @@ Route::middleware(['auth', 'super_admin'])->prefix('super-admin')->name('web.sup
     Route::post('hospitals/{id}/admin', [\App\Http\Controllers\Web\SuperAdminController::class, 'addAdminToHospital'])->name('hospitals.admin.add');
     Route::post('hospitals/{hospitalId}/users/{userId}/reset-password', [\App\Http\Controllers\Web\SuperAdminController::class, 'resetUserPassword'])->name('hospitals.users.reset');
     // IAM — all user accounts across hospitals
+    Route::get('activity', [\App\Http\Controllers\Web\SuperAdminController::class, 'activityLog'])->name('activity');
     Route::get('users', [\App\Http\Controllers\Web\SuperAdminController::class, 'users'])->name('users.index');
     Route::get('users/{userId}', [\App\Http\Controllers\Web\SuperAdminController::class, 'userDetail'])->name('users.show');
     Route::post('users/{userId}/toggle', [\App\Http\Controllers\Web\SuperAdminController::class, 'toggleUserActive'])->name('users.toggle');

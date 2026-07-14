@@ -14,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
+        // Record state-changing actions to the account-activity audit trail
+        // (web only — API/token traffic isn't part of the admin incident log).
+        $middleware->web(append: [\App\Http\Middleware\LogActivity::class]);
+
         $middleware->alias([
             'resolve.hospital' => \App\Modules\Admin\Middleware\ResolveHospital::class,
             'role'             => \App\Modules\Admin\Middleware\CheckRole::class,

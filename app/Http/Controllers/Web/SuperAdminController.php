@@ -665,6 +665,44 @@ class SuperAdminController extends Controller
         return view('superadmin.user-detail', compact('user', 'hospitalName', 'activity', 'actions', 'stats'));
     }
 
+    /**
+     * Platform-wide activity log — every account's sign-ins and changes across
+     * all hospitals, filterable, for audit & incident response.
+     */
+    public function activityLog(Request $request)
+    {
+        $q = AccountActivity::query();
+
+        if ($h = $request->get('hospital')) {
+            $q->where('hospital_id', $h);
+        }
+        if ($action = $request->get('action')) {
+            $q->where('action', $action);
+        }
+        if (($s = trim((string) $request->get('search', ''))) !== '') {
+            $q->where(fn ($w) => $w->where('user_name', 'like', "%{$s}%")
+                ->orWhere('user_email', 'like', "%{$s}%")
+                ->orWhere('description', 'like', "%{$s}%")
+                ->orWhere('ip_address', 'like', "%{$s}%"));
+        }
+        if ($request->filled('from')) {
+            $q->whereDate('created_at', '>=', $request->get('from'));
+        }
+        if ($request->filled('to')) {
+            $q->whereDate('created_at', '<=', $request->get('to'));
+        }
+
+        $activities = $q->orderByDesc('created_at')->paginate(50)->withQueryString();
+
+        return view('admin.activity-log', [
+            'activities'   => $activities,
+            'isSuperAdmin' => true,
+            'hospitals'    => Hospital::orderBy('name')->get(['id', 'name']),
+            'actionTypes'  => AccountActivity::ACTIONS,
+            'scopeLabel'   => 'all hospitals',
+        ]);
+    }
+
     /** Permanently delete a user account (e.g. an unknown / test account). */
     public function deleteUser(string $userId)
     {
