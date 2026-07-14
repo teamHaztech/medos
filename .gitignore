@@ -23,3 +23,6 @@ docs/MedOS-System-Lifecycle.pdf
 /.postman
 /postman
 /skills-lock.json
+
+# Throwaway kernel/probe harnesses (never deploy)
+/_*.php
