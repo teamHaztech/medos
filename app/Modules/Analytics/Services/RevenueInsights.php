@@ -208,6 +208,65 @@ class RevenueInsights
             });
     }
 
+    /**
+     * Bucket key for a moment at the given granularity — mirrors the SQL keys used by
+     * trend() so DB-aggregated and PHP-aggregated series line up on the same axis.
+     */
+    public static function bucketKey(Carbon $d, string $granularity): string
+    {
+        return match ($granularity) {
+            'hour'  => $d->format('Y-m-d H'),
+            'month' => $d->format('Y-m'),
+            default => $d->format('Y-m-d'),
+        };
+    }
+
+    /**
+     * Ordered, gap-filled empty buckets spanning [start, end] at the granularity.
+     *
+     * @return array<string, array{label:string, value:float}> keyed by bucketKey()
+     */
+    public function axis(Carbon $start, Carbon $end, string $granularity, string $labelFormat): array
+    {
+        $step   = match ($granularity) { 'hour' => 'hour', 'month' => 'month', default => 'day' };
+        $out    = [];
+        $cursor = $start->copy();
+        $guard  = 400;
+
+        while ($cursor <= $end && $guard-- > 0) {
+            $out[self::bucketKey($cursor, $granularity)] = ['label' => $cursor->format($labelFormat), 'value' => 0.0];
+            $cursor->addUnit($step, 1);
+        }
+
+        return $out;
+    }
+
+    /**
+     * Generic count/sum time-series over ANY row set (appointments, admissions, claims…),
+     * bucketed in PHP so it works for tables that aren't the charge ledger. $dateFn pulls
+     * the moment from a row; $valueFn pulls the value to sum (default: count of 1).
+     *
+     * @return array<int, array{label:string, value:float}>
+     */
+    public function series(iterable $rows, callable $dateFn, Carbon $start, Carbon $end, string $granularity, string $labelFormat, ?callable $valueFn = null): array
+    {
+        $buckets = $this->axis($start, $end, $granularity, $labelFormat);
+
+        foreach ($rows as $row) {
+            $d = $dateFn($row);
+            if (! $d) {
+                continue;
+            }
+            $d = $d instanceof Carbon ? $d : Carbon::parse($d);
+            $k = self::bucketKey($d, $granularity);
+            if (isset($buckets[$k])) {
+                $buckets[$k]['value'] += $valueFn ? (float) $valueFn($row) : 1;
+            }
+        }
+
+        return array_values($buckets);
+    }
+
     /** Period-over-period percentage change, guarding division by zero. */
     public static function pctChange(float $current, float $previous): int
     {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Analytics\Services\RevenueInsights;
 use App\Modules\Billing\Models\Bill;
 use App\Modules\Billing\Models\ChargeItem;
 use App\Modules\Billing\Models\ServiceCharge;
@@ -33,6 +34,98 @@ class InpatientController extends Controller
     private function ready(): bool
     {
         return Schema::hasTable('admissions') && Schema::hasTable('wards') && Schema::hasTable('beds');
+    }
+
+    /**
+     * Inpatient insights — live bed occupancy, admissions vs discharges over a day /
+     * week / month / year, average length of stay, ward utilization, discharge-type
+     * mix and IPD revenue. Occupancy/ALOS come from the admissions + bed census;
+     * revenue comes from admission-linked charges in the ledger.
+     */
+    public function insights(Request $request, RevenueInsights $insights)
+    {
+        $hid = $this->hid();
+
+        if (! $this->ready()) {
+            return view('ip.insights', [
+                'period' => 'month', 'periodLabel' => 'This Month', 'notReady' => true,
+                'kpis' => [], 'trend' => [], 'wardUtil' => collect(), 'dischargeTypes' => collect(), 'secondary' => [],
+            ]);
+        }
+
+        $period = $request->get('period', 'month');
+        $r      = $insights->range($period);
+
+        // Live bed census (snapshot).
+        $wards = Ward::where('is_active', true)
+            ->with(['beds' => fn ($q) => $q->where('is_active', true), 'beds.admission'])
+            ->orderBy('name')->get();
+        $totalBeds = $wards->sum(fn ($w) => $w->beds->count());
+        $occupied  = $wards->sum(fn ($w) => $w->occupiedCount());
+        $occupancy = $totalBeds > 0 ? (int) round($occupied / $totalBeds * 100) : 0;
+
+        // Admissions / discharges in the window (+ previous window for deltas).
+        $admThis = Admission::whereBetween('admitted_at', [$r['start'], $r['end']])->count();
+        $admPrev = Admission::whereBetween('admitted_at', [$r['prevStart'], $r['prevEnd']])->count();
+        $disThis = Admission::whereNotNull('discharged_at')->whereBetween('discharged_at', [$r['start'], $r['end']])->count();
+        $disPrev = Admission::whereNotNull('discharged_at')->whereBetween('discharged_at', [$r['prevStart'], $r['prevEnd']])->count();
+
+        // Average length of stay for patients discharged in the window (fallback: all-time).
+        $dischargedWin = Admission::where('status', 'discharged')->whereNotNull('discharged_at')
+            ->whereBetween('discharged_at', [$r['start'], $r['end']])->get();
+        $losSet = $dischargedWin->count()
+            ? $dischargedWin
+            : Admission::where('status', 'discharged')->whereNotNull('discharged_at')->get();
+        $alos = $losSet->count() ? round($losSet->avg(fn ($a) => $a->lengthOfDays()), 1) : 0;
+
+        // IPD revenue = admission-linked charges (room, nursing, meds, procedures under an admission).
+        $ipdRevThis = round((float) ChargeItem::where('hospital_id', $hid)
+            ->whereNotNull('admission_id')->where('status', '!=', ChargeItem::STATUS_CANCELLED)
+            ->whereBetween('posted_at', [$r['start'], $r['end']])->sum('total'), 2);
+
+        $kpis = [
+            'occupancy'        => $occupancy,
+            'admissions'       => $admThis,
+            'admissions_change'=> RevenueInsights::pctChange($admThis, $admPrev),
+            'discharges'       => $disThis,
+            'discharges_change'=> RevenueInsights::pctChange($disThis, $disPrev),
+            'alos'             => $alos,
+        ];
+
+        $secondary = [
+            'current_inpatients' => Admission::where('status', 'admitted')->count(),
+            'available_beds'     => max(0, $totalBeds - $occupied),
+            'total_beds'         => $totalBeds,
+            'ipd_revenue'        => $ipdRevThis,
+        ];
+
+        // Admissions trend.
+        $admRows = Admission::whereBetween('admitted_at', [$r['start'], $r['end']])->get(['admitted_at']);
+        $trend = $insights->series($admRows, fn ($a) => $a->admitted_at, $r['start'], $r['end'], $r['granularity'], $r['labelFormat']);
+
+        // Ward utilization (occupancy % per ward).
+        $wardUtil = $wards->map(fn ($w) => (object) [
+            'name'     => $w->name,
+            'total'    => $w->beds->count(),
+            'occupied' => $w->occupiedCount(),
+            'pct'      => $w->occupancyPct(),
+        ])->sortByDesc('pct')->values();
+
+        // Discharge-type mix in the window.
+        $dischargeTypes = $dischargedWin
+            ->groupBy(fn ($a) => $a->discharge_type ?: 'unspecified')
+            ->map->count();
+
+        return view('ip.insights', [
+            'period'         => $period,
+            'periodLabel'    => $r['label'],
+            'notReady'       => false,
+            'kpis'           => $kpis,
+            'secondary'      => $secondary,
+            'trend'          => $trend,
+            'wardUtil'       => $wardUtil,
+            'dischargeTypes' => $dischargeTypes,
+        ]);
     }
 
     // ---------------------------------------------------------------

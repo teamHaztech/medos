@@ -11,6 +11,7 @@
         <a href="{{ route('web.billing.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Bills</a>
         <a href="{{ route('web.billing.services') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Service Master</a>
         <a href="{{ route('web.billing.new') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">+ New Bill</a>
+        <a href="{{ route('web.billing.audit') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Audit &amp; Reports</a>
         <form method="GET" class="ml-auto flex items-end gap-2">
             <div><label class="block text-[10px] text-slate-400 uppercase">From</label><input type="date" name="from" value="{{ $from }}" class="input-field text-sm"></div>
             <div><label class="block text-[10px] text-slate-400 uppercase">To</label><input type="date" name="to" value="{{ $to }}" class="input-field text-sm"></div>

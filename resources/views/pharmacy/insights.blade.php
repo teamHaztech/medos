@@ -27,7 +27,7 @@
     <div class="flex gap-2">
         @foreach(['today' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'year' => 'This Year'] as $key => $label)
             <a href="{{ route('web.pharmacy.insights', ['period' => $key]) }}"
-               class="px-3 py-1.5 text-sm rounded-lg border transition {{ $period === $key ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">
+               class="px-3 py-1.5 text-sm rounded-lg border transition {{ $period === $key ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">
                 {{ $label }}
             </a>
         @endforeach
@@ -39,7 +39,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
         <div class="flex items-center justify-between">
             <p class="text-sm font-medium text-slate-500">Revenue</p>
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-50 text-emerald-600">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-green-50 text-green-600">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
         </div>
@@ -93,7 +93,7 @@
             @foreach($trend as $b)
                 @php $h = round(($b['revenue'] / $maxRev) * 100); @endphp
                 <div class="flex-1 flex flex-col items-center justify-end h-full group" style="min-width: 18px;">
-                    <div class="w-full rounded-t transition-all {{ $b['revenue'] > 0 ? 'bg-emerald-500 group-hover:bg-emerald-600' : 'bg-slate-100' }}"
+                    <div class="w-full rounded-t transition-all {{ $b['revenue'] > 0 ? 'bg-green-500' : 'bg-slate-100' }}"
                          style="height: {{ max($h, $b['revenue'] > 0 ? 2 : 0) }}%;"
                          title="{{ $b['label'] }} — {{ $money($b['revenue']) }} · {{ number_format($b['units']) }} units"></div>
                 </div>
@@ -128,7 +128,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="flex-1 bg-slate-100 rounded-full h-2">
-                        <div class="bg-emerald-500 h-2 rounded-full" style="width: {{ round(($m->revenue / $mr) * 100) }}%;"></div>
+                        <div class="bg-green-500 h-2 rounded-full" style="width: {{ round(($m->revenue / $mr) * 100) }}%;"></div>
                     </div>
                     <span class="text-xs text-slate-400 whitespace-nowrap">{{ number_format($m->units) }} units · {{ $m->share }}%</span>
                 </div>
@@ -158,7 +158,7 @@
                 <tr>
                     <td class="py-2.5 text-sm text-slate-400">{{ $i + 1 }}</td>
                     <td class="py-2.5 text-sm font-medium text-slate-800">{{ $m->description }}</td>
-                    <td class="py-2.5 text-sm text-right font-semibold text-emerald-600">{{ number_format($m->units) }}</td>
+                    <td class="py-2.5 text-sm text-right font-semibold text-green-600">{{ number_format($m->units) }}</td>
                     <td class="py-2.5 text-sm text-right text-slate-600">{{ $money($m->revenue) }}</td>
                 </tr>
                 @endforeach
@@ -185,7 +185,7 @@
             </div>
             <div>
                 <p class="text-xs text-slate-500">Potential margin</p>
-                <p class="text-xl font-bold text-emerald-600">{{ $money($invMargin) }}</p>
+                <p class="text-xl font-bold text-green-600">{{ $money($invMargin) }}</p>
             </div>
             <div class="flex gap-3 pt-2 border-t border-slate-100">
                 <div class="flex-1">

@@ -10,7 +10,7 @@
     $revTotal   = collect($trend)->sum('revenue');
 
     $srcLabels = ['lab' => 'Laboratory', 'imaging' => 'Imaging / Radiology', 'procedure' => 'Procedures'];
-    $srcColors = ['lab' => 'bg-indigo-500', 'imaging' => 'bg-cyan-500', 'procedure' => 'bg-fuchsia-500'];
+    $srcColors = ['lab' => 'bg-indigo-500', 'imaging' => 'bg-cyan-500', 'procedure' => 'bg-pink-500'];
     $catTotalRev = max($categories->sum('revenue') ?: 0, 1);
 
     $money = fn ($v) => $c . number_format((float) $v, ($v >= 1000 ? 0 : 2));
@@ -30,7 +30,7 @@
     <div class="flex gap-2">
         @foreach(['today' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'year' => 'This Year'] as $key => $label)
             <a href="{{ route('web.lab.insights', ['period' => $key]) }}"
-               class="px-3 py-1.5 text-sm rounded-lg border transition {{ $period === $key ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">
+               class="px-3 py-1.5 text-sm rounded-lg border transition {{ $period === $key ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' }}">
                 {{ $label }}
             </a>
         @endforeach
@@ -42,7 +42,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
         <div class="flex items-center justify-between">
             <p class="text-sm font-medium text-slate-500">Revenue</p>
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-50 text-emerald-600">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-green-50 text-green-600">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
         </div>
@@ -53,7 +53,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
         <div class="flex items-center justify-between">
             <p class="text-sm font-medium text-slate-500">Tests performed</p>
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-600">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.2a2 2 0 01-.34 1.12l-4.32 6.48A2 2 0 006 20h12a2 2 0 001.66-3.2l-4.32-6.48A2 2 0 0115 9.2V3M8 3h8M9 14h6"/></svg>
             </div>
         </div>
@@ -96,7 +96,7 @@
             @foreach($trend as $b)
                 @php $h = round(($b['lines'] / $maxVol) * 100); @endphp
                 <div class="flex-1 flex flex-col items-center justify-end h-full group" style="min-width: 18px;">
-                    <div class="w-full rounded-t transition-all {{ $b['lines'] > 0 ? 'bg-indigo-500 group-hover:bg-indigo-600' : 'bg-slate-100' }}"
+                    <div class="w-full rounded-t transition-all {{ $b['lines'] > 0 ? 'bg-indigo-500' : 'bg-slate-100' }}"
                          style="height: {{ max($h, $b['lines'] > 0 ? 2 : 0) }}%;"
                          title="{{ $b['label'] }} — {{ number_format($b['lines']) }} tests · {{ $money($b['revenue']) }}"></div>
                 </div>
@@ -156,7 +156,7 @@
                         <span class="text-sm font-semibold text-slate-900">{{ $money($cat->revenue) }} <span class="text-xs text-slate-400 font-normal">· {{ number_format($cat->lines) }} tests</span></span>
                     </div>
                     <div class="w-full bg-slate-100 rounded-full h-2">
-                        <div class="{{ $srcColors[$cat->source] ?? 'bg-slate-500' }} h-2 rounded-full" style="width: {{ round(($cat->revenue / $catTotalRev) * 100) }}%;"></div>
+                        <div class="{{ $srcColors[$cat->source] ?? 'bg-slate-400' }} h-2 rounded-full" style="width: {{ round(($cat->revenue / $catTotalRev) * 100) }}%;"></div>
                     </div>
                 </div>
                 @endforeach
@@ -176,7 +176,7 @@
                         <td class="py-2 text-sm text-slate-400 w-6">{{ $i + 1 }}</td>
                         <td class="py-2 text-sm font-medium text-slate-800">{{ $t->description }}</td>
                         <td class="py-2 text-sm text-right text-slate-500">{{ number_format($t->lines) }}×</td>
-                        <td class="py-2 text-sm text-right font-semibold text-emerald-600">{{ $money($t->revenue) }}</td>
+                        <td class="py-2 text-sm text-right font-semibold text-green-600">{{ $money($t->revenue) }}</td>
                     </tr>
                     @endforeach
                 </tbody>

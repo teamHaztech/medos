@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Analytics\Services\RevenueInsights;
 use App\Modules\Appointment\Models\Appointment;
 use App\Modules\Appointment\Models\QueueEntry;
 use App\Modules\Billing\Models\Bill;
@@ -1232,6 +1233,90 @@ class AdminWebController extends Controller
             'avgWaitTime',
             'topDoctors', 'departmentStats', 'recentEncounters',
         ));
+    }
+
+    /**
+     * OPD / Appointments insights — appointment volume, completion / no-show /
+     * cancellation rates, load by doctor & department, booking-source split and the
+     * busiest weekdays, over a day / week / month / year. Straight off the
+     * appointments table (slot_start-scoped) — the same records the front desk works.
+     */
+    public function opdInsights(Request $request, RevenueInsights $insights)
+    {
+        $hid    = Auth::user()->hospital_id;
+        $period = $request->get('period', 'month');
+        $r      = $insights->range($period);
+
+        $appts = Appointment::where('hospital_id', $hid)
+            ->whereBetween('slot_start', [$r['start'], $r['end']])
+            ->get(['doctor_id', 'status', 'booking_source', 'slot_start', 'patient_id']);
+
+        $sv = fn ($a) => $a->status instanceof \BackedEnum ? $a->status->value : $a->status;
+
+        $total     = $appts->count();
+        $completed = $appts->filter(fn ($a) => $sv($a) === 'completed')->count();
+        $noShow    = $appts->filter(fn ($a) => $sv($a) === 'no_show')->count();
+        $cancelled = $appts->filter(fn ($a) => $sv($a) === 'cancelled')->count();
+
+        $prevTotal = Appointment::where('hospital_id', $hid)
+            ->whereBetween('slot_start', [$r['prevStart'], $r['prevEnd']])->count();
+        $prevCompleted = Appointment::where('hospital_id', $hid)
+            ->whereBetween('slot_start', [$r['prevStart'], $r['prevEnd']])
+            ->where('status', 'completed')->count();
+
+        $kpis = [
+            'total'            => $total,
+            'total_change'     => RevenueInsights::pctChange($total, $prevTotal),
+            'completed'        => $completed,
+            'completed_change' => RevenueInsights::pctChange($completed, $prevCompleted),
+            'no_show_rate'     => $total > 0 ? (int) round($noShow / $total * 100) : 0,
+            'cancel_rate'      => $total > 0 ? (int) round($cancelled / $total * 100) : 0,
+            'completion_rate'  => $total > 0 ? (int) round($completed / $total * 100) : 0,
+            'unique_patients'  => $appts->pluck('patient_id')->unique()->count(),
+        ];
+
+        $trend = $insights->series($appts, fn ($a) => $a->slot_start, $r['start'], $r['end'], $r['granularity'], $r['labelFormat']);
+
+        $topDoctors = Appointment::where('appointments.hospital_id', $hid)
+            ->whereBetween('slot_start', [$r['start'], $r['end']])
+            ->join('staff', 'appointments.doctor_id', '=', 'staff.id')
+            ->selectRaw('staff.name, staff.department, count(*) as cnt, count(distinct appointments.patient_id) as patients')
+            ->groupBy('staff.id', 'staff.name', 'staff.department')
+            ->orderByDesc('cnt')->limit(8)->get();
+
+        $byDept = Appointment::where('appointments.hospital_id', $hid)
+            ->whereBetween('slot_start', [$r['start'], $r['end']])
+            ->join('staff', 'appointments.doctor_id', '=', 'staff.id')
+            ->selectRaw("coalesce(nullif(staff.department, ''), 'General') as department, count(*) as cnt")
+            ->groupBy('department')->orderByDesc('cnt')->get();
+
+        $bySource = $appts->groupBy(fn ($a) => $a->booking_source ?: 'walk_in')
+            ->map(fn ($g, $k) => (object) ['source' => $k, 'cnt' => $g->count()])
+            ->sortByDesc('cnt')->values();
+
+        $byStatus = $appts->groupBy(fn ($a) => $sv($a))->map->count();
+
+        // Busiest weekday (Mon → Sun), preserving order.
+        $dow = ['Mon' => 0, 'Tue' => 0, 'Wed' => 0, 'Thu' => 0, 'Fri' => 0, 'Sat' => 0, 'Sun' => 0];
+        foreach ($appts as $a) {
+            $d = $a->slot_start?->format('D');
+            if ($d && isset($dow[$d])) {
+                $dow[$d]++;
+            }
+        }
+        $busiestDays = collect($dow)->map(fn ($v, $k) => ['label' => $k, 'value' => $v])->values()->all();
+
+        return view('admin.opd-insights', [
+            'period'      => $period,
+            'periodLabel' => $r['label'],
+            'kpis'        => $kpis,
+            'trend'       => $trend,
+            'topDoctors'  => $topDoctors,
+            'byDept'      => $byDept,
+            'bySource'    => $bySource,
+            'byStatus'    => $byStatus,
+            'busiestDays' => $busiestDays,
+        ]);
     }
 
     public function updateTest(Request $request, string $id)

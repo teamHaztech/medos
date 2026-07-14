@@ -431,25 +431,27 @@ class SuperAdminController extends Controller
     public function deleteHospital(string $id)
     {
         $hospital = Hospital::findOrFail($id);
+        // If the super admin is operating in this hospital, move their context off
+        // it so the sidebar/banner don't keep pointing at a deactivated hospital.
+        $this->detachActingUserFrom($hospital->id);
         $hospital->update(['is_active' => false]);
-        return redirect()->route('web.superadmin.index')->with('success', 'Hospital deactivated.');
+        return redirect()->route('web.superadmin.index')->with('success', 'Hospital "' . $hospital->name . '" deactivated.');
     }
 
     /**
-     * Permanently delete a hospital and its data. Guarded against deleting the
-     * hospital the super admin is currently operating in; falls back to a
-     * deactivate if linked records block the delete.
+     * Permanently delete a hospital and its data. If the super admin is currently
+     * operating in it, their context is first moved to another active hospital
+     * (or cleared) so the delete isn't blocked. Falls back to a deactivate if
+     * linked records block the delete.
      */
     public function destroyHospital(string $id)
     {
         $hospital = Hospital::findOrFail($id);
-
-        if (auth()->user()?->hospital_id === $hospital->id) {
-            return redirect()->route('web.superadmin.index')
-                ->with('error', 'You cannot delete the hospital you are currently operating in. Switch to another hospital first.');
-        }
-
         $name = $hospital->name;
+
+        // Move the acting super admin off this hospital before deleting, otherwise
+        // the FK from users.hospital_id (SET NULL) would strand them on a dead id.
+        $this->detachActingUserFrom($hospital->id);
 
         try {
             DB::transaction(fn () => $hospital->delete()); // cascades via FKs
@@ -457,8 +459,131 @@ class SuperAdminController extends Controller
         } catch (\Throwable $e) {
             $hospital->update(['is_active' => false]);
             return redirect()->route('web.superadmin.index')
-                ->with('error', 'Could not fully delete "' . $name . '" because it has linked records — it has been deactivated instead.');
+                ->with('error', 'Could not fully delete "' . $name . '" (' . $e->getMessage() . ') — it has been deactivated instead.');
         }
+    }
+
+    /**
+     * If the currently authenticated super admin is pinned to $hospitalId, repoint
+     * them to another active hospital (or null). Super admins operate at the
+     * platform level, so a null hospital context is fine.
+     */
+    private function detachActingUserFrom(string $hospitalId): void
+    {
+        $user = auth()->user();
+        if (! $user || $user->hospital_id !== $hospitalId) {
+            return;
+        }
+
+        $fallback = Hospital::where('id', '!=', $hospitalId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->value('id');
+
+        $user->forceFill(['hospital_id' => $fallback])->save();
+    }
+
+    // ---------------------------------------------------------------
+    // Backups (disaster recovery — Hostinger has no SSH/terminal)
+    // ---------------------------------------------------------------
+
+    /**
+     * Download the ENTIRE SQLite database as a single file. This is the
+     * platform-wide safety net: it is a complete, restorable snapshot that can
+     * be re-uploaded via hPanel File Manager to recover from downtime.
+     */
+    public function downloadFullBackup()
+    {
+        $path = config('database.connections.sqlite.database') ?: database_path('database.sqlite');
+
+        if (! is_string($path) || ! is_file($path)) {
+            return redirect()->route('web.superadmin.index')
+                ->with('error', 'Database file not found — only the SQLite driver supports a full-file backup.');
+        }
+
+        $stamp = now()->format('Y-m-d_His');
+
+        return response()->download($path, "medos-full-backup-{$stamp}.sqlite", [
+            'Content-Type' => 'application/x-sqlite3',
+        ]);
+    }
+
+    /**
+     * Export a single hospital's data as a restorable .sql file. Emits INSERT
+     * statements (idempotent — INSERT OR IGNORE) for the hospital row plus every
+     * table that carries a hospital_id, scoped to this hospital only. Restore by
+     * running the file against the DB (or importing via a tool).
+     */
+    public function backupHospital(string $id)
+    {
+        $hospital = Hospital::findOrFail($id);
+
+        $lines = [];
+        $lines[] = '-- MedOS per-hospital backup';
+        $lines[] = '-- Hospital: ' . $hospital->name . ' (' . $hospital->id . ')';
+        $lines[] = '-- Generated: ' . now()->toDateTimeString();
+        $lines[] = 'PRAGMA foreign_keys = OFF;';
+        $lines[] = 'BEGIN TRANSACTION;';
+        $lines[] = '';
+
+        // 1. The hospital row itself.
+        $lines[] = '-- Table: hospitals';
+        foreach (DB::table('hospitals')->where('id', $id)->get() as $row) {
+            $lines[] = $this->rowToInsert('hospitals', (array) $row);
+        }
+        $lines[] = '';
+
+        // 2. Every other table that has a hospital_id column, scoped to this hospital.
+        $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
+        foreach ($tables as $t) {
+            $table = $t->name;
+            if ($table === 'hospitals' || ! Schema::hasColumn($table, 'hospital_id')) {
+                continue;
+            }
+            $rows = DB::table($table)->where('hospital_id', $id)->get();
+            if ($rows->isEmpty()) {
+                continue;
+            }
+            $lines[] = '-- Table: ' . $table . ' (' . $rows->count() . ' rows)';
+            foreach ($rows as $row) {
+                $lines[] = $this->rowToInsert($table, (array) $row);
+            }
+            $lines[] = '';
+        }
+
+        $lines[] = 'COMMIT;';
+        $lines[] = 'PRAGMA foreign_keys = ON;';
+
+        $sql   = implode("\n", $lines) . "\n";
+        $slug  = Str::slug($hospital->name) ?: 'hospital';
+        $stamp = now()->format('Y-m-d_His');
+
+        return response($sql, 200, [
+            'Content-Type'        => 'application/sql',
+            'Content-Disposition' => 'attachment; filename="' . $slug . '-backup-' . $stamp . '.sql"',
+        ]);
+    }
+
+    /** Build a single `INSERT OR IGNORE` statement for one row. */
+    private function rowToInsert(string $table, array $row): string
+    {
+        $cols = array_map(fn ($c) => '"' . str_replace('"', '""', $c) . '"', array_keys($row));
+
+        $vals = array_map(function ($v) {
+            if ($v === null) {
+                return 'NULL';
+            }
+            if (is_int($v) || is_float($v)) {
+                return (string) $v;
+            }
+            if (is_bool($v)) {
+                return $v ? '1' : '0';
+            }
+
+            return "'" . str_replace("'", "''", (string) $v) . "'";
+        }, array_values($row));
+
+        return 'INSERT OR IGNORE INTO "' . $table . '" (' . implode(', ', $cols) . ') VALUES (' . implode(', ', $vals) . ');';
     }
 
     // ---------------------------------------------------------------

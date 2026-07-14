@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Analytics\Services\RevenueInsights;
 use App\Modules\Billing\Models\Bill;
 use App\Modules\Billing\Services\ChargeCapture;
 use App\Modules\Insurance\Models\InsuranceTransaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
@@ -32,6 +34,84 @@ class InsuranceWebController extends Controller
             ->orderByDesc('created_at')->paginate(30);
 
         return view('billing.claims', compact('claims'));
+    }
+
+    /**
+     * Insurance claims insights — the claim funnel (filed → approved / denied /
+     * pending), approval & realization rates, claimed vs approved amounts, per-payer
+     * performance and claim turnaround, over a day / week / month / year. Off the
+     * insurance_transactions ledger (claim + pre-auth records).
+     */
+    public function insights(Request $request, RevenueInsights $insights)
+    {
+        $hid    = $this->hid();
+        $period = $request->get('period', 'month');
+        $r      = $insights->range($period);
+
+        $cols = ['status', 'requested_amount', 'approved_amount', 'insurer_name', 'submitted_at', 'responded_at', 'created_at'];
+        $base = fn ($from, $to) => InsuranceTransaction::where('hospital_id', $hid)
+            ->whereIn('type', ['claim_submission', 'pre_authorization'])
+            ->whereBetween('created_at', [$from, $to]);
+
+        $claims = (clone $base($r['start'], $r['end']))->get($cols);
+
+        $approved = $claims->where('status', 'approved');
+        $denied   = $claims->where('status', 'denied');
+        $pending  = $claims->whereNotIn('status', ['approved', 'denied']);
+        $resolved = $approved->count() + $denied->count();
+
+        $claimedAmt  = round((float) $claims->sum('requested_amount'), 2);
+        $approvedAmt = round((float) $approved->sum('approved_amount'), 2);
+
+        // Previous window (for deltas).
+        $prevClaims   = (clone $base($r['prevStart'], $r['prevEnd']))->get(['status', 'requested_amount', 'approved_amount']);
+        $filedPrev    = $prevClaims->count();
+        $claimedPrev  = (float) $prevClaims->sum('requested_amount');
+        $approvedPrev = (float) $prevClaims->where('status', 'approved')->sum('approved_amount');
+
+        // Turnaround (submitted → responded), in days.
+        $responded = $claims->filter(fn ($c) => $c->submitted_at && $c->responded_at);
+        $avgTat = $responded->count()
+            ? round($responded->avg(fn ($c) => Carbon::parse($c->submitted_at)->diffInDays(Carbon::parse($c->responded_at))), 1)
+            : 0;
+
+        $kpis = [
+            'filed'            => $claims->count(),
+            'filed_change'     => RevenueInsights::pctChange($claims->count(), $filedPrev),
+            'approval_rate'    => $resolved > 0 ? (int) round($approved->count() / $resolved * 100) : 0,
+            'claimed'          => $claimedAmt,
+            'claimed_change'   => RevenueInsights::pctChange($claimedAmt, $claimedPrev),
+            'approved_amt'     => $approvedAmt,
+            'approved_change'  => RevenueInsights::pctChange($approvedAmt, $approvedPrev),
+            'realization'      => $claimedAmt > 0 ? (int) round($approvedAmt / $claimedAmt * 100) : 0,
+            'avg_tat_days'     => $avgTat,
+        ];
+
+        $funnel = [
+            'filed'    => $claims->count(),
+            'approved' => $approved->count(),
+            'denied'   => $denied->count(),
+            'pending'  => $pending->count(),
+        ];
+
+        $trend = $insights->series($claims, fn ($c) => $c->created_at, $r['start'], $r['end'], $r['granularity'], $r['labelFormat']);
+
+        $byInsurer = $claims->groupBy(fn ($c) => $c->insurer_name ?: 'Unknown')
+            ->map(fn ($g, $k) => (object) [
+                'insurer'  => $k,
+                'count'    => $g->count(),
+                'claimed'  => round((float) $g->sum('requested_amount'), 2),
+                'approved' => round((float) $g->where('status', 'approved')->sum('approved_amount'), 2),
+            ])->sortByDesc('claimed')->values();
+
+        return view('billing.claims-insights', [
+            'period'      => $period,
+            'periodLabel' => $r['label'],
+            'kpis'        => $kpis,
+            'funnel'      => $funnel,
+            'trend'       => $trend,
+            'byInsurer'   => $byInsurer,
+        ]);
     }
 
     /** File an insurance claim against a bill. */

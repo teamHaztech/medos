@@ -53,6 +53,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
     Route::post('appointments/{id}/check-in', [AdminWebController::class, 'checkInAppointment'])->name('appointments.checkin');
     Route::post('appointments/{id}/cancel', [AdminWebController::class, 'cancelAppointment'])->name('appointments.cancel');
     Route::get('analytics', [AdminWebController::class, 'analytics'])->name('analytics');
+    Route::get('opd-insights', [AdminWebController::class, 'opdInsights'])->name('opd-insights');
 
     // Admin-only: manage slots, tests, medicines, settings
     Route::middleware('admin')->group(function () {
@@ -122,6 +123,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
 
 Route::middleware(['auth', 'module:inpatient'])->prefix('ip')->name('web.ip.')->group(function () {
     Route::get('/', [InpatientController::class, 'dashboard'])->name('dashboard');
+    Route::get('insights', [InpatientController::class, 'insights'])->name('insights');
     Route::get('adt', [InpatientController::class, 'adt'])->name('adt');
     Route::get('admissions', [InpatientController::class, 'admissions'])->name('admissions');
     Route::post('admissions', [InpatientController::class, 'admit'])->name('admit');
@@ -214,6 +216,7 @@ Route::middleware(['auth', 'module:pharmacy'])->prefix('pharmacy')->name('web.ph
 Route::middleware(['auth', 'module:billing'])->prefix('billing')->name('web.billing.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\BillingWebController::class, 'index'])->name('index');
     Route::get('dashboard', [\App\Http\Controllers\Web\BillingWebController::class, 'dashboard'])->name('dashboard');
+    Route::get('insights', [\App\Http\Controllers\Web\BillingWebController::class, 'insights'])->name('insights');
     Route::get('create/{encounterId}', [\App\Http\Controllers\Web\BillingWebController::class, 'create'])->name('create');
     Route::post('/', [\App\Http\Controllers\Web\BillingWebController::class, 'store'])->name('store');
     // Compile captured charges (charge-capture ledger) into the encounter's bill
@@ -230,6 +233,11 @@ Route::middleware(['auth', 'module:billing'])->prefix('billing')->name('web.bill
     Route::post('deposit', [\App\Http\Controllers\Web\BillingWebController::class, 'collectDeposit'])->name('deposit');
     // Accounting export (CSV / Tally XML) — must precede the {id} route
     Route::get('export', [\App\Http\Controllers\Web\BillingWebController::class, 'exportAccounting'])->name('export');
+    // Revenue-cycle Audit & Documentation hub (+ exports) — must precede {id}
+    Route::get('audit', [\App\Http\Controllers\Web\BillingWebController::class, 'audit'])->name('audit');
+    Route::get('audit/charges.csv', [\App\Http\Controllers\Web\BillingWebController::class, 'exportChargeLedger'])->name('audit.charges');
+    Route::get('audit/gst.csv', [\App\Http\Controllers\Web\BillingWebController::class, 'exportGstSummary'])->name('audit.gst');
+    Route::get('audit/payments.csv', [\App\Http\Controllers\Web\BillingWebController::class, 'exportPaymentsLedger'])->name('audit.payments');
     Route::get('{id}', [\App\Http\Controllers\Web\BillingWebController::class, 'show'])->name('show');
     Route::post('{id}/pay', [\App\Http\Controllers\Web\BillingWebController::class, 'recordPayment'])->name('pay');
     Route::post('{id}/cancel', [\App\Http\Controllers\Web\BillingWebController::class, 'cancelBill'])->name('cancel');
@@ -242,6 +250,7 @@ Route::middleware(['auth', 'module:billing'])->prefix('billing')->name('web.bill
 // Insurance claims (bill-centric)
 Route::middleware(['auth', 'module:billing'])->prefix('claims')->name('web.claims.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\InsuranceWebController::class, 'index'])->name('index');
+    Route::get('insights', [\App\Http\Controllers\Web\InsuranceWebController::class, 'insights'])->name('insights');
     Route::post('file/{billId}', [\App\Http\Controllers\Web\InsuranceWebController::class, 'fileClaim'])->name('file');
     Route::post('{claimId}/approve', [\App\Http\Controllers\Web\InsuranceWebController::class, 'approveClaim'])->name('approve');
     Route::post('{claimId}/deny', [\App\Http\Controllers\Web\InsuranceWebController::class, 'denyClaim'])->name('deny');
@@ -572,6 +581,9 @@ Route::post('chat/send', [\App\Http\Controllers\Web\ChatController::class, 'send
 // ---------------------------------------------------------------
 Route::middleware(['auth', 'super_admin'])->prefix('super-admin')->name('web.superadmin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\SuperAdminController::class, 'index'])->name('index');
+    // Backups (disaster recovery)
+    Route::get('backup', [\App\Http\Controllers\Web\SuperAdminController::class, 'downloadFullBackup'])->name('backup.full');
+    Route::get('hospitals/{id}/backup', [\App\Http\Controllers\Web\SuperAdminController::class, 'backupHospital'])->name('hospitals.backup');
     Route::get('hospitals/create', [\App\Http\Controllers\Web\SuperAdminController::class, 'createHospital'])->name('hospitals.create');
     Route::post('hospitals', [\App\Http\Controllers\Web\SuperAdminController::class, 'storeHospital'])->name('hospitals.store');
     Route::get('hospitals/{id}', [\App\Http\Controllers\Web\SuperAdminController::class, 'hospitalDetail'])->name('hospitals.show');

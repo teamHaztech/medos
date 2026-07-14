@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Analytics\Services\RevenueInsights;
 use App\Modules\Billing\Models\Bill;
 use App\Modules\Billing\Models\BillPayment;
 use App\Modules\Billing\Models\ChargeItem;
@@ -19,6 +20,91 @@ use Illuminate\Support\Str;
 
 class BillingWebController extends Controller
 {
+    /**
+     * Revenue & collections insights — how the hospital earns (revenue by source),
+     * how well it collects (billed vs collected vs outstanding AR), the payment-method
+     * mix, and top-earning services, over a day / week / month / year. Billed revenue
+     * is the charge-capture ledger; collections are the BillPayment ledger; both are
+     * the same rows the bills and ERP sync run on, so the numbers reconcile.
+     */
+    public function insights(Request $request, RevenueInsights $insights)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        $period     = $request->get('period', 'month');
+        $sources    = array_keys(ChargeItem::SOURCES); // all revenue streams
+
+        $r = $insights->range($period);
+
+        // Billed revenue (ledger) for this window and the previous one.
+        $now  = $insights->totals($hospitalId, $sources, $r['start'], $r['end']);
+        $prev = $insights->totals($hospitalId, $sources, $r['prevStart'], $r['prevEnd']);
+
+        // Collections from the payment ledger (positive = collected, negative = refund).
+        $payThis = BillPayment::where('hospital_id', $hospitalId)
+            ->whereBetween('paid_at', [$r['start'], $r['end']])->get(['amount', 'method', 'paid_at']);
+        $payPrev = BillPayment::where('hospital_id', $hospitalId)
+            ->whereBetween('paid_at', [$r['prevStart'], $r['prevEnd']])->sum('amount');
+
+        $collected = round((float) $payThis->where('amount', '>', 0)->sum('amount'), 2);
+        $refunded  = round((float) abs($payThis->where('amount', '<', 0)->sum('amount')), 2);
+
+        // Bills issued in the window.
+        $bills = Bill::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$r['start'], $r['end']])
+            ->get(['total_amount', 'payment_status', 'created_at']);
+        $billsThis = $bills->count();
+        $billsPrev = Bill::where('hospital_id', $hospitalId)
+            ->whereBetween('created_at', [$r['prevStart'], $r['prevEnd']])->count();
+
+        // Outstanding receivables — current snapshot across all open bills (not window-scoped).
+        $outstanding = round((float) Bill::where('hospital_id', $hospitalId)
+            ->whereIn('payment_status', ['pending', 'partial'])
+            ->sum('balance_due'), 2);
+
+        $kpis = [
+            'revenue'         => $now['revenue'],
+            'revenue_change'  => RevenueInsights::pctChange($now['revenue'], $prev['revenue']),
+            'collected'       => $collected,
+            'collected_change'=> RevenueInsights::pctChange($collected, (float) $payPrev),
+            'collection_rate' => $now['revenue'] > 0 ? (int) round(($collected / $now['revenue']) * 100) : 0,
+            'outstanding'     => $outstanding,
+            'refunded'        => $refunded,
+            'bills'           => $billsThis,
+            'bills_change'    => RevenueInsights::pctChange($billsThis, $billsPrev),
+            'avg_bill'        => $billsThis > 0 ? round($bills->sum('total_amount') / $billsThis, 2) : 0.0,
+        ];
+
+        // Revenue trend (all sources).
+        $trend = collect($insights->trend($hospitalId, $sources, $r['start'], $r['end'], $r['granularity'], $r['labelFormat']))
+            ->map(fn ($b) => ['label' => $b['label'], 'value' => $b['revenue']])->all();
+
+        // How revenue is made — split by charge source, and top individual services.
+        $bySource = $insights->bySource($hospitalId, $sources, $r['start'], $r['end']);
+        $topItems = $insights->items($hospitalId, $sources, $r['start'], $r['end'])
+            ->sortByDesc('revenue')->take(10)->values();
+
+        // Payment-method mix (collected only).
+        $methodMix = $payThis->where('amount', '>', 0)
+            ->groupBy('method')
+            ->map(fn ($g, $m) => (object) ['method' => $m, 'amount' => round((float) $g->sum('amount'), 2), 'count' => $g->count()])
+            ->sortByDesc('amount')->values();
+
+        // Bills by payment status in the window.
+        $statusMix = $bills->groupBy(fn ($b) => $b->payment_status instanceof \BackedEnum ? $b->payment_status->value : $b->payment_status)
+            ->map(fn ($g) => $g->count());
+
+        return view('billing.insights', [
+            'period'      => $period,
+            'periodLabel' => $r['label'],
+            'kpis'        => $kpis,
+            'trend'       => $trend,
+            'bySource'    => $bySource,
+            'topItems'    => $topItems,
+            'methodMix'   => $methodMix,
+            'statusMix'   => $statusMix,
+        ]);
+    }
+
     /**
      * List bills for the hospital with filters.
      */
@@ -649,6 +735,221 @@ class BillingWebController extends Controller
             'outstandingBills' => $outstandingBills,
             'from' => $from->toDateString(), 'to' => $to->toDateString(),
         ]);
+    }
+
+    /**
+     * Revenue-cycle Audit & Documentation hub.
+     *
+     * Reads the charge-capture ledger (charge_items) — every chargeable event
+     * across the hospital posts a row there — and rolls it up by revenue source
+     * (patients/OPD, lab & imaging, pharmacy, inventory/consumables, IPD) plus a
+     * GST summary, giving billing staff a production-grade, exportable view for
+     * audit & compliance rather than the patient-bill-only screen.
+     */
+    public function audit(Request $request)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        [$from, $to] = $this->auditRange($request);
+        $cur = RegionService::currency();
+
+        // Ledger rolled up by source × status × tax bucket (single grouped query).
+        $rows = ChargeItem::where('hospital_id', $hospitalId)
+            ->whereRaw('COALESCE(posted_at, created_at) BETWEEN ? AND ?', [$from, $to])
+            ->selectRaw('source, status, is_taxable, gst_rate, COUNT(*) as cnt, SUM(total) as net')
+            ->groupBy('source', 'status', 'is_taxable', 'gst_rate')
+            ->get();
+
+        $sources = [];
+        foreach ($rows as $r) {
+            $s = $r->source ?: 'other';
+            $sources[$s] ??= ['label' => ChargeItem::SOURCES[$s] ?? ucfirst($s), 'net' => 0, 'billed' => 0, 'pending' => 0, 'cancelled' => 0, 'tax' => 0, 'cnt' => 0];
+            $net = (float) $r->net;
+            $sources[$s]['cnt'] += $r->cnt;
+            if ($r->status === 'cancelled') {
+                $sources[$s]['cancelled'] += $net;
+                continue;
+            }
+            $sources[$s]['net'] += $net;
+            $sources[$s][$r->status === 'billed' ? 'billed' : 'pending'] += $net;
+            if ($r->is_taxable) {
+                $sources[$s]['tax'] += round($net * (float) $r->gst_rate / 100, 2);
+            }
+        }
+
+        // Group sources into the departments billing/audit cares about.
+        $deptMap = [
+            'OPD / Consultations'      => ['registration', 'consultation', 'procedure'],
+            'Lab & Imaging'            => ['lab', 'imaging'],
+            'Pharmacy'                 => ['pharmacy'],
+            'Inventory / Consumables'  => ['consumable'],
+            'IPD — Room & Nursing'     => ['room', 'nursing'],
+            'Other'                    => ['other'],
+        ];
+        $depts = [];
+        foreach ($deptMap as $name => $keys) {
+            $agg = ['net' => 0, 'billed' => 0, 'pending' => 0, 'tax' => 0, 'cnt' => 0];
+            foreach ($keys as $k) {
+                if (isset($sources[$k])) {
+                    foreach (['net', 'billed', 'pending', 'tax', 'cnt'] as $f) {
+                        $agg[$f] += $sources[$k][$f];
+                    }
+                }
+            }
+            if ($agg['cnt'] > 0) {
+                $depts[$name] = $agg;
+            }
+        }
+
+        // GST summary by rate (taxable, non-cancelled) — ready for filing.
+        $gstRows = ChargeItem::where('hospital_id', $hospitalId)
+            ->whereRaw('COALESCE(posted_at, created_at) BETWEEN ? AND ?', [$from, $to])
+            ->where('status', '!=', 'cancelled')->where('is_taxable', true)
+            ->selectRaw('gst_rate, SUM(total) as taxable, COUNT(*) as cnt')
+            ->groupBy('gst_rate')->orderBy('gst_rate')->get()
+            ->map(function ($g) {
+                $gst  = round((float) $g->taxable * (float) $g->gst_rate / 100, 2);
+                $cgst = round($gst / 2, 2);
+                return [
+                    'rate' => (float) $g->gst_rate, 'taxable' => (float) $g->taxable,
+                    'gst' => $gst, 'cgst' => $cgst, 'sgst' => round($gst - $cgst, 2), 'cnt' => (int) $g->cnt,
+                ];
+            });
+
+        $totals = [
+            'net'     => array_sum(array_column($sources, 'net')),
+            'billed'  => array_sum(array_column($sources, 'billed')),
+            'pending' => array_sum(array_column($sources, 'pending')),
+            'tax'     => array_sum(array_column($sources, 'tax')),
+        ];
+        $totals['gross'] = round($totals['net'] + $totals['tax'], 2);
+
+        $collections = (float) BillPayment::where('hospital_id', $hospitalId)
+            ->whereBetween('paid_at', [$from, $to])->sum('amount');
+
+        $ledger = ChargeItem::where('hospital_id', $hospitalId)
+            ->whereRaw('COALESCE(posted_at, created_at) BETWEEN ? AND ?', [$from, $to])
+            ->with(['patient', 'bill'])
+            ->orderByRaw('COALESCE(posted_at, created_at) DESC')
+            ->limit(50)->get();
+
+        return view('billing.audit', [
+            'depts'       => $depts,
+            'sources'     => $sources,
+            'gstRows'     => $gstRows,
+            'totals'      => $totals,
+            'collections' => $collections,
+            'ledger'      => $ledger,
+            'cur'         => $cur,
+            'from'        => $from->toDateString(),
+            'to'          => $to->toDateString(),
+        ]);
+    }
+
+    /** Resolve the audit date range (defaults to current month → today). */
+    private function auditRange(Request $request): array
+    {
+        $from = $request->filled('from')
+            ? \Illuminate\Support\Carbon::parse($request->from)->startOfDay()
+            : now()->startOfMonth();
+        $to = $request->filled('to')
+            ? \Illuminate\Support\Carbon::parse($request->to)->endOfDay()
+            : now()->endOfDay();
+
+        return [$from, $to];
+    }
+
+    /** CSV: the full charge-capture ledger for the range — the audit trail. */
+    public function exportChargeLedger(Request $request)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        [$from, $to] = $this->auditRange($request);
+
+        $items = ChargeItem::where('hospital_id', $hospitalId)
+            ->whereRaw('COALESCE(posted_at, created_at) BETWEEN ? AND ?', [$from, $to])
+            ->with(['patient', 'bill'])
+            ->orderByRaw('COALESCE(posted_at, created_at)')
+            ->get();
+
+        $stamp = now()->format('Ymd_His');
+
+        return response()->streamDownload(function () use ($items) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Posted At', 'Source', 'Description', 'Code', 'HSN/SAC', 'Qty', 'Unit Price', 'Net', 'Taxable', 'GST %', 'GST Amount', 'Total (incl GST)', 'Status', 'Patient', 'Bill No', 'Posted By', 'Source Ref']);
+            foreach ($items as $c) {
+                $net = (float) $c->total;
+                $gst = $c->is_taxable ? round($net * (float) $c->gst_rate / 100, 2) : 0;
+                fputcsv($out, [
+                    optional($c->posted_at ?? $c->created_at)->format('Y-m-d H:i'),
+                    ChargeItem::SOURCES[$c->source] ?? $c->source,
+                    $c->description, $c->code, $c->hsn_sac,
+                    $c->quantity, $c->unit_price, number_format($net, 2, '.', ''),
+                    $c->is_taxable ? 'Yes' : 'No', $c->gst_rate, number_format($gst, 2, '.', ''),
+                    number_format($net + $gst, 2, '.', ''),
+                    $c->status, $c->patient?->name, $c->bill?->bill_number,
+                    $c->posted_by_name, $c->source_ref,
+                ]);
+            }
+            fclose($out);
+        }, "medos_charge_ledger_{$stamp}.csv", ['Content-Type' => 'text/csv']);
+    }
+
+    /** CSV: GST summary by rate for the range — for tax filing. */
+    public function exportGstSummary(Request $request)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        [$from, $to] = $this->auditRange($request);
+
+        $rows = ChargeItem::where('hospital_id', $hospitalId)
+            ->whereRaw('COALESCE(posted_at, created_at) BETWEEN ? AND ?', [$from, $to])
+            ->where('status', '!=', 'cancelled')->where('is_taxable', true)
+            ->selectRaw('gst_rate, SUM(total) as taxable, COUNT(*) as cnt')
+            ->groupBy('gst_rate')->orderBy('gst_rate')->get();
+
+        $stamp = now()->format('Ymd_His');
+
+        return response()->streamDownload(function () use ($rows, $from, $to) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Period', $from->toDateString() . ' to ' . $to->toDateString()]);
+            fputcsv($out, []);
+            fputcsv($out, ['GST Rate %', 'Taxable Value', 'CGST', 'SGST', 'Total GST', 'Line Count']);
+            foreach ($rows as $g) {
+                $gst  = round((float) $g->taxable * (float) $g->gst_rate / 100, 2);
+                $cgst = round($gst / 2, 2);
+                fputcsv($out, [
+                    $g->gst_rate, number_format((float) $g->taxable, 2, '.', ''),
+                    number_format($cgst, 2, '.', ''), number_format($gst - $cgst, 2, '.', ''),
+                    number_format($gst, 2, '.', ''), $g->cnt,
+                ]);
+            }
+            fclose($out);
+        }, "medos_gst_summary_{$stamp}.csv", ['Content-Type' => 'text/csv']);
+    }
+
+    /** CSV: every payment received in the range — the collections audit. */
+    public function exportPaymentsLedger(Request $request)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        [$from, $to] = $this->auditRange($request);
+
+        $payments = BillPayment::where('hospital_id', $hospitalId)
+            ->whereBetween('paid_at', [$from, $to])
+            ->with('bill.patient')
+            ->orderBy('paid_at')->get();
+
+        $stamp = now()->format('Ymd_His');
+
+        return response()->streamDownload(function () use ($payments) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Paid At', 'Bill No', 'Patient', 'Method', 'Reference', 'Amount']);
+            foreach ($payments as $p) {
+                fputcsv($out, [
+                    optional($p->paid_at)->format('Y-m-d H:i'),
+                    $p->bill?->bill_number, $p->bill?->patient?->name,
+                    $p->method, $p->reference, number_format((float) $p->amount, 2, '.', ''),
+                ]);
+            }
+            fclose($out);
+        }, "medos_payments_{$stamp}.csv", ['Content-Type' => 'text/csv']);
     }
 
     /**

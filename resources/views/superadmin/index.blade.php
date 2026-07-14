@@ -31,7 +31,12 @@
 {{-- Action bar --}}
 <div class="flex items-center justify-between mb-4">
     <p class="text-sm text-slate-500">{{ $hospitals->count() }} hospitals registered</p>
-    <a href="{{ route('web.superadmin.hospitals.create') }}" class="btn-primary">+ Add Hospital</a>
+    <div class="flex items-center gap-2">
+        <a href="{{ route('web.superadmin.backup.full') }}"
+           class="text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg px-3 py-1.5"
+           title="Download the entire database as a restorable snapshot">⤓ Download Full Backup</a>
+        <a href="{{ route('web.superadmin.hospitals.create') }}" class="btn-primary">+ Add Hospital</a>
+    </div>
 </div>
 
 {{-- Hospital cards grid --}}
@@ -97,20 +102,24 @@
         {{-- Actions --}}
         <div class="px-5 py-3 border-t border-slate-100 flex items-center gap-2">
             <a href="{{ route('web.superadmin.hospitals.show', $h->id) }}" class="btn-primary text-xs px-3 py-1.5">Manage</a>
+            <a href="{{ route('web.superadmin.hospitals.backup', $h->id) }}"
+               class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
+               title="Download this hospital's data as a restorable .sql file">⤓ Backup</a>
             <button type="button"
                 @click="openEdit({ id:'{{ $h->id }}', name: @js($h->name), slug: @js($h->slug), country: @js($h->country ?? 'IN'), city: @js($h->city ?? ''), state: @js($h->state ?? ''), address: @js($h->address ?? ''), phone: @js($h->phone ?? ''), email: @js($h->email ?? ''), is_active: {{ $h->is_active ? 'true' : 'false' }} })"
                 class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
-            @if($h->is_active && !$isCurrentHospital)
-            <form method="POST" action="{{ route('web.superadmin.hospitals.delete', $h->id) }}" class="inline" onsubmit="return confirm('Deactivate this hospital?')">
+            @if($h->is_active)
+            <form method="POST" action="{{ route('web.superadmin.hospitals.delete', $h->id) }}" class="inline" onsubmit="return confirm('Deactivate {{ $h->name }}?')">
                 @csrf @method('DELETE')
                 <button type="submit" class="text-xs px-3 py-1.5 text-red-600 hover:text-red-800 font-medium">Deactivate</button>
             </form>
             @endif
-            @if(!$isCurrentHospital)
-            <form method="POST" action="{{ route('web.superadmin.hospitals.destroy', $h->id) }}" class="inline" onsubmit="return confirm('PERMANENTLY delete {{ $h->name }} and ALL of its data? This cannot be undone.')">
+            <form method="POST" action="{{ route('web.superadmin.hospitals.destroy', $h->id) }}" class="inline" onsubmit="return confirm('{{ $isCurrentHospital ? 'You are currently operating in this hospital; your context will move to another hospital. ' : '' }}PERMANENTLY delete {{ $h->name }} and ALL of its data? This cannot be undone.')">
                 @csrf @method('DELETE')
                 <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold">Delete</button>
             </form>
+            @if($isCurrentHospital)
+            <span class="text-amber-600 font-medium" style="font-size:11px" title="Your super-admin context is currently set to this hospital">● operating here</span>
             @endif
         </div>
     </div>
