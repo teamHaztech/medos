@@ -21,14 +21,34 @@
         <a href="{{ route('web.admin.assets.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 text-white">Asset Register</a>
         <a href="{{ route('web.admin.vendors.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Vendors</a>
         <a href="{{ route('web.admin.tickets.index') }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Service Requests</a>
-        <div class="ml-auto flex gap-2">
-            <a href="{{ route('web.admin.assets.export') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Export CSV</a>
+        <div class="ml-auto flex flex-wrap items-center gap-2">
+            <a href="{{ route('web.admin.assets.import.template') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">⤓ Template</a>
+            <form method="POST" action="{{ route('web.admin.assets.import') }}" enctype="multipart/form-data" class="inline-flex">
+                @csrf
+                <label class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer">
+                    Import CSV
+                    <input type="file" name="file" accept=".csv,text/csv" class="hidden" onchange="if(this.files.length){this.form.submit()}">
+                </label>
+            </form>
+            <a href="{{ route('web.admin.assets.export') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">⤒ Export CSV</a>
+            <a href="{{ route('web.admin.assets.report') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">Print Report</a>
             <button @click="openAdd()" class="btn-primary">+ Add Asset</button>
         </div>
     </div>
 
     @if(session('success'))
         <div class="mb-4 px-4 py-2.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="mb-4 px-4 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">{{ session('error') }}</div>
+    @endif
+    @if(session('import_errors') && count(session('import_errors')))
+        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <p class="text-sm font-semibold text-amber-800 mb-2">Some rows need attention ({{ count(session('import_errors')) }} shown):</p>
+            <ul class="text-xs text-amber-700 space-y-0.5 max-h-48 overflow-y-auto">
+                @foreach(session('import_errors') as $err)<li>• {{ $err }}</li>@endforeach
+            </ul>
+        </div>
     @endif
 
     {{-- Filters --}}

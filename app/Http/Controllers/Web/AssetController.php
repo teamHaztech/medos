@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AssetController extends Controller
 {
@@ -524,6 +525,151 @@ class AssetController extends Controller
             }
             fclose($out);
         }, 'asset-register.csv', $headers);
+    }
+
+    /** Download a ready-to-fill CSV template for the asset register import. */
+    public function importTemplate()
+    {
+        $headers = ['asset_name', 'asset_type', 'serial_number', 'model', 'manufacturer', 'department',
+            'location', 'purchase_date', 'purchase_cost', 'useful_life_years', 'salvage_value', 'vendor', 'status', 'notes'];
+        $sample  = ['Ventilator V60', 'Ventilator', 'SN-VEN-001', 'V60', 'Philips', 'ICU', 'ICU Bay 3',
+            '2024-03-15', '850000', '10', '50000', 'MedEquip Distributors', 'active', 'Primary ICU ventilator'];
+
+        $csv = implode(',', array_map([$this, 'csvCell'], $headers)) . "\r\n"
+             . implode(',', array_map([$this, 'csvCell'], $sample)) . "\r\n";
+
+        return response($csv, 200, [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="asset-register-template.csv"',
+        ]);
+    }
+
+    /**
+     * Bulk-import assets into the register from a CSV. Only asset_name is required;
+     * vendor is matched by name to an existing vendor (blank if not found), status
+     * falls back to active, and rows with a serial number already on file are skipped.
+     */
+    public function import(Request $request)
+    {
+        $hid = $this->hid();
+
+        $request->validate(['file' => 'required|file|mimes:csv,txt|max:5120']);
+
+        $handle = fopen($request->file('file')->getRealPath(), 'r');
+        if ($handle === false) {
+            return back()->with('error', 'Could not read the uploaded file.');
+        }
+
+        $header = fgetcsv($handle);
+        if ($header === false) {
+            fclose($handle);
+            return back()->with('error', 'The file is empty.');
+        }
+        $header = array_map(fn ($h) => Str::of($h)->trim()->lower()->replace(' ', '_')->value(), $header);
+        if (isset($header[0])) {
+            $header[0] = preg_replace('/^\x{FEFF}/u', '', $header[0]); // strip UTF-8 BOM
+        }
+        if (! in_array('asset_name', $header, true)) {
+            fclose($handle);
+            return back()->with('error', 'Missing required column: asset_name. Download the template.');
+        }
+
+        // Match vendors by name (case-insensitive) so an asset can reference its supplier.
+        $vendors = Vendor::where('hospital_id', $hid)->get()->keyBy(fn ($v) => mb_strtolower($v->name));
+
+        $imported = 0;
+        $skipped  = 0;
+        $errors   = [];
+        $line     = 1;
+
+        while (($data = fgetcsv($handle)) !== false) {
+            $line++;
+            if (count(array_filter($data, fn ($c) => trim((string) $c) !== '')) === 0) {
+                continue; // blank line
+            }
+
+            $row = [];
+            foreach ($header as $i => $key) {
+                $row[$key] = isset($data[$i]) ? trim((string) $data[$i]) : '';
+            }
+
+            $name = $row['asset_name'] ?? '';
+            if ($name === '') {
+                $errors[] = "Row {$line}: missing asset_name";
+                continue;
+            }
+
+            $serial = $row['serial_number'] ?? '';
+            if ($serial !== '' && Asset::where('hospital_id', $hid)->where('serial_number', $serial)->exists()) {
+                $skipped++;
+                $errors[] = "Row {$line}: skipped (serial {$serial} already on file)";
+                continue;
+            }
+
+            $status = strtolower($row['status'] ?? 'active');
+            if (! isset(Asset::STATUSES[$status])) {
+                $status = 'active';
+            }
+
+            $vendorName = mb_strtolower(trim($row['vendor'] ?? ''));
+            $vendorId   = ($vendorName !== '' && isset($vendors[$vendorName])) ? $vendors[$vendorName]->id : null;
+
+            try {
+                Asset::create([
+                    'hospital_id'       => $hid,
+                    'asset_name'        => $name,
+                    'asset_type'        => $row['asset_type'] ?: null,
+                    'serial_number'     => $serial ?: null,
+                    'model'             => $row['model'] ?: null,
+                    'manufacturer'      => $row['manufacturer'] ?: null,
+                    'department'        => $row['department'] ?: null,
+                    'location'          => $row['location'] ?: null,
+                    'purchase_date'     => $this->parseDate($row['purchase_date'] ?? ''),
+                    'purchase_cost'     => is_numeric($row['purchase_cost'] ?? '') ? (float) $row['purchase_cost'] : null,
+                    'useful_life_years' => is_numeric($row['useful_life_years'] ?? '') ? (int) $row['useful_life_years'] : null,
+                    'salvage_value'     => is_numeric($row['salvage_value'] ?? '') ? (float) $row['salvage_value'] : 0, // column is NOT NULL default 0
+                    'vendor_id'         => $vendorId,
+                    'status'            => $status,
+                    'notes'             => $row['notes'] ?: null,
+                    'is_active'         => true,
+                ]);
+                $imported++;
+            } catch (\Throwable $e) {
+                $errors[] = "Row {$line}: " . $e->getMessage();
+            }
+        }
+
+        fclose($handle);
+
+        $msg = "Imported {$imported} asset(s)" . ($skipped ? ", skipped {$skipped}" : '') . '.';
+
+        return back()
+            ->with($imported > 0 ? 'success' : 'error', $msg)
+            ->with('import_errors', array_slice($errors, 0, 50));
+    }
+
+    private function parseDate(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+        try {
+            return \Carbon\Carbon::parse($value)->toDateString();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /** Quote a CSV cell if it contains a comma, quote, or newline. */
+    private function csvCell($value): string
+    {
+        $value = (string) $value;
+        if (preg_match('/[",\r\n]/', $value)) {
+            return '"' . str_replace('"', '""', $value) . '"';
+        }
+
+        return $value;
     }
 
     /** Printable HTML report (browser print-to-PDF — no composer dependency). */

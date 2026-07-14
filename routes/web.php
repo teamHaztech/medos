@@ -99,6 +99,8 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::get('assets/dashboard', [AssetController::class, 'dashboard'])->name('assets.dashboard');
         Route::get('assets/export', [AssetController::class, 'exportCsv'])->name('assets.export');
         Route::get('assets/report', [AssetController::class, 'report'])->name('assets.report');
+        Route::get('assets/import/template', [AssetController::class, 'importTemplate'])->name('assets.import.template');
+        Route::post('assets/import', [AssetController::class, 'import'])->name('assets.import');
         Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
         Route::get('assets/{id}', [AssetController::class, 'show'])->name('assets.show');
         Route::put('assets/{id}', [AssetController::class, 'update'])->name('assets.update');
