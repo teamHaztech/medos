@@ -1,14 +1,20 @@
 @props([
+    // `title` is kept for back-compat but intentionally NOT rendered: every page
+    // already shows its title in the top bar (@yield('page-title')), so repeating
+    // it here produced a duplicate heading. We render only the subtitle + actions.
     'title' => '',
     'subtitle' => null,
 ])
 
-<div class="flex flex-wrap items-end justify-between gap-3 mb-6">
-    <div>
-        <h2 class="text-xl font-bold text-slate-800">{{ $title }}</h2>
-        @if($subtitle)<p class="text-sm text-slate-500">{{ $subtitle }}</p>@endif
-    </div>
+@if($subtitle || isset($actions))
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    @if($subtitle)
+        <p class="text-sm text-slate-500">{{ $subtitle }}</p>
+    @else
+        <span></span>
+    @endif
     @isset($actions)
         <div class="flex items-center gap-2 text-xs">{{ $actions }}</div>
     @endisset
 </div>
+@endif
