@@ -518,81 +518,51 @@ class SuperAdminController extends Controller
     }
 
     /**
-     * Export a single hospital's data as a restorable .sql file. Emits INSERT
-     * statements (idempotent — INSERT OR IGNORE) for the hospital row plus every
-     * table that carries a hospital_id, scoped to this hospital only. Restore by
-     * running the file against the DB (or importing via a tool).
+     * Download a single hospital's data as a restorable JSON backup file
+     * (the hospital row + every hospital-scoped table). Restore it later via
+     * restoreHospital(). See \App\Modules\Core\Services\HospitalBackup.
      */
     public function backupHospital(string $id)
     {
         $hospital = Hospital::findOrFail($id);
+        $data     = \App\Modules\Core\Services\HospitalBackup::export($id);
 
-        $lines = [];
-        $lines[] = '-- MedOS per-hospital backup';
-        $lines[] = '-- Hospital: ' . $hospital->name . ' (' . $hospital->id . ')';
-        $lines[] = '-- Generated: ' . now()->toDateTimeString();
-        $lines[] = 'PRAGMA foreign_keys = OFF;';
-        $lines[] = 'BEGIN TRANSACTION;';
-        $lines[] = '';
-
-        // 1. The hospital row itself.
-        $lines[] = '-- Table: hospitals';
-        foreach (DB::table('hospitals')->where('id', $id)->get() as $row) {
-            $lines[] = $this->rowToInsert('hospitals', (array) $row);
-        }
-        $lines[] = '';
-
-        // 2. Every other table that has a hospital_id column, scoped to this hospital.
-        $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
-        foreach ($tables as $t) {
-            $table = $t->name;
-            if ($table === 'hospitals' || ! Schema::hasColumn($table, 'hospital_id')) {
-                continue;
-            }
-            $rows = DB::table($table)->where('hospital_id', $id)->get();
-            if ($rows->isEmpty()) {
-                continue;
-            }
-            $lines[] = '-- Table: ' . $table . ' (' . $rows->count() . ' rows)';
-            foreach ($rows as $row) {
-                $lines[] = $this->rowToInsert($table, (array) $row);
-            }
-            $lines[] = '';
-        }
-
-        $lines[] = 'COMMIT;';
-        $lines[] = 'PRAGMA foreign_keys = ON;';
-
-        $sql   = implode("\n", $lines) . "\n";
         $slug  = Str::slug($hospital->name) ?: 'hospital';
         $stamp = now()->format('Y-m-d_His');
+        $json  = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-        return response($sql, 200, [
-            'Content-Type'        => 'application/sql',
-            'Content-Disposition' => 'attachment; filename="' . $slug . '-backup-' . $stamp . '.sql"',
+        return response($json, 200, [
+            'Content-Type'        => 'application/json',
+            'Content-Disposition' => 'attachment; filename="' . $slug . '-backup-' . $stamp . '.json"',
         ]);
     }
 
-    /** Build a single `INSERT OR IGNORE` statement for one row. */
-    private function rowToInsert(string $table, array $row): string
+    /**
+     * Restore a hospital JSON backup INTO the given hospital. Additive and
+     * tenant-scoped: rows are forced to this hospital_id and existing rows are
+     * left untouched (insertOrIgnore).
+     */
+    public function restoreHospital(Request $request, string $id)
     {
-        $cols = array_map(fn ($c) => '"' . str_replace('"', '""', $c) . '"', array_keys($row));
+        $hospital = Hospital::findOrFail($id);
+        $request->validate(['file' => 'required|file|max:20480']); // 20 MB
 
-        $vals = array_map(function ($v) {
-            if ($v === null) {
-                return 'NULL';
-            }
-            if (is_int($v) || is_float($v)) {
-                return (string) $v;
-            }
-            if (is_bool($v)) {
-                return $v ? '1' : '0';
-            }
+        $raw  = file_get_contents($request->file('file')->getRealPath());
+        $data = json_decode($raw, true);
+        if (! is_array($data)) {
+            return back()->with('error', 'Could not read the backup file — it is not valid JSON.');
+        }
 
-            return "'" . str_replace("'", "''", (string) $v) . "'";
-        }, array_values($row));
+        try {
+            $res = \App\Modules\Core\Services\HospitalBackup::import($id, $data);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Restore failed: ' . $e->getMessage());
+        }
 
-        return 'INSERT OR IGNORE INTO "' . $table . '" (' . implode(', ', $cols) . ') VALUES (' . implode(', ', $vals) . ');';
+        $msg = 'Restored into ' . $hospital->name . ': ' . $res['imported'] . ' rows added, '
+            . $res['skipped'] . ' already present across ' . $res['tables'] . ' tables.';
+
+        return back()->with($res['imported'] > 0 ? 'success' : 'error', $msg);
     }
 
     // ---------------------------------------------------------------

@@ -535,6 +535,49 @@ class AdminWebController extends Controller
         return (is_object($user->role) ? $user->role->value : $user->role) === 'super_admin';
     }
 
+    /** Download a JSON backup of the admin's own hospital. */
+    public function backupHospital()
+    {
+        $hospitalId = $this->effectiveHospitalId();
+        $hospital   = Hospital::findOrFail($hospitalId);
+        $data       = \App\Modules\Core\Services\HospitalBackup::export($hospitalId);
+
+        $slug  = Str::slug($hospital->name) ?: 'hospital';
+        $stamp = now()->format('Y-m-d_His');
+        $json  = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        return response($json, 200, [
+            'Content-Type'        => 'application/json',
+            'Content-Disposition' => 'attachment; filename="' . $slug . '-backup-' . $stamp . '.json"',
+        ]);
+    }
+
+    /**
+     * Restore a JSON backup into the admin's own hospital. Tenant-safe: the
+     * service forces every row to this hospital_id, so a file can never write
+     * into another hospital, and existing rows are left untouched.
+     */
+    public function restoreHospital(Request $request)
+    {
+        $hospitalId = $this->effectiveHospitalId();
+        $request->validate(['file' => 'required|file|max:20480']);
+
+        $data = json_decode(file_get_contents($request->file('file')->getRealPath()), true);
+        if (! is_array($data)) {
+            return back()->with('error', 'Could not read the backup file — it is not valid JSON.');
+        }
+
+        try {
+            $res = \App\Modules\Core\Services\HospitalBackup::import($hospitalId, $data);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Restore failed: ' . $e->getMessage());
+        }
+
+        return back()->with($res['imported'] > 0 ? 'success' : 'error',
+            'Restore complete: ' . $res['imported'] . ' rows added, ' . $res['skipped']
+            . ' already present across ' . $res['tables'] . ' tables.');
+    }
+
     public function settings()
     {
         $hospital = Hospital::find($this->effectiveHospitalId());
@@ -1428,6 +1471,158 @@ class AdminWebController extends Controller
 
         return redirect()->route('web.admin.staff')->with('success',
             "Staff \"{$v['name']}\" added. Login → {$v['email']} / {$plain}  (share securely; they should change it).");
+    }
+
+    /** Downloadable CSV template for the bulk staff import. */
+    public function staffImportTemplate()
+    {
+        $csv = "name,email,password,role,department,phone\n"
+             . "Dr. Asha Rao,asha@example.com,Secret123,doctor,Cardiology,9876500001\n"
+             . "Nurse John,john@example.com,,nurse,General,9876500002\n"
+             . "Reception Meena,meena@example.com,Welcome1,receptionist,,9876500003\n";
+
+        return response($csv, 200, [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="staff_import_template.csv"',
+        ]);
+    }
+
+    /**
+     * Bulk-import staff from a CSV file or pasted rows. Columns:
+     * name,email,password,role,department,phone (order-based, or by header row).
+     * Each row creates a staff + a linked login user (password hashed). Blank
+     * passwords are auto-generated; duplicate emails are skipped, not errored,
+     * so the same file can be safely re-run when setting up a new hospital.
+     */
+    public function importStaff(Request $request)
+    {
+        $request->validate([
+            'file' => 'nullable|file|max:2048',
+            'rows' => 'nullable|string',
+        ]);
+
+        $raw = '';
+        if ($request->hasFile('file')) {
+            $raw = (string) file_get_contents($request->file('file')->getRealPath());
+        } elseif ($request->filled('rows')) {
+            $raw = (string) $request->input('rows');
+        }
+        $raw = preg_replace('/^\xEF\xBB\xBF/', '', trim($raw)); // strip BOM
+        if ($raw === '') {
+            return redirect()->route('web.admin.staff')->with('error', 'No CSV file or pasted data was provided.');
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', $raw);
+        $lines = array_values(array_filter(array_map('trim', $lines), fn ($l) => $l !== ''));
+
+        // Header row? Map columns by name; otherwise assume the fixed order.
+        $firstCells = array_map(fn ($c) => strtolower(trim($c)), str_getcsv($lines[0]));
+        $map = ['name' => 0, 'email' => 1, 'password' => 2, 'role' => 3, 'department' => 4, 'phone' => 5];
+        if (in_array('email', $firstCells, true) || in_array('name', $firstCells, true)) {
+            $map = [];
+            foreach ($firstCells as $i => $c) {
+                $map[$c] = $i;
+            }
+            array_shift($lines);
+        }
+
+        $validRoles = ['doctor', 'nurse', 'receptionist', 'pharmacist', 'lab_tech', 'billing_staff', 'hospital_admin', 'dentist', 'dietitian'];
+        $aliases = [
+            'admin' => 'hospital_admin', 'hospital admin' => 'hospital_admin', 'physician' => 'doctor',
+            'reception' => 'receptionist', 'front desk' => 'receptionist', 'pharmacy' => 'pharmacist',
+            'lab' => 'lab_tech', 'lab tech' => 'lab_tech', 'lab technician' => 'lab_tech', 'technician' => 'lab_tech',
+            'billing' => 'billing_staff', 'billing staff' => 'billing_staff', 'cashier' => 'billing_staff',
+            'dental' => 'dentist', 'dietician' => 'dietitian', 'nutritionist' => 'dietitian',
+        ];
+
+        // Existing emails (global — login must be unique) + emails seen in this file.
+        $existing = \DB::table('staff')->pluck('email')
+            ->merge(\DB::table('users')->pluck('email'))
+            ->filter()->map(fn ($e) => strtolower(trim($e)))->flip();
+
+        $hospitalId = Auth::user()->hospital_id;
+        $created = [];
+        $skipped = [];
+        $errors  = [];
+        $seen    = [];
+        $offset  = ($map !== ['name' => 0, 'email' => 1, 'password' => 2, 'role' => 3, 'department' => 4, 'phone' => 5]) ? 2 : 1;
+
+        foreach ($lines as $idx => $line) {
+            if (count($created) + count($skipped) + count($errors) >= 500) {
+                $errors[] = ['row' => $idx + $offset, 'email' => '', 'reason' => 'row limit (500) reached'];
+                break;
+            }
+            $cells = str_getcsv($line);
+            $cell = function (string $key) use ($cells, $map) {
+                $i = $map[$key] ?? null;
+                return ($i !== null && isset($cells[$i])) ? trim($cells[$i]) : '';
+            };
+
+            $rowNo = $idx + $offset;
+            $name  = $cell('name');
+            $email = strtolower($cell('email'));
+
+            if ($name === '' && $email === '') {
+                continue;
+            }
+            if ($name === '' || $email === '') {
+                $errors[] = ['row' => $rowNo, 'email' => $email, 'reason' => 'missing name or email'];
+                continue;
+            }
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = ['row' => $rowNo, 'email' => $email, 'reason' => 'invalid email'];
+                continue;
+            }
+            if (isset($existing[$email]) || isset($seen[$email])) {
+                $skipped[] = ['email' => $email, 'reason' => 'already exists'];
+                continue;
+            }
+
+            $roleRaw = strtolower($cell('role'));
+            $role = in_array($roleRaw, $validRoles, true) ? $roleRaw : ($aliases[$roleRaw] ?? 'receptionist');
+
+            $pw    = $cell('password');
+            $plain = strlen($pw) >= 6 ? $pw : Str::random(10);
+            $dept  = $cell('department') ?: null;
+            $phone = $cell('phone') ?: null;
+
+            try {
+                $staffId = Str::uuid()->toString();
+                $userId  = Str::uuid()->toString();
+
+                \DB::table('staff')->insert([
+                    'id' => $staffId, 'hospital_id' => $hospitalId, 'name' => $name, 'email' => $email,
+                    'phone' => $phone, 'role' => $role, 'department' => $dept,
+                    'consultation_duration_default' => 15, 'is_active' => true,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+                \DB::table('users')->insert([
+                    'id' => $userId, 'name' => $name, 'email' => $email,
+                    'password' => \Illuminate\Support\Facades\Hash::make($plain),
+                    'phone' => $phone, 'role' => $role, 'hospital_id' => $hospitalId,
+                    'staff_id' => $staffId, 'is_active' => true,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+                \DB::table('staff')->where('id', $staffId)->update(['user_id' => $userId]);
+
+                $created[] = ['name' => $name, 'email' => $email, 'password' => $plain, 'role' => $role];
+                $seen[$email] = true;
+            } catch (\Throwable $e) {
+                $errors[] = ['row' => $rowNo, 'email' => $email, 'reason' => 'could not create account'];
+            }
+        }
+
+        $parts = [count($created) . ' staff imported'];
+        if ($skipped) {
+            $parts[] = count($skipped) . ' skipped (already exist)';
+        }
+        if ($errors) {
+            $parts[] = count($errors) . ' had errors';
+        }
+
+        return redirect()->route('web.admin.staff')
+            ->with('success', implode(' · ', $parts) . '.')
+            ->with('import_result', ['created' => $created, 'skipped' => $skipped, 'errors' => $errors]);
     }
 
     public function updateStaff(Request $request, string $id)

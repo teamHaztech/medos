@@ -45,6 +45,8 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
     Route::get('counter/slip/{id}', [AdminWebController::class, 'tokenSlip'])->name('counter.slip');
     Route::get('info-desk', [AdminWebController::class, 'infoDesk'])->name('info-desk');
     Route::get('staff', [AdminWebController::class, 'staff'])->name('staff');
+    Route::get('staff/import/template', [AdminWebController::class, 'staffImportTemplate'])->name('staff.import.template');
+    Route::post('staff/import', [AdminWebController::class, 'importStaff'])->name('staff.import');
     Route::post('staff', [AdminWebController::class, 'storeStaff'])->name('staff.store');
     Route::put('staff/{id}', [AdminWebController::class, 'updateStaff'])->name('staff.update');
     Route::delete('staff/{id}', [AdminWebController::class, 'deleteStaff'])->name('staff.delete');
@@ -76,6 +78,10 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::get('import', [\App\Http\Controllers\Web\ImportController::class, 'index'])->name('import');
         Route::get('import/template/{type}', [\App\Http\Controllers\Web\ImportController::class, 'template'])->name('import.template');
         Route::post('import/{type}', [\App\Http\Controllers\Web\ImportController::class, 'import'])->name('import.run');
+
+        // Own-hospital backup & restore (JSON)
+        Route::get('backup', [AdminWebController::class, 'backupHospital'])->name('backup');
+        Route::post('restore', [AdminWebController::class, 'restoreHospital'])->name('restore');
 
         Route::get('slots', [AdminWebController::class, 'slots'])->name('slots');
         Route::post('slots/{staffId}', [AdminWebController::class, 'updateSlots'])->name('slots.update');
@@ -590,6 +596,7 @@ Route::middleware(['auth', 'super_admin'])->prefix('super-admin')->name('web.sup
     // Backups (disaster recovery)
     Route::get('backup', [\App\Http\Controllers\Web\SuperAdminController::class, 'downloadFullBackup'])->name('backup.full');
     Route::get('hospitals/{id}/backup', [\App\Http\Controllers\Web\SuperAdminController::class, 'backupHospital'])->name('hospitals.backup');
+    Route::post('hospitals/{id}/restore', [\App\Http\Controllers\Web\SuperAdminController::class, 'restoreHospital'])->name('hospitals.restore');
     Route::get('hospitals/create', [\App\Http\Controllers\Web\SuperAdminController::class, 'createHospital'])->name('hospitals.create');
     Route::post('hospitals', [\App\Http\Controllers\Web\SuperAdminController::class, 'storeHospital'])->name('hospitals.store');
     Route::get('hospitals/{id}', [\App\Http\Controllers\Web\SuperAdminController::class, 'hospitalDetail'])->name('hospitals.show');

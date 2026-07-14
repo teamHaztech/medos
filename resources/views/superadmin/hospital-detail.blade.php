@@ -11,6 +11,25 @@
         Back to All Hospitals
     </a>
 
+    {{-- Backup & Restore --}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="min-w-0">
+                <h3 class="text-base font-bold text-slate-900">Backup &amp; Restore</h3>
+                <p class="text-sm text-slate-500 mt-0.5">Download a full <strong>.json</strong> backup of {{ $hospital->name }}, or restore one. Restore re-adds missing rows into this hospital and never overwrites existing data.</p>
+            </div>
+            <a href="{{ route('web.superadmin.hospitals.backup', $hospital->id) }}" class="btn-primary text-xs px-3 py-1.5 whitespace-nowrap shrink-0">⤓ Download Backup</a>
+        </div>
+        <form method="POST" action="{{ route('web.superadmin.hospitals.restore', $hospital->id) }}" enctype="multipart/form-data"
+              class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100"
+              onsubmit="return confirm('Restore this backup INTO {{ $hospital->name }}? Missing rows are re-added; existing rows are left as-is.')">
+            @csrf
+            <input type="file" name="file" accept=".json,application/json" required
+                   class="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
+            <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium whitespace-nowrap">Restore from backup</button>
+        </form>
+    </div>
+
     {{-- Hospital Info Card --}}
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
         <div class="flex items-start justify-between">

@@ -11,6 +11,31 @@
         are skipped automatically. Everything imports into <strong>{{ auth()->user()?->hospital?->name ?? 'your hospital' }}</strong>.
     </p>
 
+    {{-- Whole-hospital backup & restore --}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="min-w-0">
+                <h3 class="text-base font-bold text-slate-900">Backup &amp; Restore this hospital</h3>
+                <p class="text-sm text-slate-500 mt-0.5">
+                    Download a complete backup of <strong>{{ auth()->user()?->hospital?->name ?? 'your hospital' }}</strong>
+                    (patients, staff, bills, everything) as a <strong>.json</strong> file. Restore re-adds any missing
+                    rows from a backup — it never overwrites existing data.
+                </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <a href="{{ route('web.admin.backup') }}" class="btn-primary text-xs px-3 py-1.5 whitespace-nowrap">⤓ Download Backup</a>
+            </div>
+        </div>
+        <form method="POST" action="{{ route('web.admin.restore') }}" enctype="multipart/form-data"
+              class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100"
+              onsubmit="return confirm('Restore from this backup into {{ auth()->user()?->hospital?->name ?? 'your hospital' }}? Missing rows are re-added; existing rows are left as-is.')">
+            @csrf
+            <input type="file" name="file" accept=".json,application/json" required
+                   class="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
+            <button type="submit" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium whitespace-nowrap">Restore from backup</button>
+        </form>
+    </div>
+
     @if(session('import_credentials') && count(session('import_credentials')))
     <div class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
         <p class="text-sm font-semibold text-green-800 mb-2">Login credentials for {{ count(session('import_credentials')) }} new staff — copy &amp; share securely (they should change on first login):</p>
