@@ -50,6 +50,14 @@ Route::prefix('auth')->name('auth.')->group(function () {
 });
 
 // -----------------------------------------------------------------
+// Hospital directory — auth only (no hospital context needed). A super-admin
+// (platform) token lists every hospital; a hospital token gets only its own.
+// Lets the voice-AI vendor map an inbound phone line / DID → hospital_id.
+// -----------------------------------------------------------------
+Route::middleware('auth:sanctum')->get('hospitals', [\App\Http\Controllers\Api\IntegrationController::class, 'hospitals'])
+    ->name('hospitals');
+
+// -----------------------------------------------------------------
 // Authenticated + Hospital-scoped routes
 // -----------------------------------------------------------------
 Route::middleware(['auth:sanctum', 'resolve.hospital'])->group(function () {

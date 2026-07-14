@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Modules\Appointment\Models\Appointment;
 use App\Modules\Billing\Services\ChargeCapture;
+use App\Modules\Core\Models\Hospital;
 use App\Modules\Core\Models\Order;
 use App\Modules\Core\Models\Staff;
+use App\Modules\Core\Services\HospitalContext;
 use App\Modules\Patient\Models\Encounter;
 use App\Modules\Patient\Models\Patient;
 use Carbon\Carbon;
@@ -29,9 +31,40 @@ use Illuminate\Support\Str;
  */
 class IntegrationController extends Controller
 {
+    /**
+     * The hospital this request acts on. Uses the context resolved by the
+     * `resolve.hospital` middleware (X-Hospital-ID header → subdomain → the token's
+     * own hospital), so ONE platform (super-admin) token can serve every hospital in
+     * MedOS by sending `X-Hospital-ID: <hospital_id>`, while a hospital's own token
+     * stays pinned to itself. Falls back to the token owner's hospital.
+     */
     private function hid(): string
     {
-        return Auth::user()->hospital_id;
+        return app(HospitalContext::class)->getHospitalId() ?? Auth::user()->hospital_id;
+    }
+
+    // ---------------------------------------------------------------
+    // 0. Hospital directory (map a phone line / DID → hospital_id)
+    // ---------------------------------------------------------------
+    public function hospitals(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $role = is_object($user->role) ? $user->role->value : $user->role;
+
+        $query = Hospital::where('is_active', true);
+        if ($role !== 'super_admin') {
+            $query->where('id', $user->hospital_id); // a hospital token only sees its own
+        }
+
+        $hospitals = $query->orderBy('name')->get()->map(fn (Hospital $h) => [
+            'hospital_id' => $h->id,
+            'name'        => $h->name,
+            'slug'        => $h->slug,
+            'city'        => $h->city,
+            'phone'       => $h->phone,
+        ]);
+
+        return response()->json(['success' => true, 'data' => ['hospitals' => $hospitals]]);
     }
 
     /** staff.schedule may be an array (Eloquent cast) or a JSON string — normalise to array. */
