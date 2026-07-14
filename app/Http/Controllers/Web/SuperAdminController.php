@@ -333,7 +333,13 @@ class SuperAdminController extends Controller
                 'departments' => [],
                 'operating_hours' => ['open' => '08:00', 'close' => '21:00'],
             ],
-            'modules_enabled'     => ['ai_receptionist', 'whatsapp', 'triage', 'scheduling', 'queue', 'billing', 'analytics', 'engagement'],
+            // New hospitals get the core comms/finance set plus every module added
+            // this cycle (voice_calls, lab, pharmacy, inpatient, clinical, ops) so
+            // nothing is silently missing — the super admin can turn any off later.
+            'modules_enabled'     => array_values(array_unique(array_merge(
+                ['ai_receptionist', 'whatsapp', 'triage', 'scheduling', 'queue', 'billing', 'analytics', 'engagement'],
+                \App\Modules\Core\Support\ModuleCatalog::NEW_MODULE_KEYS,
+            ))),
             'subscription_plan'   => 'standard',
             'subscription_status' => 'active',
             'is_active'           => true,
