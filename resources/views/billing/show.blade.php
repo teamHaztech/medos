@@ -70,15 +70,15 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                     <div>
                         <span class="text-slate-500">Name</span>
-                        <p class="font-medium text-slate-800">{{ $bill->patient->name ?? '-' }}</p>
+                        <p class="font-medium text-slate-800">{{ $bill->patient->name ?? '' }}</p>
                     </div>
                     <div>
                         <span class="text-slate-500">Phone</span>
-                        <p class="font-medium text-slate-800">{{ $bill->patient->phone ?? '-' }}</p>
+                        <p class="font-medium text-slate-800">{{ $bill->patient->phone ?? '' }}</p>
                     </div>
                     <div>
                         <span class="text-slate-500">Encounter</span>
-                        <p class="font-medium text-slate-800">{{ $bill->encounter->encounter_number ?? '-' }}</p>
+                        <p class="font-medium text-slate-800">{{ $bill->encounter->encounter_number ?? '' }}</p>
                     </div>
                 </div>
             </div>
@@ -103,13 +103,13 @@
                         <tbody class="divide-y divide-slate-100">
                             @foreach($bill->line_items ?? [] as $item)
                             <tr>
-                                <td class="px-4 py-3 text-sm text-slate-800">{{ $item['description'] ?? '-' }}</td>
+                                <td class="px-4 py-3 text-sm text-slate-800">{{ $item['description'] ?? '' }}</td>
                                 <td class="px-4 py-3 text-sm text-slate-600 text-center">{{ $item['quantity'] ?? 1 }}</td>
                                 <td class="px-4 py-3 text-sm text-slate-600 text-right">{{ $currency }}{{ number_format($item['unit_price'] ?? 0, 2) }}</td>
                                 <td class="px-4 py-3 text-sm font-medium text-slate-800 text-right">{{ $currency }}{{ number_format($item['total'] ?? 0, 2) }}</td>
-                                <td class="px-4 py-3 text-center">@if($item['taxable'] ?? false)<span class="text-xs font-semibold text-amber-600">✓</span>@else<span class="text-xs text-slate-300">—</span>@endif</td>
+                                <td class="px-4 py-3 text-center">@if($item['taxable'] ?? false)<span class="text-xs font-semibold text-amber-600">✓</span>@else<span class="text-xs text-slate-300"></span>@endif</td>
                                 <td class="px-4 py-3">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 capitalize">{{ $item['category'] ?? '-' }}</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 capitalize">{{ $item['category'] ?? '' }}</span>
                                 </td>
                             </tr>
                             @endforeach
@@ -171,13 +171,13 @@
                     <div class="flex items-center justify-between mb-2">
                         <div>
                             <p class="text-sm font-semibold text-slate-800">{{ $claim->insurer_name ?? $claim->insurer_code }}</p>
-                            <p class="text-xs text-slate-400">Policy {{ $claim->policy_number ?? '—' }}{{ $claim->member_id ? ' · Member '.$claim->member_id : '' }}</p>
+                            <p class="text-xs text-slate-400">Policy {{ $claim->policy_number ?? '' }}{{ $claim->member_id ? ' · Member '.$claim->member_id : '' }}</p>
                         </div>
                         <span class="text-xs px-2 py-0.5 rounded-full {{ $cs[$claim->status] ?? 'bg-slate-100 text-slate-600' }}">{{ ucfirst(str_replace('_',' ', $claim->status)) }}</span>
                     </div>
                     <div class="grid grid-cols-2 gap-3 text-sm mt-3">
                         <div><span class="text-slate-400 text-xs">Requested</span><p class="font-medium text-slate-700">{{ $currency }}{{ number_format($claim->requested_amount, 2) }}</p></div>
-                        <div><span class="text-slate-400 text-xs">Approved</span><p class="font-medium text-slate-700">{{ $claim->approved_amount !== null ? $currency.number_format($claim->approved_amount, 2) : '—' }}</p></div>
+                        <div><span class="text-slate-400 text-xs">Approved</span><p class="font-medium text-slate-700">{{ $claim->approved_amount !== null ? $currency.number_format($claim->approved_amount, 2) : '' }}</p></div>
                     </div>
                     @if($claim->denial_reason)<p class="text-xs text-red-600 mt-2">Denied: {{ $claim->denial_reason }}</p>@endif
                     @if($claim->external_reference_id)<p class="text-xs text-slate-400 mt-2">Ref: {{ $claim->external_reference_id }}</p>@endif

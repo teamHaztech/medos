@@ -38,16 +38,16 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse($orders as $o)
                     <tr class="{{ $o->status==='discontinued' ? 'opacity-50' : '' }}">
-                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $o->patient?->name ?? '—' }}<span class="block text-xs text-slate-400">{{ $o->patient?->phone }}</span></td>
-                        <td class="px-4 py-2.5 text-sm text-slate-600">{{ $o->ward ?? '—' }}</td>
-                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $o->diet?->name ?? '—' }}<span class="text-xs text-slate-400"> {{ $o->diet?->code }}</span></td>
+                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $o->patient?->name ?? '' }}<span class="block text-xs text-slate-400">{{ $o->patient?->phone }}</span></td>
+                        <td class="px-4 py-2.5 text-sm text-slate-600">{{ $o->ward ?? '' }}</td>
+                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $o->diet?->name ?? '' }}<span class="text-xs text-slate-400"> {{ $o->diet?->code }}</span></td>
                         <td class="px-4 py-2.5 text-xs text-slate-600">
                             {{ TD::TEXTURES[$o->texture] ?? $o->texture }}
                             @php $rc = ['npo'=>'text-red-600 font-semibold','ng_tube'=>'text-amber-600','peg'=>'text-amber-600'][$o->route] ?? 'text-slate-500'; @endphp
                             <span class="block {{ $rc }}">{{ DOrder::ROUTES[$o->route] ?? $o->route }}{{ $o->fluid_restriction_ml ? ' · fluid '.$o->fluid_restriction_ml.'ml' : '' }}</span>
                         </td>
-                        <td class="px-4 py-2.5 text-xs text-slate-600 text-center">{{ $o->kcal_target ? $o->kcal_target.' kcal' : '—' }}<span class="block">{{ $o->protein_target_g ? $o->protein_target_g.'g protein' : '' }}</span></td>
-                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ $o->ordered_by_name ?? '—' }}<span class="block">{{ optional($o->start_date)->format('M d') }}</span></td>
+                        <td class="px-4 py-2.5 text-xs text-slate-600 text-center">{{ $o->kcal_target ? $o->kcal_target.' kcal' : '' }}<span class="block">{{ $o->protein_target_g ? $o->protein_target_g.'g protein' : '' }}</span></td>
+                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ $o->ordered_by_name ?? '' }}<span class="block">{{ optional($o->start_date)->format('M d') }}</span></td>
                         <td class="px-4 py-2.5 text-right">
                             @if($o->status==='active')
                                 <form method="POST" action="{{ route('web.dietary.orders.discontinue', $o->id) }}" onsubmit="return confirm('Discontinue this diet order?')">@csrf<button type="submit" class="text-xs font-medium text-red-500 hover:text-red-700">Discontinue</button></form>
@@ -96,12 +96,12 @@
                 @forelse($assessments as $a)
                 @php $rk = ['low'=>'bg-green-100 text-green-700','medium'=>'bg-amber-100 text-amber-700','high'=>'bg-red-100 text-red-700'][$a->risk] ?? 'bg-slate-100'; @endphp
                 <tr>
-                    <td class="px-4 py-2.5 text-sm text-slate-800">{{ $a->patient?->name ?? '—' }}</td>
+                    <td class="px-4 py-2.5 text-sm text-slate-800">{{ $a->patient?->name ?? '' }}</td>
                     <td class="px-4 py-2.5 text-xs text-slate-600">{{ $a->tool }}{{ $a->score !== null ? ' · '.$a->score : '' }}</td>
                     <td class="px-4 py-2.5"><span class="text-xs px-2 py-0.5 rounded-full {{ $rk }}">{{ NA::RISKS[$a->risk] ?? $a->risk }}</span></td>
-                    <td class="px-4 py-2.5 text-center text-sm text-slate-700">{{ $a->bmi ?? '—' }}</td>
-                    <td class="px-4 py-2.5 text-xs text-slate-500 max-w-xs truncate">{{ $a->plan ?? $a->diagnosis ?? '—' }}</td>
-                    <td class="px-4 py-2.5 text-xs text-slate-500">{{ optional($a->follow_up_date)->format('M d, Y') ?? '—' }}</td>
+                    <td class="px-4 py-2.5 text-center text-sm text-slate-700">{{ $a->bmi ?? '' }}</td>
+                    <td class="px-4 py-2.5 text-xs text-slate-500 max-w-xs truncate">{{ $a->plan ?? $a->diagnosis ?? '' }}</td>
+                    <td class="px-4 py-2.5 text-xs text-slate-500">{{ optional($a->follow_up_date)->format('M d, Y') ?? '' }}</td>
                 </tr>
                 @empty
                 <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-400">No assessments yet.</td></tr>
@@ -124,8 +124,8 @@
                         <td class="px-4 py-2.5 text-sm text-slate-800">{{ $d->name }}<span class="text-xs text-slate-400"> {{ $d->code }}</span><span class="block text-xs text-slate-400">{{ $d->indications }}</span></td>
                         <td class="px-4 py-2.5 text-sm text-slate-600">{{ TD::CATEGORIES[$d->category] ?? $d->category }}</td>
                         <td class="px-4 py-2.5 text-xs text-slate-600">{{ TD::TEXTURES[$d->default_texture] ?? $d->default_texture }}</td>
-                        <td class="px-4 py-2.5 text-xs text-slate-600 text-center">{{ $d->default_kcal ?? '—' }} / {{ $d->default_protein_g ?? '—' }}g</td>
-                        <td class="px-4 py-2.5 text-xs text-slate-500 max-w-xs truncate">{{ $d->restrictions ?? '—' }}</td>
+                        <td class="px-4 py-2.5 text-xs text-slate-600 text-center">{{ $d->default_kcal ?? '' }} / {{ $d->default_protein_g ?? '' }}g</td>
+                        <td class="px-4 py-2.5 text-xs text-slate-500 max-w-xs truncate">{{ $d->restrictions ?? '' }}</td>
                         <td class="px-4 py-2.5 text-right"><button type="button" @click="openDiet({ id: @js($d->id), code: @js($d->code), name: @js($d->name), category: @js($d->category), default_texture: @js($d->default_texture), indications: @js($d->indications ?? ''), restrictions: @js($d->restrictions ?? ''), default_kcal: {{ $d->default_kcal ?: 'null' }}, default_protein_g: {{ $d->default_protein_g ?: 'null' }}, is_active: {{ $d->is_active ? 'true' : 'false' }} })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button></td>
                     </tr>
                     @endforeach
@@ -173,12 +173,12 @@
 
             {{-- Results --}}
             <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-3 content-start">
-                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">BMI</p><p class="text-2xl font-bold text-slate-800" x-text="bmi ? bmi.toFixed(1) : '—'"></p><p class="text-xs" :class="bmiColor" x-text="bmiCat"></p></div>
-                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Ideal body weight</p><p class="text-2xl font-bold text-slate-800"><span x-text="ibw ? r(ibw) : '—'"></span> <span class="text-sm text-slate-400">kg</span></p></div>
-                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">BMR</p><p class="text-2xl font-bold text-slate-800"><span x-text="bmr ? r(bmr) : '—'"></span></p><p class="text-xs text-slate-400">kcal/day at rest</p></div>
-                <div class="bg-white rounded-xl border-2 border-blue-200 bg-blue-50/40 p-4"><p class="text-xs text-blue-600 font-semibold">Daily calorie target</p><p class="text-3xl font-black text-blue-700"><span x-text="calorieGoal ? r(calorieGoal) : '—'"></span></p><p class="text-xs text-slate-500">kcal · TDEE <span x-text="tdee?r(tdee):'—'"></span></p></div>
-                <div class="bg-white rounded-xl border-2 border-green-200 bg-green-50/40 p-4"><p class="text-xs text-green-700 font-semibold">Protein target</p><p class="text-3xl font-black text-green-700"><span x-text="protein ? r(protein) : '—'"></span> <span class="text-sm">g</span></p><p class="text-xs text-slate-500">≈ <span x-text="proteinRange"></span> g/day</p></div>
-                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Fluid target</p><p class="text-2xl font-bold text-slate-800"><span x-text="fluid ? (fluid/1000).toFixed(1) : '—'"></span> <span class="text-sm text-slate-400">L</span></p><p class="text-xs text-slate-400">≈ 30 ml/kg</p></div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">BMI</p><p class="text-2xl font-bold text-slate-800" x-text="bmi ? bmi.toFixed(1) : ''"></p><p class="text-xs" :class="bmiColor" x-text="bmiCat"></p></div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Ideal body weight</p><p class="text-2xl font-bold text-slate-800"><span x-text="ibw ? r(ibw) : ''"></span> <span class="text-sm text-slate-400">kg</span></p></div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">BMR</p><p class="text-2xl font-bold text-slate-800"><span x-text="bmr ? r(bmr) : ''"></span></p><p class="text-xs text-slate-400">kcal/day at rest</p></div>
+                <div class="bg-white rounded-xl border-2 border-blue-200 bg-blue-50/40 p-4"><p class="text-xs text-blue-600 font-semibold">Daily calorie target</p><p class="text-3xl font-black text-blue-700"><span x-text="calorieGoal ? r(calorieGoal) : ''"></span></p><p class="text-xs text-slate-500">kcal · TDEE <span x-text="tdee?r(tdee):'—'"></span></p></div>
+                <div class="bg-white rounded-xl border-2 border-green-200 bg-green-50/40 p-4"><p class="text-xs text-green-700 font-semibold">Protein target</p><p class="text-3xl font-black text-green-700"><span x-text="protein ? r(protein) : ''"></span> <span class="text-sm">g</span></p><p class="text-xs text-slate-500">≈ <span x-text="proteinRange"></span> g/day</p></div>
+                <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Fluid target</p><p class="text-2xl font-bold text-slate-800"><span x-text="fluid ? (fluid/1000).toFixed(1) : ''"></span> <span class="text-sm text-slate-400">L</span></p><p class="text-xs text-slate-400">≈ 30 ml/kg</p></div>
                 <div class="col-span-2 md:col-span-3 text-xs text-slate-400 px-1">BMR by Mifflin-St Jeor; protein by clinical g/kg factor. Clinical judgement required — adjust for oedema, obesity (use adjusted/ideal weight), and organ function.</div>
             </div>
         </div>

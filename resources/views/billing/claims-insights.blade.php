@@ -47,7 +47,7 @@
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
         <p class="text-xs text-slate-500">Avg turnaround</p>
-        <p class="text-lg font-bold text-slate-900">{{ $kpis['avg_tat_days'] ? $kpis['avg_tat_days'].' days' : '—' }}</p>
+        <p class="text-lg font-bold text-slate-900">{{ $kpis['avg_tat_days'] ? $kpis['avg_tat_days'].' days' : '' }}</p>
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
         <p class="text-xs text-slate-500">Pending review</p>

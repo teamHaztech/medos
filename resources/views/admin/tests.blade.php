@@ -77,8 +77,8 @@
                             <td class="table-cell font-medium">{{ $test->name }}</td>
                             <td class="table-cell">{{ $test->category }}</td>
                             <td class="table-cell">{{ \App\Modules\Core\Services\RegionService::currency() }}{{ number_format($test->price, 0) }}</td>
-                            <td class="table-cell">{{ $test->turnaround_time ?? '-' }}</td>
-                            <td class="table-cell text-xs text-slate-500">{{ \Illuminate\Support\Str::limit($test->instructions ?? '-', 40) }}</td>
+                            <td class="table-cell">{{ $test->turnaround_time ?? '' }}</td>
+                            <td class="table-cell text-xs text-slate-500">{{ \Illuminate\Support\Str::limit($test->instructions ?? '', 40) }}</td>
                             <td class="table-cell">
                                 <div class="flex items-center gap-2">
                                     <button type="button"

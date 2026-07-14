@@ -43,7 +43,7 @@
                     @forelse($services as $s)
                     <tr class="hover:bg-slate-50">
                         <td class="table-cell font-medium text-slate-800">{{ $s->name }}</td>
-                        <td class="table-cell text-slate-500 font-mono text-xs">{{ $s->code ?? '—' }}</td>
+                        <td class="table-cell text-slate-500 font-mono text-xs">{{ $s->code ?? '' }}</td>
                         <td class="table-cell"><span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ $s->categoryLabel() }}</span></td>
                         <td class="table-cell font-medium">{{ $cur }}{{ number_format($s->price, 2) }}</td>
                         <td class="table-cell">@if($s->is_taxable || $s->gst_rate > 0)<span class="text-xs">GST {{ rtrim(rtrim(number_format($s->gst_rate, 2), '0'), '.') }}%</span>@if($s->hsn_sac)<span class="block text-xs text-slate-400">HSN {{ $s->hsn_sac }}</span>@endif @else<span class="text-xs text-slate-400">Exempt</span>@endif</td>

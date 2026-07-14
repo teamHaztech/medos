@@ -48,7 +48,7 @@
                             <div class="w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold {{ $st === 'in_progress' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600' }}">{{ $i + 1 }}</div>
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm font-medium text-slate-800 truncate">{{ $apt->patient?->name ?? 'Unknown' }}</p>
-                                <p class="text-xs text-slate-400">Token {{ $apt->notes ?? '—' }}</p>
+                                <p class="text-xs text-slate-400">Token {{ $apt->notes ?? '' }}</p>
                             </div>
                             <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $st === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700' }}">{{ $st === 'in_progress' ? 'With doctor' : 'Waiting' }}</span>
                         </div>
@@ -79,7 +79,7 @@
                 <div class="flex items-center gap-3 px-4 py-3">
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-slate-800">{{ $o->patient?->name ?? 'Unknown' }}</p>
-                        <p class="text-xs text-slate-400 truncate">{{ $items ?: 'Tests' }} · Token {{ $o->notes ?? '—' }}</p>
+                        <p class="text-xs text-slate-400 truncate">{{ $items ?: 'Tests' }} · Token {{ $o->notes ?? '' }}</p>
                     </div>
                     @if($pr !== 'routine')<span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $pr === 'stat' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700' }}">{{ strtoupper($pr) }}</span>@endif
                     <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">{{ ucfirst(str_replace('_', ' ', $os)) }}</span>

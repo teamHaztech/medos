@@ -61,7 +61,7 @@
             @forelse($statusMix as $st => $ct)
                 <span class="px-2 py-0.5 rounded text-xs font-medium {{ $statusStyle[$st] ?? 'bg-slate-100 text-slate-600' }}">{{ ucfirst($st) }} {{ $ct }}</span>
             @empty
-                <span class="text-xs text-slate-400">—</span>
+                <span class="text-xs text-slate-400"></span>
             @endforelse
         </div>
     </div>

@@ -82,10 +82,10 @@
                 <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
                     <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">Currently Admitted</h4>
                     <div class="grid grid-cols-2 gap-2 text-sm text-slate-700">
-                        <p><span class="text-slate-500">Ward:</span> <span class="font-medium" x-text="snapshot.admission.ward || '—'"></span></p>
-                        <p><span class="text-slate-500">Bed:</span> <span class="font-medium" x-text="snapshot.admission.bed || '—'"></span></p>
-                        <p><span class="text-slate-500">Doctor:</span> <span class="font-medium" x-text="snapshot.admission.doctor || '—'"></span></p>
-                        <p><span class="text-slate-500">Since:</span> <span class="font-medium" x-text="snapshot.admission.since || '—'"></span></p>
+                        <p><span class="text-slate-500">Ward:</span> <span class="font-medium" x-text="snapshot.admission.ward || ''"></span></p>
+                        <p><span class="text-slate-500">Bed:</span> <span class="font-medium" x-text="snapshot.admission.bed || ''"></span></p>
+                        <p><span class="text-slate-500">Doctor:</span> <span class="font-medium" x-text="snapshot.admission.doctor || ''"></span></p>
+                        <p><span class="text-slate-500">Since:</span> <span class="font-medium" x-text="snapshot.admission.since || ''"></span></p>
                     </div>
                     <p x-show="snapshot.admission.reason" class="text-xs text-slate-500 mt-2" x-text="'Reason: ' + snapshot.admission.reason"></p>
                 </div>
@@ -151,7 +151,7 @@
                     @forelse($doctors as $d)
                     <tr>
                         <td class="px-4 py-2.5 text-sm text-slate-800">{{ $d->name }}<span class="text-xs text-slate-400 block">{{ $d->specialization }}</span></td>
-                        <td class="px-4 py-2.5 text-sm text-slate-600">{{ $d->department ?? '—' }}</td>
+                        <td class="px-4 py-2.5 text-sm text-slate-600">{{ $d->department ?? '' }}</td>
                         <td class="px-4 py-2.5 text-sm">
                             @if($d->today)<span class="text-green-700">{{ $d->today }}</span>@else<span class="text-slate-400">Off today</span>@endif
                         </td>

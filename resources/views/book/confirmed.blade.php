@@ -19,7 +19,7 @@
     </div>
     <div class="flex justify-between text-sm"><span class="text-slate-500">Patient</span><span class="font-medium text-slate-800">{{ $appointment->patient?->name }}</span></div>
     <div class="flex justify-between text-sm"><span class="text-slate-500">Doctor</span><span class="font-medium text-slate-800">{{ $appointment->doctor?->name }}</span></div>
-    <div class="flex justify-between text-sm"><span class="text-slate-500">Department</span><span class="font-medium text-slate-800">{{ $appointment->doctor?->department ?? '—' }}</span></div>
+    <div class="flex justify-between text-sm"><span class="text-slate-500">Department</span><span class="font-medium text-slate-800">{{ $appointment->doctor?->department ?? '' }}</span></div>
     <div class="flex justify-between text-sm"><span class="text-slate-500">When</span><span class="font-medium text-slate-800">{{ optional($appointment->slot_start)->format('D, M d · g:i A') }}</span></div>
     @if($bill)
     <div class="flex justify-between text-sm"><span class="text-slate-500">Consultation fee</span><span class="font-medium text-slate-800">{{ $currency }}{{ number_format($bill->total_amount, 2) }} <span class="text-xs text-amber-600">· pay at hospital</span></span></div>

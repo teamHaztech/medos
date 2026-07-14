@@ -41,7 +41,7 @@
 {{-- Security stats --}}
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
     <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Last login</p><p class="text-sm font-bold text-slate-800">{{ $stats['last_login'] ? $stats['last_login']->format('d M Y, g:i A') : 'Never' }}</p></div>
-    <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Last IP</p><p class="text-sm font-bold text-slate-800">{{ $stats['last_ip'] ?? '—' }}</p></div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Last IP</p><p class="text-sm font-bold text-slate-800">{{ $stats['last_ip'] ?? '' }}</p></div>
     <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Total logins</p><p class="text-2xl font-bold text-slate-800">{{ $stats['logins'] }}</p></div>
     <div class="bg-white rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-500">Audited actions</p><p class="text-2xl font-bold text-slate-800">{{ $stats['actions'] }}</p></div>
 </div>
@@ -60,7 +60,7 @@
                     <tr>
                         <td class="px-4 py-2.5"><span class="text-sm font-medium {{ $actIcon[$a->action] ?? 'text-slate-600' }}">{{ $a->actionLabel() }}</span></td>
                         <td class="px-4 py-2.5 text-xs text-slate-500">{{ optional($a->created_at)->format('d M Y, g:i:s A') }}</td>
-                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ $a->ip_address ?? '—' }}<span class="block text-slate-400 truncate" style="max-width:220px;">{{ \Illuminate\Support\Str::limit($a->user_agent, 60) }}</span></td>
+                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ $a->ip_address ?? '' }}<span class="block text-slate-400 truncate" style="max-width:220px;">{{ \Illuminate\Support\Str::limit($a->user_agent, 60) }}</span></td>
                     </tr>
                     @empty
                     <tr><td colspan="3" class="px-4 py-8 text-center text-sm text-slate-400">No sign-in activity recorded yet.</td></tr>
@@ -81,8 +81,8 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse($actions as $log)
                     <tr>
-                        <td class="px-4 py-2.5 text-sm text-slate-700">{{ ucwords(str_replace('_',' ', $log->action ?? '—')) }}</td>
-                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ class_basename($log->entity_type ?? '') ?: '—' }}</td>
+                        <td class="px-4 py-2.5 text-sm text-slate-700">{{ ucwords(str_replace('_',' ', $log->action ?? '')) }}</td>
+                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ class_basename($log->entity_type ?? '') ?: '' }}</td>
                         <td class="px-4 py-2.5 text-xs text-slate-500">{{ optional($log->created_at)->format('d M Y, g:i A') }}</td>
                     </tr>
                     @empty

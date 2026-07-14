@@ -55,7 +55,7 @@
                             {{ $kpi['delta']['dir'] === 'up' ? '▲' : '▼' }} {{ $kpi['delta']['pct'] }}%
                         </span>
                     @elseif($kpi['delta'])
-                        <span class="text-xs font-medium text-slate-400">—</span>
+                        <span class="text-xs font-medium text-slate-400"></span>
                     @endif
                 </div>
                 <p class="text-2xl font-bold text-slate-800 mt-3">{{ $kpi['value'] }}</p>

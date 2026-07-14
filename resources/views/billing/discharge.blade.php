@@ -46,7 +46,7 @@
         $diagnosisCodes = $encounter->diagnosis_codes ?? [];
         $encounterStatus = is_object($encounter->status) ? $encounter->status->value : $encounter->status;
         $encounterType = is_object($encounter->type) ? $encounter->type->value : $encounter->type;
-        $age = $patient->date_of_birth ? $patient->date_of_birth->age : ($patient->age_approximate ?? '-');
+        $age = $patient->date_of_birth ? $patient->date_of_birth->age : ($patient->age_approximate ?? '');
 
         $pharmacyOrders = $orders->where('type', 'pharmacy');
         $labOrders = $orders->where('type', 'lab');
@@ -57,7 +57,7 @@
 
     <div class="header">
         <h1>{{ $hospital->name ?? 'Hospital' }}</h1>
-        <p>{{ $hospital->address ?? '' }}{{ $hospital->city ? ', ' . $hospital->city : '' }} | Phone: {{ $hospital->phone ?? '-' }}</p>
+        <p>{{ $hospital->address ?? '' }}{{ $hospital->city ? ', ' . $hospital->city : '' }} | Phone: {{ $hospital->phone ?? '' }}</p>
     </div>
 
     <div class="doc-title">Discharge Summary</div>
@@ -66,10 +66,10 @@
     <div class="section">
         <div class="section-title">Patient Information</div>
         <div class="info-grid">
-            <div class="item"><span class="label">Patient:</span> <span class="value">{{ $patient->name ?? '-' }}</span></div>
-            <div class="item"><span class="label">Phone:</span> <span class="value">{{ $patient->phone ?? '-' }}</span></div>
+            <div class="item"><span class="label">Patient:</span> <span class="value">{{ $patient->name ?? '' }}</span></div>
+            <div class="item"><span class="label">Phone:</span> <span class="value">{{ $patient->phone ?? '' }}</span></div>
             <div class="item"><span class="label">Age:</span> <span class="value">{{ $age }}</span></div>
-            <div class="item"><span class="label">Gender:</span> <span class="value">{{ ucfirst($patient->gender ?? '-') }}</span></div>
+            <div class="item"><span class="label">Gender:</span> <span class="value">{{ ucfirst($patient->gender ?? '') }}</span></div>
             @if($patient->abha_number)
             <div class="item"><span class="label">{{ \App\Modules\Core\Services\RegionService::healthIdLabel() }}:</span> <span class="value">{{ \App\Modules\Core\Services\RegionService::formatHealthId($patient->abha_number) }}</span></div>
             @endif
@@ -81,7 +81,7 @@
         <div class="section-title">Encounter Details</div>
         <div class="info-grid">
             <div class="item"><span class="label">Encounter #:</span> <span class="value">{{ $encounter->encounter_number }}</span></div>
-            <div class="item"><span class="label">Consulting Doctor:</span> <span class="value">Dr. {{ $doctor->name ?? '-' }} ({{ $doctor->department ?? '-' }})</span></div>
+            <div class="item"><span class="label">Consulting Doctor:</span> <span class="value">Dr. {{ $doctor->name ?? '' }} ({{ $doctor->department ?? '' }})</span></div>
             <div class="item"><span class="label">Date of Visit:</span> <span class="value">{{ $encounter->created_at->format('M d, Y') }}</span></div>
             <div class="item"><span class="label">Date of Discharge:</span> <span class="value">{{ $encounter->updated_at->format('M d, Y') }}</span></div>
         </div>
@@ -152,10 +152,10 @@
                     @foreach($order->items ?? [] as $med)
                     <tr>
                         <td>{{ $medIndex++ }}</td>
-                        <td>{{ $med['name'] ?? '-' }} {{ $med['dosage'] ?? '' }}</td>
-                        <td>{{ $med['frequency'] ?? '-' }}</td>
-                        <td>{{ $med['duration'] ?? '-' }}</td>
-                        <td>{{ ucfirst($med['timing'] ?? '-') }}</td>
+                        <td>{{ $med['name'] ?? '' }} {{ $med['dosage'] ?? '' }}</td>
+                        <td>{{ $med['frequency'] ?? '' }}</td>
+                        <td>{{ $med['duration'] ?? '' }}</td>
+                        <td>{{ ucfirst($med['timing'] ?? '') }}</td>
                     </tr>
                     @endforeach
                 @endforeach
@@ -232,7 +232,7 @@
 
     <div class="signature">
         <div class="line"></div>
-        <div class="name">Dr. {{ $doctor->name ?? '-' }}</div>
+        <div class="name">Dr. {{ $doctor->name ?? '' }}</div>
         <div class="dept">{{ $doctor->department ?? '' }}{{ $doctor->specialization ? ' - ' . $doctor->specialization : '' }}</div>
     </div>
 </body>

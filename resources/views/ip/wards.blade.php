@@ -66,7 +66,7 @@
                 @csrf
                 <div class="col-span-2"><label class="block text-xs font-semibold text-slate-600 mb-1">Ward name *</label><input type="text" name="name" required class="input-field" placeholder="General Ward B"></div>
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Type</label>
-                    <select name="ward_type" class="input-field"><option value="">—</option>@foreach(\App\Modules\Inpatient\Models\Ward::TYPES as $t)<option value="{{ $t }}">{{ $t }}</option>@endforeach</select>
+                    <select name="ward_type" class="input-field"><option value=""></option>@foreach(\App\Modules\Inpatient\Models\Ward::TYPES as $t)<option value="{{ $t }}">{{ $t }}</option>@endforeach</select>
                 </div>
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1">Floor</label><input type="text" name="floor" class="input-field"></div>
                 <div><label class="block text-xs font-semibold text-slate-600 mb-1"># Beds to create</label><input type="number" name="bed_count" min="0" max="200" value="0" class="input-field"></div>

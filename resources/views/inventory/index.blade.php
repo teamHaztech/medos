@@ -96,11 +96,11 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse($movements as $m)
                     <tr>
-                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $m->item?->name ?? '—' }}</td>
+                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $m->item?->name ?? '' }}</td>
                         <td class="px-4 py-2.5 text-sm text-slate-600">{{ StockMovement::TYPES[$m->type] ?? $m->type }}</td>
                         <td class="px-4 py-2.5 text-center text-sm font-semibold {{ $m->quantity < 0 ? 'text-red-600' : 'text-green-600' }}">{{ $m->quantity > 0 ? '+' : '' }}{{ $m->quantity }}</td>
                         <td class="px-4 py-2.5 text-xs text-slate-500">{{ $m->batch_number ? 'B:'.$m->batch_number : '' }}{{ $m->expiry_date ? ' exp '.$m->expiry_date->format('M Y') : '' }}{{ $m->department ? ' → '.$m->department : '' }}</td>
-                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ $m->performed_by_name ?? '—' }}</td>
+                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ $m->performed_by_name ?? '' }}</td>
                         <td class="px-4 py-2.5 text-xs text-slate-500">{{ optional($m->created_at)->format('M d, H:i') }}</td>
                     </tr>
                     @empty
@@ -121,8 +121,8 @@
                 @forelse($expiring as $e)
                 @php $days = today()->diffInDays($e->expiry_date, false); @endphp
                 <tr>
-                    <td class="px-4 py-2.5 text-sm text-slate-800">{{ $e->item?->name ?? '—' }}</td>
-                    <td class="px-4 py-2.5 text-sm text-slate-600">{{ $e->batch_number ?? '—' }}</td>
+                    <td class="px-4 py-2.5 text-sm text-slate-800">{{ $e->item?->name ?? '' }}</td>
+                    <td class="px-4 py-2.5 text-sm text-slate-600">{{ $e->batch_number ?? '' }}</td>
                     <td class="px-4 py-2.5 text-sm text-slate-600">{{ $e->expiry_date->format('M d, Y') }}</td>
                     <td class="px-4 py-2.5 text-right text-sm font-semibold {{ $days <= 30 ? 'text-red-600' : 'text-orange-600' }}">{{ $days }}</td>
                 </tr>

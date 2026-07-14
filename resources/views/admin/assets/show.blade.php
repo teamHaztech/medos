@@ -46,12 +46,12 @@
             </div>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5 text-sm">
-            <div><p class="text-xs text-slate-400">Serial</p><p class="font-medium text-slate-700">{{ $asset->serial_number ?? '-' }}</p></div>
-            <div><p class="text-xs text-slate-400">Department</p><p class="font-medium text-slate-700">{{ $asset->department ?? '-' }}</p></div>
-            <div><p class="text-xs text-slate-400">Location</p><p class="font-medium text-slate-700">{{ $asset->location ?? '-' }}</p></div>
-            <div><p class="text-xs text-slate-400">Vendor</p><p class="font-medium text-slate-700">{{ $asset->vendor?->name ?? '-' }}</p></div>
-            <div><p class="text-xs text-slate-400">Purchase Date</p><p class="font-medium text-slate-700">{{ optional($asset->purchase_date)->format('M d, Y') ?? '-' }}</p></div>
-            <div><p class="text-xs text-slate-400">Purchase Cost</p><p class="font-medium text-slate-700">{{ $asset->purchase_cost ? $cur . number_format($asset->purchase_cost, 2) : '-' }}</p></div>
+            <div><p class="text-xs text-slate-400">Serial</p><p class="font-medium text-slate-700">{{ $asset->serial_number ?? '' }}</p></div>
+            <div><p class="text-xs text-slate-400">Department</p><p class="font-medium text-slate-700">{{ $asset->department ?? '' }}</p></div>
+            <div><p class="text-xs text-slate-400">Location</p><p class="font-medium text-slate-700">{{ $asset->location ?? '' }}</p></div>
+            <div><p class="text-xs text-slate-400">Vendor</p><p class="font-medium text-slate-700">{{ $asset->vendor?->name ?? '' }}</p></div>
+            <div><p class="text-xs text-slate-400">Purchase Date</p><p class="font-medium text-slate-700">{{ optional($asset->purchase_date)->format('M d, Y') ?? '' }}</p></div>
+            <div><p class="text-xs text-slate-400">Purchase Cost</p><p class="font-medium text-slate-700">{{ $asset->purchase_cost ? $cur . number_format($asset->purchase_cost, 2) : '' }}</p></div>
             @if($asset->purchase_cost && $asset->useful_life_years)
             <div><p class="text-xs text-slate-400">Useful Life</p><p class="font-medium text-slate-700">{{ $asset->useful_life_years }} yrs · salvage {{ $cur }}{{ number_format($asset->salvage_value ?? 0, 0) }}</p></div>
             <div><p class="text-xs text-slate-400">Annual Depreciation</p><p class="font-medium text-slate-700">{{ $cur }}{{ number_format($asset->annualDepreciation(), 2) }}</p></div>
@@ -97,7 +97,7 @@
                             </div>
                         </div>
                         <p class="text-xs text-slate-500 mt-1">
-                            {{ optional($w->start_date)->format('M d, Y') ?? '—' }} → {{ optional($w->end_date)->format('M d, Y') }}
+                            {{ optional($w->start_date)->format('M d, Y') ?? '' }} → {{ optional($w->end_date)->format('M d, Y') }}
                             {{ $w->vendor_contact ? ' · ' . $w->vendor_contact : '' }}{{ $w->is_active ? '' : ' · (superseded)' }}
                         </p>
                         @if($w->terms)<p class="text-xs text-slate-600 mt-1">{{ $w->terms }}</p>@endif

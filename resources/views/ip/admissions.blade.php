@@ -50,11 +50,11 @@
                     <tr class="hover:bg-slate-50">
                         <td class="table-cell font-medium">{{ $a->admission_no }}</td>
                         <td class="table-cell">
-                            <span class="font-medium text-slate-800">{{ $a->patient?->name ?? '-' }}</span>
+                            <span class="font-medium text-slate-800">{{ $a->patient?->name ?? '' }}</span>
                             <span class="block text-xs text-slate-400">{{ $a->provisional_diagnosis ?? $a->reason }}</span>
                         </td>
-                        <td class="table-cell">{{ $a->ward?->name ?? '-' }}{{ $a->bed?->bed_number ? ' · ' . $a->bed->bed_number : '' }}</td>
-                        <td class="table-cell text-slate-600">{{ $a->attendingDoctor?->name ?? '-' }}</td>
+                        <td class="table-cell">{{ $a->ward?->name ?? '' }}{{ $a->bed?->bed_number ? ' · ' . $a->bed->bed_number : '' }}</td>
+                        <td class="table-cell text-slate-600">{{ $a->attendingDoctor?->name ?? '' }}</td>
                         <td class="table-cell text-slate-500 text-sm">{{ optional($showDischarged ? $a->discharged_at : $a->admitted_at)->format('M d, Y g:i A') }}</td>
                         <td class="table-cell">{{ $a->lengthOfDays() }}d @if($showDischarged && $a->dischargeTypeLabel())<span class="text-xs text-slate-400">· {{ $a->dischargeTypeLabel() }}</span>@endif</td>
                         <td class="table-cell">
@@ -97,14 +97,14 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Admitting doctor</label>
                     <select name="admitting_doctor_id" class="input-field">
-                        <option value="">—</option>
+                        <option value=""></option>
                         @foreach($doctors as $d)<option value="{{ $d->id }}">{{ $d->name }}</option>@endforeach
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Attending doctor</label>
                     <select name="attending_doctor_id" class="input-field">
-                        <option value="">—</option>
+                        <option value=""></option>
                         @foreach($doctors as $d)<option value="{{ $d->id }}">{{ $d->name }}</option>@endforeach
                     </select>
                 </div>

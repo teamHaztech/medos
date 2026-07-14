@@ -48,7 +48,7 @@ $stCls = ['reported'=>'bg-blue-100 text-blue-700','under_review'=>'bg-amber-100 
                         <td class="px-4 py-2.5 text-xs font-mono text-slate-500">{{ $i->incident_no }}</td>
                         <td class="px-4 py-2.5 text-sm text-slate-800">{{ Incident::CATEGORIES[$i->category] ?? $i->category }}<span class="block text-xs text-slate-400 truncate max-w-xs">{{ $i->description }}</span></td>
                         <td class="px-4 py-2.5"><span class="text-xs px-2 py-0.5 rounded-full {{ $sevCls[$i->severity] ?? 'bg-slate-100' }}">{{ Incident::SEVERITIES[$i->severity] ?? $i->severity }}</span></td>
-                        <td class="px-4 py-2.5 text-sm text-slate-600">{{ $i->department ?? '—' }}</td>
+                        <td class="px-4 py-2.5 text-sm text-slate-600">{{ $i->department ?? '' }}</td>
                         <td class="px-4 py-2.5 text-xs text-slate-500">{{ optional($i->occurred_at)->format('M d, H:i') }}</td>
                         <td class="px-4 py-2.5"><span class="text-xs px-2 py-0.5 rounded-full {{ $stCls[$i->status] ?? 'bg-slate-100' }}">{{ Incident::STATUSES[$i->status] ?? $i->status }}</span></td>
                         <td class="px-4 py-2.5 text-right"><button type="button" @click="openManage({ id: @js($i->id), no: @js($i->incident_no), category: @js(Incident::CATEGORIES[$i->category] ?? $i->category), severity: @js($i->severity), status: @js($i->status), department: @js($i->department ?? ''), reportedBy: @js($i->reported_by_name ?? ''), occurredAt: @js(optional($i->occurred_at)->format('M d, Y H:i')), patient: @js($i->patient?->name ?? ''), description: @js($i->description), immediateAction: @js($i->immediate_action ?? ''), assigned: @js($i->assigned_to_name ?? ''), capa: @js($i->capa ?? '') })" class="text-xs font-medium text-blue-600 hover:text-blue-800">Manage</button></td>
@@ -118,8 +118,8 @@ $stCls = ['reported'=>'bg-blue-100 text-blue-700','under_review'=>'bg-amber-100 
     <x-modal show="manageModal" title-expr="'Incident ' + inc.no" max="2xl">
         <div class="space-y-3">
             <div class="rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm space-y-1">
-                <p><span class="text-slate-500">Type:</span> <span class="font-medium" x-text="inc.category"></span> · <span class="text-slate-500">Dept:</span> <span x-text="inc.department || '—'"></span></p>
-                <p><span class="text-slate-500">When:</span> <span x-text="inc.occurredAt"></span> · <span class="text-slate-500">Reported by:</span> <span x-text="inc.reportedBy || '—'"></span></p>
+                <p><span class="text-slate-500">Type:</span> <span class="font-medium" x-text="inc.category"></span> · <span class="text-slate-500">Dept:</span> <span x-text="inc.department || ''"></span></p>
+                <p><span class="text-slate-500">When:</span> <span x-text="inc.occurredAt"></span> · <span class="text-slate-500">Reported by:</span> <span x-text="inc.reportedBy || ''"></span></p>
                 <p x-show="inc.patient"><span class="text-slate-500">Patient:</span> <span x-text="inc.patient"></span></p>
                 <p class="text-slate-700 pt-1" x-text="inc.description"></p>
                 <p x-show="inc.immediateAction" class="text-slate-500 text-xs">Immediate action: <span x-text="inc.immediateAction"></span></p>

@@ -92,7 +92,7 @@
                     @foreach($outstandingBills as $b)
                         <tr>
                             <td class="py-2 font-mono text-slate-600">{{ $b->bill_number }}</td>
-                            <td class="text-slate-800">{{ $b->patient?->name ?? '-' }}</td>
+                            <td class="text-slate-800">{{ $b->patient?->name ?? '' }}</td>
                             <td class="text-right text-slate-600">{{ $cur }}{{ number_format($b->patient_payable ?? $b->total_amount, 2) }}</td>
                             <td class="text-right text-green-700">{{ $cur }}{{ number_format($b->amount_paid, 2) }}</td>
                             <td class="text-right font-semibold text-red-600">{{ $cur }}{{ number_format($b->balance_due, 2) }}</td>

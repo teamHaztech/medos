@@ -18,12 +18,12 @@
 
         <div class="px-6 py-8 text-center">
             <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Your Token</p>
-            <p class="text-5xl font-extrabold text-blue-700 tracking-tight">{{ $token ?: '—' }}</p>
+            <p class="text-5xl font-extrabold text-blue-700 tracking-tight">{{ $token ?: '' }}</p>
             @if($position)<p class="mt-2 text-sm text-slate-500">Position in queue: <span class="font-bold text-slate-700">{{ $position }}</span></p>@endif
         </div>
 
         <div class="px-6 pb-6 space-y-2 text-sm">
-            <div class="flex justify-between"><span class="text-slate-400">Patient</span><span class="font-medium text-slate-800">{{ $bill->patient?->name ?? '—' }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Patient</span><span class="font-medium text-slate-800">{{ $bill->patient?->name ?? '' }}</span></div>
             @if($doctor)<div class="flex justify-between"><span class="text-slate-400">Doctor</span><span class="font-medium text-slate-800">{{ $doctor->name }}{{ $doctor->department ? ' · '.$doctor->department : '' }}</span></div>@endif
             <div class="border-t border-dashed border-slate-200 my-2"></div>
             @foreach($bill->line_items ?? [] as $li)

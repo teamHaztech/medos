@@ -52,8 +52,8 @@
             </div>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5 text-sm">
-            <div><p class="text-xs text-slate-400">Ward / Bed</p><p class="font-medium text-slate-700">{{ $admission->ward?->name ?? '-' }}{{ $admission->bed?->bed_number ? ' · ' . $admission->bed->bed_number : '' }}</p></div>
-            <div><p class="text-xs text-slate-400">Attending Doctor</p><p class="font-medium text-slate-700">{{ $admission->attendingDoctor?->name ?? '-' }}</p></div>
+            <div><p class="text-xs text-slate-400">Ward / Bed</p><p class="font-medium text-slate-700">{{ $admission->ward?->name ?? '' }}{{ $admission->bed?->bed_number ? ' · ' . $admission->bed->bed_number : '' }}</p></div>
+            <div><p class="text-xs text-slate-400">Attending Doctor</p><p class="font-medium text-slate-700">{{ $admission->attendingDoctor?->name ?? '' }}</p></div>
             <div><p class="text-xs text-slate-400">Admitted</p><p class="font-medium text-slate-700">{{ optional($admission->admitted_at)->format('M d, Y g:i A') }}</p></div>
             <div><p class="text-xs text-slate-400">Length of Stay</p><p class="font-medium text-slate-700">{{ $admission->lengthOfDays() }} day(s)</p></div>
         </div>
@@ -135,12 +135,12 @@
                             @php $flags = $v->abnormalFlags(); @endphp
                             <tr class="{{ $v->isAbnormal() ? 'bg-red-50/40' : '' }}">
                                 <td class="py-1.5 pr-3 text-slate-500 whitespace-nowrap">{{ optional($v->recorded_at)->format('M d, g:i A') }}</td>
-                                <td class="px-2 text-center {{ in_array('bp',$flags) ? 'text-red-600 font-semibold' : 'text-slate-700' }}">{{ $v->bp_systolic ? $v->bp_systolic.'/'.$v->bp_diastolic : '—' }}</td>
-                                <td class="px-2 text-center {{ in_array('temperature',$flags) ? 'text-red-600 font-semibold' : 'text-slate-700' }}">{{ $v->temperature ?? '—' }}</td>
-                                <td class="px-2 text-center {{ in_array('pulse',$flags) ? 'text-red-600 font-semibold' : 'text-slate-700' }}">{{ $v->pulse ?? '—' }}</td>
-                                <td class="px-2 text-center {{ in_array('spo2',$flags) ? 'text-red-600 font-semibold' : 'text-slate-700' }}">{{ $v->spo2 ?? '—' }}</td>
-                                <td class="px-2 text-center {{ in_array('resp_rate',$flags) ? 'text-red-600 font-semibold' : 'text-slate-700' }}">{{ $v->resp_rate ?? '—' }}</td>
-                                <td class="px-2 text-center text-slate-700">{{ $v->bmi ?? '—' }}</td>
+                                <td class="px-2 text-center {{ in_array('bp',$flags) ? 'text-red-600 font-semibold' : 'text-slate-700' }}">{{ $v->bp_systolic ? $v->bp_systolic.'/'.$v->bp_diastolic : '' }}</td>
+                                <td class="px-2 text-center {{ in_array('temperature',$flags) ? 'text-red-600 font-semibold' : 'text-slate-700' }}">{{ $v->temperature ?? '' }}</td>
+                                <td class="px-2 text-center {{ in_array('pulse',$flags) ? 'text-red-600 font-semibold' : 'text-slate-700' }}">{{ $v->pulse ?? '' }}</td>
+                                <td class="px-2 text-center {{ in_array('spo2',$flags) ? 'text-red-600 font-semibold' : 'text-slate-700' }}">{{ $v->spo2 ?? '' }}</td>
+                                <td class="px-2 text-center {{ in_array('resp_rate',$flags) ? 'text-red-600 font-semibold' : 'text-slate-700' }}">{{ $v->resp_rate ?? '' }}</td>
+                                <td class="px-2 text-center text-slate-700">{{ $v->bmi ?? '' }}</td>
                             </tr>
                         @empty
                             <tr><td colspan="7" class="text-center text-slate-400 py-6">No vitals recorded yet.</td></tr>

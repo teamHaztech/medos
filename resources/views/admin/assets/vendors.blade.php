@@ -42,10 +42,10 @@
                     <tr class="hover:bg-slate-50">
                         <td class="table-cell font-medium">{{ $v->name }}</td>
                         <td class="table-cell text-slate-600">
-                            {{ $v->contact_person ?? '-' }}
+                            {{ $v->contact_person ?? '' }}
                             <span class="block text-xs text-slate-400">{{ $v->phone }}{{ $v->email ? ' · ' . $v->email : '' }}</span>
                         </td>
-                        <td class="table-cell">{{ $v->service_type ?? '-' }}</td>
+                        <td class="table-cell">{{ $v->service_type ?? '' }}</td>
                         <td class="table-cell">{{ $v->assets_count }}</td>
                         <td class="table-cell">
                             <div class="flex items-center gap-2">

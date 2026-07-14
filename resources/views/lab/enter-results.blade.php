@@ -23,7 +23,7 @@
                 @if($order->sample_id)
                 <p class="font-mono bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs inline-block">{{ $order->sample_id }}</p>
                 @endif
-                <p class="text-slate-400 mt-1">Ordered by <span class="font-medium text-slate-600">{{ $order->orderedBy?->name ?? '-' }}</span></p>
+                <p class="text-slate-400 mt-1">Ordered by <span class="font-medium text-slate-600">{{ $order->orderedBy?->name ?? '' }}</span></p>
                 <p class="text-slate-400">{{ $order->created_at?->format('d M Y, h:i A') }}</p>
             </div>
         </div>

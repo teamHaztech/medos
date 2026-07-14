@@ -31,8 +31,8 @@
                     @forelse($enrollments as $e)
                     @php $pct = $e->progressPercent(); $st = $e->status; $stCls = ['active'=>'bg-blue-100 text-blue-700','completed'=>'bg-green-100 text-green-700','discontinued'=>'bg-slate-100 text-slate-500'][$st] ?? 'bg-slate-100'; @endphp
                     <tr class="{{ $st === 'discontinued' ? 'opacity-50' : '' }}">
-                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $e->patient?->name ?? '—' }}<span class="block text-xs text-slate-400">{{ $e->patient?->phone }}</span></td>
-                        <td class="px-4 py-2.5 text-sm text-slate-700">{{ $e->template?->name ?? '—' }}</td>
+                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $e->patient?->name ?? '' }}<span class="block text-xs text-slate-400">{{ $e->patient?->phone }}</span></td>
+                        <td class="px-4 py-2.5 text-sm text-slate-700">{{ $e->template?->name ?? '' }}</td>
                         <td class="px-4 py-2.5 w-48">
                             <div class="flex items-center gap-2">
                                 <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-blue-500 rounded-full" style="width: {{ $pct }}%"></div></div>

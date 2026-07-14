@@ -2111,7 +2111,7 @@ class AdminWebController extends Controller
                 ->first();
             if ($existingApt) {
                 return back()->withInput()->with('error',
-                    'This patient is already in ' . $doctor->name . "'s queue (token " . ($existingApt->notes ?: '—') . '). Complete or cancel that visit before issuing a new token.');
+                    'This patient is already in ' . $doctor->name . "'s queue (token " . ($existingApt->notes ?: 'n/a') . '). Complete or cancel that visit before issuing a new token.');
             }
         }
 

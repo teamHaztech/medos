@@ -42,12 +42,12 @@ use App\Modules\Vaccination\Models\PatientVaccination;
                     <tbody class="divide-y divide-slate-100">
                         @forelse($records as $r)
                         <tr class="{{ $r->has_aefi ? 'bg-red-50/40' : '' }}">
-                            <td class="px-4 py-2 text-sm text-slate-800">{{ $r->patient?->name ?? '—' }}</td>
-                            <td class="px-4 py-2 text-sm text-slate-700">{{ $r->vaccine?->name ?? '—' }}@if($r->has_aefi)<span class="ml-1 text-xs text-red-600">⚠ AEFI</span>@endif</td>
+                            <td class="px-4 py-2 text-sm text-slate-800">{{ $r->patient?->name ?? '' }}</td>
+                            <td class="px-4 py-2 text-sm text-slate-700">{{ $r->vaccine?->name ?? '' }}@if($r->has_aefi)<span class="ml-1 text-xs text-red-600">⚠ AEFI</span>@endif</td>
                             <td class="px-4 py-2 text-sm text-slate-600 text-center">{{ $r->dose_number }}</td>
                             <td class="px-4 py-2 text-xs text-slate-500">{{ optional($r->given_date)->format('M d, Y') }}</td>
-                            <td class="px-4 py-2 text-xs text-slate-500">{{ $r->batch_number ?? '—' }}</td>
-                            <td class="px-4 py-2 text-xs text-slate-500">{{ $r->given_by_name ?? '—' }}</td>
+                            <td class="px-4 py-2 text-xs text-slate-500">{{ $r->batch_number ?? '' }}</td>
+                            <td class="px-4 py-2 text-xs text-slate-500">{{ $r->given_by_name ?? '' }}</td>
                         </tr>
                         @empty
                         <tr><td colspan="6" class="px-4 py-6 text-center text-sm text-slate-400">No doses recorded yet.</td></tr>
@@ -191,12 +191,12 @@ use App\Modules\Vaccination\Models\PatientVaccination;
                     <tbody class="divide-y divide-slate-100">
                         @forelse($history as $h)
                         <tr>
-                            <td class="px-4 py-2 text-sm text-slate-800">{{ $h->vaccine?->name ?? '—' }}</td>
+                            <td class="px-4 py-2 text-sm text-slate-800">{{ $h->vaccine?->name ?? '' }}</td>
                             <td class="px-4 py-2 text-sm text-slate-600 text-center">{{ $h->dose_number }}</td>
                             <td class="px-4 py-2 text-xs text-slate-500">{{ optional($h->given_date)->format('d M Y') }}</td>
-                            <td class="px-4 py-2 text-xs text-slate-500">{{ Vaccine::ROUTES[$h->route] ?? $h->route ?? '—' }}<span class="block">{{ PatientVaccination::SITES[$h->site] ?? '' }}</span></td>
-                            <td class="px-4 py-2 text-xs text-slate-500">{{ $h->batch_number ?? '—' }}<span class="block text-slate-400">{{ $h->manufacturer }}</span></td>
-                            <td class="px-4 py-2 text-xs">@if($h->has_aefi)<span class="text-red-600" title="{{ $h->aefi_notes }}">⚠ {{ \Illuminate\Support\Str::limit($h->aefi_notes, 30) ?: 'Reported' }}</span>@else<span class="text-slate-300">—</span>@endif</td>
+                            <td class="px-4 py-2 text-xs text-slate-500">{{ Vaccine::ROUTES[$h->route] ?? $h->route ?? '' }}<span class="block">{{ PatientVaccination::SITES[$h->site] ?? '' }}</span></td>
+                            <td class="px-4 py-2 text-xs text-slate-500">{{ $h->batch_number ?? '' }}<span class="block text-slate-400">{{ $h->manufacturer }}</span></td>
+                            <td class="px-4 py-2 text-xs">@if($h->has_aefi)<span class="text-red-600" title="{{ $h->aefi_notes }}">⚠ {{ \Illuminate\Support\Str::limit($h->aefi_notes, 30) ?: 'Reported' }}</span>@else<span class="text-slate-300"></span>@endif</td>
                         </tr>
                         @empty
                         <tr><td colspan="6" class="px-4 py-6 text-center text-sm text-slate-400">No doses recorded for this patient.</td></tr>
@@ -224,7 +224,7 @@ use App\Modules\Vaccination\Models\PatientVaccination;
                 <div class="grid grid-cols-3 gap-3">
                     <div><label class="block text-sm font-medium text-slate-700 mb-1">Given date</label><input type="date" name="given_date" value="{{ now()->toDateString() }}" required class="input-field"></div>
                     <div><label class="block text-sm font-medium text-slate-700 mb-1">Route</label><select name="route" x-model="rec.route" class="input-field">@foreach(Vaccine::ROUTES as $k=>$l)<option value="{{ $k }}">{{ $l }}</option>@endforeach</select></div>
-                    <div><label class="block text-sm font-medium text-slate-700 mb-1">Site</label><select name="site" class="input-field"><option value="">—</option>@foreach(PatientVaccination::SITES as $k=>$l)<option value="{{ $k }}">{{ $l }}</option>@endforeach</select></div>
+                    <div><label class="block text-sm font-medium text-slate-700 mb-1">Site</label><select name="site" class="input-field"><option value=""></option>@foreach(PatientVaccination::SITES as $k=>$l)<option value="{{ $k }}">{{ $l }}</option>@endforeach</select></div>
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                     <div><label class="block text-sm font-medium text-slate-700 mb-1">Batch / lot no.</label><input type="text" name="batch_number" maxlength="60" class="input-field"></div>

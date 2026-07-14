@@ -54,7 +54,7 @@
     <div class="header">
         <h1>{{ $hospital->name ?? 'Hospital' }}</h1>
         <p>{{ $hospital->address ?? '' }}{{ $hospital->city ? ', ' . $hospital->city : '' }}</p>
-        <p>Phone: {{ $hospital->phone ?? '-' }}</p>
+        <p>Phone: {{ $hospital->phone ?? '' }}</p>
         @if($gstin)<p><strong>GSTIN: {{ $gstin }}</strong>{{ $gstState ? ' · State: '.$gstState : '' }}</p>@endif
     </div>
 
@@ -82,12 +82,12 @@
     <div class="info-section">
         <div class="info-row">
             <span class="label">Patient:</span>
-            <span class="value">{{ $bill->patient->name ?? '-' }} | Phone: {{ $bill->patient->phone ?? '-' }}</span>
+            <span class="value">{{ $bill->patient->name ?? '' }} | Phone: {{ $bill->patient->phone ?? '' }}</span>
         </div>
         @if($bill->encounter && $bill->encounter->doctor)
         <div class="info-row">
             <span class="label">Doctor:</span>
-            <span class="value">Dr. {{ $bill->encounter->doctor->name ?? '-' }} | Dept: {{ $bill->encounter->doctor->department ?? '-' }}</span>
+            <span class="value">Dr. {{ $bill->encounter->doctor->name ?? '' }} | Dept: {{ $bill->encounter->doctor->department ?? '' }}</span>
         </div>
         @endif
     </div>
@@ -108,8 +108,8 @@
         <tbody>
             @foreach($bill->line_items ?? [] as $item)
             <tr>
-                <td>{{ $item['description'] ?? '-' }}</td>
-                @if($hasGst)<td class="center">{{ $item['hsn_sac'] ?? '—' }}</td>@endif
+                <td>{{ $item['description'] ?? '' }}</td>
+                @if($hasGst)<td class="center">{{ $item['hsn_sac'] ?? '' }}</td>@endif
                 <td class="center">{{ rtrim(rtrim(number_format($item['quantity'] ?? 1, 2), '0'), '.') }}</td>
                 <td class="right">{{ $currency }}{{ number_format($item['unit_price'] ?? 0, 2) }}</td>
                 @if($hasGst)<td class="center">{{ ($item['gst_rate'] ?? 0) > 0 ? rtrim(rtrim(number_format($item['gst_rate'], 2), '0'), '.').'%' : 'Exempt' }}</td>@endif
@@ -187,7 +187,7 @@
 
     <div class="info-row" style="margin-top: 8px;">
         <span class="label">Payment:</span>
-        <span class="value">{{ ucfirst($bill->payment_method ?? '-') }} | Ref: {{ $bill->payment_reference ?? '-' }}</span>
+        <span class="value">{{ ucfirst($bill->payment_method ?? '') }} | Ref: {{ $bill->payment_reference ?? '' }}</span>
     </div>
 
     <hr class="divider">

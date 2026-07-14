@@ -45,7 +45,7 @@
             <tbody class="divide-y divide-slate-100">
                 @forelse($tickets as $t)
                     <tr class="hover:bg-slate-50">
-                        <td class="table-cell font-medium">{{ $t->asset?->asset_name ?? '—' }}</td>
+                        <td class="table-cell font-medium">{{ $t->asset?->asset_name ?? '' }}</td>
                         <td class="table-cell text-slate-600">{{ \Illuminate\Support\Str::limit($t->issue, 60) }}</td>
                         <td class="table-cell">
                             <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ in_array($t->priority, ['critical','high']) ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600' }}">{{ $t->priorityLabel() }}</span>

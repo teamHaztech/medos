@@ -18,7 +18,7 @@
                     <span>{{ $patient->phone }}</span>
                     @php $age = $patient->date_of_birth ? \Carbon\Carbon::parse($patient->date_of_birth)->age : $patient->age_approximate; @endphp
                     @if($age)<span>{{ $age }} yrs</span>@endif
-                    <span class="capitalize">{{ $patient->gender ?? '-' }}</span>
+                    <span class="capitalize">{{ $patient->gender ?? '' }}</span>
                 </div>
             </div>
         </div>

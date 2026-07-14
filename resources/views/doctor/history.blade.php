@@ -24,7 +24,7 @@
                 <tr class="hover:bg-slate-50 cursor-pointer" onclick="window.location='{{ route('web.doctor.patients.show', $enc->patient_id) }}'">
                     <td class="table-cell text-slate-500">{{ $enc->created_at?->format('M d, Y h:i A') }}</td>
                     <td class="table-cell font-medium">{{ $enc->patient?->name ?? 'Unknown' }}</td>
-                    <td class="table-cell">{{ $intake['chief_complaint'] ?? '-' }}</td>
+                    <td class="table-cell">{{ $intake['chief_complaint'] ?? '' }}</td>
                     <td class="table-cell capitalize">{{ str_replace('_', ' ', $type) }}</td>
                     <td class="table-cell font-mono text-xs text-slate-500">{{ $enc->encounter_number }}</td>
                     <td class="table-cell" onclick="event.stopPropagation()">

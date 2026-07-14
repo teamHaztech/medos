@@ -208,7 +208,7 @@
                         <td class="table-cell text-xs text-slate-500 whitespace-nowrap">{{ optional($c->posted_at ?? $c->created_at)->format('d M H:i') }}</td>
                         <td class="table-cell text-xs">{{ \App\Modules\Billing\Models\ChargeItem::SOURCES[$c->source] ?? $c->source }}</td>
                         <td class="table-cell">{{ \Illuminate\Support\Str::limit($c->description, 40) }}</td>
-                        <td class="table-cell text-slate-600">{{ $c->patient?->name ?? '—' }}</td>
+                        <td class="table-cell text-slate-600">{{ $c->patient?->name ?? '' }}</td>
                         <td class="table-cell text-right">{{ $cur }}{{ number_format($net, 2) }}</td>
                         <td class="table-cell text-right text-slate-500">{{ $cur }}{{ number_format($gst, 2) }}</td>
                         <td class="table-cell text-right font-medium">{{ $cur }}{{ number_format($net + $gst, 2) }}</td>
@@ -217,7 +217,7 @@
                             @if($c->bill_id)
                                 <a href="{{ route('web.billing.show', $c->bill_id) }}" class="text-xs font-medium text-blue-600 hover:text-blue-800">{{ $c->bill?->bill_number ?? 'View' }}</a>
                             @else
-                                <span class="text-xs text-slate-400">—</span>
+                                <span class="text-xs text-slate-400"></span>
                             @endif
                         </td>
                     </tr>

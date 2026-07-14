@@ -80,10 +80,10 @@
                     @foreach($appts as $apt)
                         @php $bst = is_object($apt->status) ? $apt->status->value : ($apt->status ?? 'scheduled'); @endphp
                         <div class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
-                            <div class="w-20 text-sm font-semibold text-slate-700">{{ $apt->slot_start?->format('g:i A') ?? '—' }}</div>
+                            <div class="w-20 text-sm font-semibold text-slate-700">{{ $apt->slot_start?->format('g:i A') ?? '' }}</div>
                             <div class="flex-1 min-w-0">
                                 <a href="{{ route('web.admin.patients.show', $apt->patient_id ?? 0) }}" class="text-sm font-medium text-blue-600 hover:underline">{{ $apt->patient?->name ?? 'Unknown' }}</a>
-                                <p class="text-xs text-slate-400">Token {{ $apt->notes ?? '—' }}</p>
+                                <p class="text-xs text-slate-400">Token {{ $apt->notes ?? '' }}</p>
                             </div>
                             <x-status-badge :status="$bst" type="appointment" />
                         </div>
@@ -114,15 +114,15 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse($appointments ?? [] as $apt)
                     <tr class="hover:bg-slate-50">
-                        <td class="table-cell font-medium">{{ $apt->slot_start?->format('h:i A') ?? '-' }}</td>
+                        <td class="table-cell font-medium">{{ $apt->slot_start?->format('h:i A') ?? '' }}</td>
                         <td class="table-cell">
                             <a href="{{ route('web.admin.patients.show', $apt->patient_id ?? 0) }}" class="text-blue-600 hover:underline">
                                 {{ $apt->patient?->name ?? 'Unknown' }}
                             </a>
                         </td>
-                        <td class="table-cell">{{ $apt->doctor?->name ?? '-' }}</td>
-                        <td class="table-cell">{{ $apt->doctor?->department ?? '-' }}</td>
-                        <td class="table-cell text-slate-500">{{ \Illuminate\Support\Str::limit($apt->notes ?? '-', 40) }}</td>
+                        <td class="table-cell">{{ $apt->doctor?->name ?? '' }}</td>
+                        <td class="table-cell">{{ $apt->doctor?->department ?? '' }}</td>
+                        <td class="table-cell text-slate-500">{{ \Illuminate\Support\Str::limit($apt->notes ?? '', 40) }}</td>
                         <td class="table-cell">
                             <x-status-badge :status="$apt->status?->value ?? 'scheduled'" type="appointment" />
                         </td>
@@ -130,7 +130,7 @@
                             @php
                                 $src = is_object($apt->booking_source ?? null) ? $apt->booking_source->value : ($apt->booking_source ?? '');
                                 $srcMap = ['walk_in' => ['Walk-in', 'bg-blue-100 text-blue-700'], 'whatsapp' => ['Online', 'bg-green-100 text-green-700'], 'kiosk' => ['Kiosk', 'bg-purple-100 text-purple-700'], 'referral' => ['Referral', 'bg-amber-100 text-amber-700']];
-                                [$sl, $sc] = $srcMap[$src] ?? [$src ? ucfirst(str_replace('_', ' ', $src)) : '—', 'bg-slate-100 text-slate-600'];
+                                [$sl, $sc] = $srcMap[$src] ?? [$src ? ucfirst(str_replace('_', ' ', $src)) : '', 'bg-slate-100 text-slate-600'];
                             @endphp
                             <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $sc }}">{{ $sl }}</span>
                         </td>

@@ -44,7 +44,7 @@
         $doctor = $encounter->doctor;
         $items = $pharmacyOrder->items ?? [];
         $soapNotes = $encounter->soap_notes ?? [];
-        $age = $patient->date_of_birth ? $patient->date_of_birth->age : ($patient->age_approximate ?? '-');
+        $age = $patient->date_of_birth ? $patient->date_of_birth->age : ($patient->age_approximate ?? '');
     @endphp
 
     <button class="print-btn" onclick="window.print()">Print Prescription</button>
@@ -60,15 +60,15 @@
     </div>
 
     <div class="doctor-info">
-        <strong>Doctor:</strong> Dr. {{ $doctor->name ?? '-' }}{{ $doctor->specialization ? ', ' . $doctor->specialization : '' }}
+        <strong>Doctor:</strong> Dr. {{ $doctor->name ?? '' }}{{ $doctor->specialization ? ', ' . $doctor->specialization : '' }}
         {{ $doctor->department ? ' (' . $doctor->department . ')' : '' }}
     </div>
     <div class="date">Date: {{ $encounter->created_at->format('M d, Y') }}</div>
 
     <div class="patient-info">
-        <span><strong>Patient:</strong> {{ $patient->name ?? '-' }}</span>
+        <span><strong>Patient:</strong> {{ $patient->name ?? '' }}</span>
         <span><strong>Age:</strong> {{ $age }}</span>
-        <span><strong>Gender:</strong> {{ ucfirst($patient->gender ?? '-') }}</span>
+        <span><strong>Gender:</strong> {{ ucfirst($patient->gender ?? '') }}</span>
     </div>
 
     <div class="rx-symbol">&#8478;</div>
@@ -111,7 +111,7 @@
 
     <div class="signature">
         <div class="line"></div>
-        <div class="name">Dr. {{ $doctor->name ?? '-' }}</div>
+        <div class="name">Dr. {{ $doctor->name ?? '' }}</div>
         <div class="reg">Reg. No: {{ $doctor->registration_number ?? '____' }}</div>
     </div>
 </body>

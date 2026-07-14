@@ -44,8 +44,8 @@
                     @foreach($unbilled as $enc)
                         <tr class="hover:bg-slate-50">
                             <td class="px-4 py-3 text-sm text-slate-600">{{ $enc->updated_at?->format('M d, Y') }}</td>
-                            <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ $enc->patient->name ?? '-' }}</td>
-                            <td class="px-4 py-3 text-sm text-slate-600">{{ $enc->doctor->name ?? '-' }}</td>
+                            <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ $enc->patient->name ?? '' }}</td>
+                            <td class="px-4 py-3 text-sm text-slate-600">{{ $enc->doctor->name ?? '' }}</td>
                             <td class="px-4 py-3 text-xs font-mono text-slate-500">{{ $enc->encounter_number }}</td>
                             <td class="px-4 py-3">
                                 <a href="{{ route('web.billing.create', $enc->id) }}" class="inline-flex items-center px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700">Generate Bill</a>
@@ -118,7 +118,7 @@
                         <tr class="hover:bg-slate-50">
                             <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ $bill->bill_number }}</td>
                             <td class="px-4 py-3 text-sm text-slate-600">{{ $bill->created_at->format('M d, Y') }}</td>
-                            <td class="px-4 py-3 text-sm text-slate-600">{{ $bill->patient->name ?? '-' }}</td>
+                            <td class="px-4 py-3 text-sm text-slate-600">{{ $bill->patient->name ?? '' }}</td>
                             <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ \App\Modules\Core\Services\RegionService::formatMoney($bill->total_amount) }}</td>
                             <td class="px-4 py-3 text-sm text-slate-600">{{ \App\Modules\Core\Services\RegionService::formatMoney($bill->amount_paid ?? 0) }}</td>
                             <td class="px-4 py-3">

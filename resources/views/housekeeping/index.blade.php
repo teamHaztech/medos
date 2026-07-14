@@ -48,7 +48,7 @@ $stCls = ['open'=>'bg-blue-100 text-blue-700','in_progress'=>'bg-amber-100 text-
                         <td class="px-4 py-2.5 text-sm text-slate-800">{{ $l->location }}<span class="block text-xs text-slate-400 truncate max-w-xs">{{ $l->description }}</span></td>
                         <td class="px-4 py-2.5 text-sm text-slate-600">{{ HousekeepingLog::CATEGORIES[$l->category] ?? $l->category }}</td>
                         <td class="px-4 py-2.5"><span class="text-xs px-2 py-0.5 rounded-full {{ $prCls[$l->priority] ?? 'bg-slate-100' }}">{{ HousekeepingLog::PRIORITIES[$l->priority] ?? $l->priority }}</span></td>
-                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ $l->reported_by_name ?? '—' }}<span class="block">{{ optional($l->created_at)->format('M d, H:i') }}</span></td>
+                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ $l->reported_by_name ?? '' }}<span class="block">{{ optional($l->created_at)->format('M d, H:i') }}</span></td>
                         <td class="px-4 py-2.5"><span class="text-xs px-2 py-0.5 rounded-full {{ $stCls[$l->status] ?? 'bg-slate-100' }}">{{ HousekeepingLog::STATUSES[$l->status] ?? $l->status }}</span></td>
                         <td class="px-4 py-2.5 text-right"><button type="button" @click="openManage({ id: @js($l->id), location: @js($l->location), category: @js(HousekeepingLog::CATEGORIES[$l->category] ?? $l->category), description: @js($l->description), reportedBy: @js($l->reported_by_name ?? ''), status: @js($l->status), priority: @js($l->priority), assigned: @js($l->assigned_to_name ?? ''), closureNotes: @js($l->closure_notes ?? '') })" class="text-xs font-medium text-blue-600 hover:text-blue-800">Manage</button></td>
                     </tr>
@@ -95,7 +95,7 @@ $stCls = ['open'=>'bg-blue-100 text-blue-700','in_progress'=>'bg-amber-100 text-
             <div class="rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm">
                 <p><span class="text-slate-500">Type:</span> <span class="font-medium" x-text="item.category"></span></p>
                 <p class="text-slate-700 pt-1" x-text="item.description"></p>
-                <p class="text-xs text-slate-400 pt-1">Reported by <span x-text="item.reportedBy || '—'"></span></p>
+                <p class="text-xs text-slate-400 pt-1">Reported by <span x-text="item.reportedBy || ''"></span></p>
             </div>
             <form method="POST" :action="'/housekeeping/' + item.id" class="space-y-3">
                 @csrf

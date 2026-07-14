@@ -101,8 +101,8 @@
                             <a href="{{ route('web.admin.assets.show', $a->id) }}" class="font-medium text-blue-600 hover:text-blue-800">{{ $a->asset_name }}</a>
                             <p class="text-xs text-slate-400">{{ $a->serial_number ? 'SN: ' . $a->serial_number : '' }}{{ $a->location ? ' · ' . $a->location : '' }}</p>
                         </td>
-                        <td class="table-cell text-slate-600">{{ $a->asset_type ?? '-' }}</td>
-                        <td class="table-cell">{{ $a->department ?? '-' }}</td>
+                        <td class="table-cell text-slate-600">{{ $a->asset_type ?? '' }}</td>
+                        <td class="table-cell">{{ $a->department ?? '' }}</td>
                         <td class="table-cell">
                             <span class="px-2 py-0.5 rounded-full text-xs font-semibold
                                 @if($a->status === 'active') bg-green-100 text-green-700
@@ -155,7 +155,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Department</label>
                     <select name="department" x-model="edit.department" class="input-field">
-                        <option value="">—</option>
+                        <option value=""></option>
                         @foreach($departments as $d)<option value="{{ $d }}">{{ $d }}</option>@endforeach
                     </select>
                 </div>
@@ -167,7 +167,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Vendor</label>
                     <select name="vendor_id" x-model="edit.vendor_id" class="input-field">
-                        <option value="">—</option>
+                        <option value=""></option>
                         @foreach($vendors as $v)<option value="{{ $v->id }}">{{ $v->name }}</option>@endforeach
                     </select>
                 </div>

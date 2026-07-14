@@ -32,20 +32,20 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse($records as $r)
                     <tr>
-                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $r->patient?->name ?? '—' }}<span class="block text-xs text-slate-400">{{ $r->patient?->phone }}</span></td>
-                        <td class="px-4 py-2.5 text-sm text-slate-700">{{ $r->form?->name ?? '—' }}</td>
+                        <td class="px-4 py-2.5 text-sm text-slate-800">{{ $r->patient?->name ?? '' }}<span class="block text-xs text-slate-400">{{ $r->patient?->phone }}</span></td>
+                        <td class="px-4 py-2.5 text-sm text-slate-700">{{ $r->form?->name ?? '' }}</td>
                         <td class="px-4 py-2.5">
                             @php $s = $r->status; $cls = ['pending'=>'bg-amber-100 text-amber-700','signed'=>'bg-green-100 text-green-700','declined'=>'bg-red-100 text-red-700','withdrawn'=>'bg-slate-100 text-slate-500'][$s] ?? 'bg-slate-100 text-slate-600'; @endphp
                             <span class="text-xs px-2 py-0.5 rounded-full {{ $cls }}">{{ PatientConsent::STATUSES[$s] ?? $s }}</span>
                         </td>
-                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ $r->signed_by_name ? $r->signed_by_name.' ('.(PatientConsent::RELATIONSHIPS[$r->relationship] ?? $r->relationship).')' : '—' }}{{ $r->witness_name ? ' · witness: '.$r->witness_name : '' }}</td>
+                        <td class="px-4 py-2.5 text-xs text-slate-500">{{ $r->signed_by_name ? $r->signed_by_name.' ('.(PatientConsent::RELATIONSHIPS[$r->relationship] ?? $r->relationship).')' : '' }}{{ $r->witness_name ? ' · witness: '.$r->witness_name : '' }}</td>
                         <td class="px-4 py-2.5 text-right">
                             @if($r->status === 'pending')
                             <button type="button" @click="openSign(@js($r->id), @js($r->patient?->name), {{ $r->form?->requires_witness ? 'true' : 'false' }})" class="text-xs font-medium text-blue-600 hover:text-blue-800">Sign</button>
                             <form method="POST" action="{{ route('web.consent.status', $r->id) }}" class="inline ml-2">@csrf<input type="hidden" name="status" value="declined"><button type="submit" class="text-xs text-red-500 hover:text-red-700">Decline</button></form>
                             @elseif($r->status === 'signed')
                             <form method="POST" action="{{ route('web.consent.status', $r->id) }}" class="inline">@csrf<input type="hidden" name="status" value="withdrawn"><button type="submit" class="text-xs text-slate-400 hover:text-slate-600">Withdraw</button></form>
-                            @else <span class="text-xs text-slate-300">—</span> @endif
+                            @else <span class="text-xs text-slate-300"></span> @endif
                         </td>
                     </tr>
                     @empty
@@ -69,7 +69,7 @@
                     <tr class="{{ $f->is_active ? '' : 'opacity-50' }}">
                         <td class="px-4 py-2.5 text-sm text-slate-800">{{ $f->name }}</td>
                         <td class="px-4 py-2.5 text-sm text-slate-600">{{ ConsentForm::CATEGORIES[$f->category] ?? $f->category }}</td>
-                        <td class="px-4 py-2.5 text-center text-xs">{!! $f->requires_witness ? '<span class="text-amber-600">Required</span>' : '<span class="text-slate-300">—</span>' !!}</td>
+                        <td class="px-4 py-2.5 text-center text-xs">{!! $f->requires_witness ? '<span class="text-amber-600">Required</span>' : '<span class="text-slate-300"></span>' !!}</td>
                         <td class="px-4 py-2.5 text-center">@if($f->is_active)<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Yes</span>@else<span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">No</span>@endif</td>
                         <td class="px-4 py-2.5 text-right"><button type="button" @click="openForm({ id: @js($f->id), name: @js($f->name), category: @js($f->category), content: @js($f->content ?? ''), requires_witness: {{ $f->requires_witness ? 'true' : 'false' }}, is_active: {{ $f->is_active ? 'true' : 'false' }} })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button></td>
                     </tr>

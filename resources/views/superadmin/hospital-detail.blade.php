@@ -146,8 +146,8 @@
                         <td class="px-4 py-3 text-slate-600">
                             <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">{{ ucwords(str_replace('_', ' ', $role)) }}</span>
                         </td>
-                        <td class="px-4 py-3 text-slate-600">{{ $s->department ?? '-' }}</td>
-                        <td class="px-4 py-3 text-slate-500">{{ $s->email ?? '-' }}</td>
+                        <td class="px-4 py-3 text-slate-600">{{ $s->department ?? '' }}</td>
+                        <td class="px-4 py-3 text-slate-500">{{ $s->email ?? '' }}</td>
                         <td class="px-4 py-3"><span class="text-xs text-slate-400">Primary</span></td>
                         <td class="px-4 py-3 text-right">
                             <form method="POST" action="{{ route('web.superadmin.hospitals.staff.remove', [$hospital->id, $s->id]) }}" class="inline" onsubmit="return confirm('Remove this staff from {{ $hospital->name }}?')">
@@ -167,8 +167,8 @@
                         <td class="px-4 py-3 text-slate-600">
                             <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs rounded">{{ ucwords(str_replace('_', ' ', $pRole)) }}</span>
                         </td>
-                        <td class="px-4 py-3 text-slate-600">{{ $pData?->department ?? $s->department ?? '-' }}</td>
-                        <td class="px-4 py-3 text-slate-500">{{ $s->email ?? '-' }}</td>
+                        <td class="px-4 py-3 text-slate-600">{{ $pData?->department ?? $s->department ?? '' }}</td>
+                        <td class="px-4 py-3 text-slate-500">{{ $s->email ?? '' }}</td>
                         <td class="px-4 py-3"><span class="text-xs text-amber-600">Multi-hospital</span></td>
                         <td class="px-4 py-3 text-right">
                             <form method="POST" action="{{ route('web.superadmin.hospitals.staff.remove', [$hospital->id, $s->id]) }}" class="inline" onsubmit="return confirm('Remove this staff from {{ $hospital->name }}?')">

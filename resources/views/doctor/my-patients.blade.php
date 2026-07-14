@@ -26,7 +26,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse($patients as $p)
-                @php $age = $p->date_of_birth ? \Carbon\Carbon::parse($p->date_of_birth)->age : ($p->age_approximate ?? '-'); @endphp
+                @php $age = $p->date_of_birth ? \Carbon\Carbon::parse($p->date_of_birth)->age : ($p->age_approximate ?? ''); @endphp
                 <tr class="hover:bg-slate-50">
                     <td class="table-cell">
                         <div class="flex items-center gap-2.5">
@@ -39,7 +39,7 @@
                     </td>
                     <td class="table-cell">{{ $p->phone }}</td>
                     <td class="table-cell">{{ $age }}</td>
-                    <td class="table-cell capitalize">{{ $p->gender ?? '-' }}</td>
+                    <td class="table-cell capitalize">{{ $p->gender ?? '' }}</td>
                     <td class="table-cell text-slate-500">{{ $p->updated_at?->diffForHumans() }}</td>
                     <td class="table-cell"><a href="{{ route('web.doctor.patients.show', $p->id) }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">View</a></td>
                 </tr>

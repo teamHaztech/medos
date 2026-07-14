@@ -319,7 +319,7 @@ class LabController extends Controller
                 $testName = $r['test_name'] ?? '';
                 if ($testName && !isset($previousResults[$testName])) {
                     $previousResults[$testName] = [
-                        'value' => $r['value'] ?? '-',
+                        'value' => $r['value'] ?? '',
                         'date' => Carbon::parse($prev->completed_at)->format('d M Y'),
                     ];
                 }

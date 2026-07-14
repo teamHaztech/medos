@@ -120,7 +120,7 @@
                             'urgent'    => '🚨',
                             'frustrated'=> '😤',
                         ];
-                        $sentimentEmoji = $sentimentMap[$call->sentiment] ?? '—';
+                        $sentimentEmoji = $sentimentMap[$call->sentiment] ?? '';
 
                         $purposeLabels = [
                             'appointment_booking' => 'Appointment',
@@ -133,11 +133,11 @@
                             'cancellation'        => 'Cancellation',
                             'transfer_request'    => 'Transfer',
                         ];
-                        $purposeLabel = $purposeLabels[$call->call_purpose] ?? ($call->call_purpose ? ucfirst(str_replace('_', ' ', $call->call_purpose)) : '—');
+                        $purposeLabel = $purposeLabels[$call->call_purpose] ?? ($call->call_purpose ? ucfirst(str_replace('_', ' ', $call->call_purpose)) : '');
                     @endphp
                     <tr class="hover:bg-slate-50">
-                        <td class="table-cell font-medium whitespace-nowrap">{{ $call->created_at?->format('M j, g:i A') ?? '—' }}</td>
-                        <td class="table-cell whitespace-nowrap">{{ $call->caller_number ?: '—' }}</td>
+                        <td class="table-cell font-medium whitespace-nowrap">{{ $call->created_at?->format('M j, g:i A') ?? '' }}</td>
+                        <td class="table-cell whitespace-nowrap">{{ $call->caller_number ?: '' }}</td>
                         <td class="table-cell">{{ $call->patient?->name ?? 'Unknown' }}</td>
                         <td class="table-cell">
                             @if($call->direction === 'inbound')

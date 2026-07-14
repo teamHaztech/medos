@@ -802,7 +802,7 @@ class KioskController extends Controller
                 $pr = $o->priority ?? 'routine';
 
                 return [
-                    'token'      => $o->notes ?: '—',
+                    'token'      => $o->notes ?: '',
                     'name'       => $o->patient?->name ?? 'Patient',
                     'status'     => $bucket,
                     'tests'      => $items ?: 'Tests',

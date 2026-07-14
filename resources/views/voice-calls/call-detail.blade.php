@@ -51,9 +51,9 @@
 
             {{-- Right: timestamps --}}
             <div class="flex flex-col gap-1 text-sm text-slate-500 lg:text-right">
-                <p>Started: <strong class="text-slate-700">{{ $call->started_at?->format('M j, Y g:i:s A') ?? '—' }}</strong></p>
-                <p>Answered: <strong class="text-slate-700">{{ $call->answered_at?->format('M j, Y g:i:s A') ?? '—' }}</strong></p>
-                <p>Ended: <strong class="text-slate-700">{{ $call->ended_at?->format('M j, Y g:i:s A') ?? '—' }}</strong></p>
+                <p>Started: <strong class="text-slate-700">{{ $call->started_at?->format('M j, Y g:i:s A') ?? '' }}</strong></p>
+                <p>Answered: <strong class="text-slate-700">{{ $call->answered_at?->format('M j, Y g:i:s A') ?? '' }}</strong></p>
+                <p>Ended: <strong class="text-slate-700">{{ $call->ended_at?->format('M j, Y g:i:s A') ?? '' }}</strong></p>
             </div>
         </div>
 
@@ -72,7 +72,7 @@
                 </div>
                 <div>
                     <p class="text-sm font-semibold text-slate-800">{{ $call->patient->name }}</p>
-                    <p class="text-xs text-slate-500">{{ $call->patient->phone ?? '—' }} &middot; {{ ucfirst($call->patient->gender ?? '—') }} &middot; {{ $upcomingCount }} upcoming appointment{{ $upcomingCount !== 1 ? 's' : '' }}</p>
+                    <p class="text-xs text-slate-500">{{ $call->patient->phone ?? '' }} &middot; {{ ucfirst($call->patient->gender ?? '') }} &middot; {{ $upcomingCount }} upcoming appointment{{ $upcomingCount !== 1 ? 's' : '' }}</p>
                 </div>
             </div>
         </div>
@@ -164,19 +164,19 @@
                 <dl class="space-y-3 text-sm">
                     <div class="flex justify-between">
                         <dt class="text-slate-500">Language Detected</dt>
-                        <dd class="font-medium text-slate-700">{{ $langLabels[$call->language_detected] ?? ($call->language_detected ?? '—') }}</dd>
+                        <dd class="font-medium text-slate-700">{{ $langLabels[$call->language_detected] ?? ($call->language_detected ?? '') }}</dd>
                     </div>
                     <div class="flex justify-between">
                         <dt class="text-slate-500">Language Used</dt>
-                        <dd class="font-medium text-slate-700">{{ $langLabels[$call->language_used] ?? ($call->language_used ?? '—') }}</dd>
+                        <dd class="font-medium text-slate-700">{{ $langLabels[$call->language_used] ?? ($call->language_used ?? '') }}</dd>
                     </div>
                     <div class="flex justify-between">
                         <dt class="text-slate-500">Call Purpose</dt>
-                        <dd class="font-medium text-slate-700">{{ $purposeLabels[$call->call_purpose] ?? ($call->call_purpose ? ucfirst(str_replace('_', ' ', $call->call_purpose)) : '—') }}</dd>
+                        <dd class="font-medium text-slate-700">{{ $purposeLabels[$call->call_purpose] ?? ($call->call_purpose ? ucfirst(str_replace('_', ' ', $call->call_purpose)) : '') }}</dd>
                     </div>
                     <div class="flex justify-between">
                         <dt class="text-slate-500">Sentiment</dt>
-                        <dd class="font-medium {{ $sentimentColors[$call->sentiment] ?? 'text-slate-700' }}">{{ $call->sentiment ? ucfirst($call->sentiment) : '—' }}</dd>
+                        <dd class="font-medium {{ $sentimentColors[$call->sentiment] ?? 'text-slate-700' }}">{{ $call->sentiment ? ucfirst($call->sentiment) : '' }}</dd>
                     </div>
                     <div>
                         <div class="flex justify-between mb-1">
@@ -189,11 +189,11 @@
                     </div>
                     <div class="flex justify-between">
                         <dt class="text-slate-500">Cost</dt>
-                        <dd class="font-medium text-slate-700">{{ $call->cost_amount ? number_format($call->cost_amount, 4) . ' ' . ($call->cost_currency ?? '') : '—' }}</dd>
+                        <dd class="font-medium text-slate-700">{{ $call->cost_amount ? number_format($call->cost_amount, 4) . ' ' . ($call->cost_currency ?? '') : '' }}</dd>
                     </div>
                     <div class="flex justify-between">
                         <dt class="text-slate-500">Provider Call SID</dt>
-                        <dd class="font-medium text-slate-700 truncate" style="max-width: 150px" title="{{ $call->call_sid ?? '' }}">{{ $call->call_sid ?? '—' }}</dd>
+                        <dd class="font-medium text-slate-700 truncate" style="max-width: 150px" title="{{ $call->call_sid ?? '' }}">{{ $call->call_sid ?? '' }}</dd>
                     </div>
                     @if($call->recording_url)
                     <div>

@@ -114,8 +114,8 @@
                 @endphp
                 <tr class="hover:bg-slate-50">
                     <td class="table-cell font-mono text-xs">{{ $enc->encounter_number }}</td>
-                    <td class="table-cell font-medium">{{ $enc->patient?->name ?? '-' }}</td>
-                    <td class="table-cell">{{ $enc->doctor?->name ?? '-' }}</td>
+                    <td class="table-cell font-medium">{{ $enc->patient?->name ?? '' }}</td>
+                    <td class="table-cell">{{ $enc->doctor?->name ?? '' }}</td>
                     <td class="table-cell capitalize">{{ str_replace('_', ' ', $encType) }}</td>
                     <td class="table-cell">
                         <span class="px-2 py-0.5 rounded text-xs font-medium
@@ -126,7 +126,7 @@
                             {{ ucfirst(str_replace('_', ' ', $encStatus)) }}
                         </span>
                     </td>
-                    <td class="table-cell text-xs text-slate-400">{{ $enc->created_at?->format('M d, Y h:i A') ?? '-' }}</td>
+                    <td class="table-cell text-xs text-slate-400">{{ $enc->created_at?->format('M d, Y h:i A') ?? '' }}</td>
                 </tr>
                 @empty
                 <tr><td colspan="6" class="text-center py-8 text-sm text-slate-400">No encounters found.</td></tr>

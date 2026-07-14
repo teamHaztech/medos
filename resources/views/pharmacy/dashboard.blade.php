@@ -58,7 +58,7 @@
                                     </div>
                                 </template>
                             </td>
-                            <td class="table-cell text-sm" x-text="order.ordered_by?.name ?? (order.ordered_by_staff?.name ?? (order.ordered_by_name ?? '-'))"></td>
+                            <td class="table-cell text-sm" x-text="order.ordered_by?.name ?? (order.ordered_by_staff?.name ?? (order.ordered_by_name ?? ''))"></td>
                             <td class="table-cell">
                                 <span :class="{
                                     'bg-red-100 text-red-700': order.priority === 'stat',
@@ -107,7 +107,7 @@
                                     <span class="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded mr-1 mb-1" x-text="item.name"></span>
                                 </template>
                             </td>
-                            <td class="table-cell text-sm" x-text="order.ordered_by?.name ?? (order.ordered_by_staff?.name ?? (order.ordered_by_name ?? '-'))"></td>
+                            <td class="table-cell text-sm" x-text="order.ordered_by?.name ?? (order.ordered_by_staff?.name ?? (order.ordered_by_name ?? ''))"></td>
                             <td class="table-cell">
                                 <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">Dispensed</span>
                             </td>

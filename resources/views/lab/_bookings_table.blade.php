@@ -25,10 +25,10 @@
                     <tr class="hover:bg-slate-50">
                         <td class="table-cell font-medium">{{ $o->scheduled_for ? $o->scheduled_for->format('h:i A') : 'Walk-in' }}</td>
                         <td class="table-cell">{{ $o->patient?->name ?? 'Unknown' }}</td>
-                        <td class="table-cell text-slate-600">{{ \Illuminate\Support\Str::limit($tests, 60) ?: '-' }}</td>
+                        <td class="table-cell text-slate-600">{{ \Illuminate\Support\Str::limit($tests, 60) ?: '' }}</td>
                         <td class="table-cell capitalize">{{ $o->type }}</td>
                         <td class="table-cell text-slate-500">{{ $source }}</td>
-                        <td class="table-cell font-mono text-xs">{{ $o->notes ?? '-' }}</td>
+                        <td class="table-cell font-mono text-xs">{{ $o->notes ?? '' }}</td>
                         <td class="table-cell">
                             <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium
                                 {{ $status === 'completed' ? 'bg-green-100 text-green-700' : ($status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600') }}">

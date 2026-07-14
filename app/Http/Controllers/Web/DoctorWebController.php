@@ -185,7 +185,7 @@ class DoctorWebController extends Controller
                 return [
                     'id' => $e->id, 'date' => $e->created_at?->format('M d, Y h:i A'),
                     'patient' => $e->patient?->name ?? 'Unknown', 'patient_id' => $e->patient_id,
-                    'complaint' => $intake['chief_complaint'] ?? '-', 'type' => $type, 'status' => $status,
+                    'complaint' => $intake ?? '', 'type' => $type, 'status' => $status,
                 ];
             });
 
@@ -227,7 +227,7 @@ class DoctorWebController extends Controller
                 $type = is_object($e->type) ? $e->type->value : ($e->type ?? '');
                 return [
                     'id' => $e->id, 'date' => $e->created_at?->format('M d, Y h:i A'),
-                    'complaint' => $intake['chief_complaint'] ?? '-', 'type' => $type,
+                    'complaint' => $intake ?? '', 'type' => $type,
                     'status' => $status, 'encounter_number' => $e->encounter_number,
                 ];
             });
@@ -250,7 +250,7 @@ class DoctorWebController extends Controller
                 return [
                     'id' => $apt->id, 'time' => $apt->slot_start?->format('h:i A'),
                     'patient' => $apt->patient?->name ?? 'Unknown', 'phone' => $apt->patient?->phone ?? '',
-                    'token' => $apt->notes ?? '-', 'status' => $status,
+                    'token' => $apt->notes ?? '', 'status' => $status,
                 ];
             });
 

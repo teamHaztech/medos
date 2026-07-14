@@ -41,9 +41,9 @@ $dob = $patient->date_of_birth ? \Carbon\Carbon::parse($patient->date_of_birth) 
         </div>
         <div class="meta">
             <div><span>Name:</span> <strong>{{ $patient->name }}</strong></div>
-            <div><span>Phone:</span> {{ $patient->phone ?? '—' }}</div>
-            <div><span>Date of birth:</span> {{ $dob ? $dob->format('d M Y') : '—' }}</div>
-            <div><span>Gender:</span> {{ ucfirst($patient->gender ?? '—') }}</div>
+            <div><span>Phone:</span> {{ $patient->phone ?? '' }}</div>
+            <div><span>Date of birth:</span> {{ $dob ? $dob->format('d M Y') : '' }}</div>
+            <div><span>Gender:</span> {{ ucfirst($patient->gender ?? '') }}</div>
             @if($patient->abha_number)<div><span>ABHA:</span> {{ $patient->abha_number }}</div>@endif
             <div><span>Issued:</span> {{ now()->format('d M Y') }}</div>
         </div>
@@ -52,11 +52,11 @@ $dob = $patient->date_of_birth ? \Carbon\Carbon::parse($patient->date_of_birth) 
             <tbody>
                 @forelse($doses as $d)
                 <tr>
-                    <td>{{ $d->vaccine?->name ?? '—' }}</td>
+                    <td>{{ $d->vaccine?->name ?? '' }}</td>
                     <td>{{ $d->dose_number }}</td>
                     <td>{{ optional($d->given_date)->format('d M Y') }}</td>
-                    <td>{{ Vaccine::ROUTES[$d->route] ?? $d->route ?? '—' }}</td>
-                    <td>{{ $d->batch_number ?? '—' }}</td>
+                    <td>{{ Vaccine::ROUTES[$d->route] ?? $d->route ?? '' }}</td>
+                    <td>{{ $d->batch_number ?? '' }}</td>
                 </tr>
                 @empty
                 <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;">No doses recorded.</td></tr>

@@ -25,13 +25,13 @@
                 @forelse($claims as $claim)
                 @php $cs = ['submitted'=>'bg-blue-100 text-blue-700','pending'=>'bg-amber-100 text-amber-700','approved'=>'bg-green-100 text-green-700','partially_approved'=>'bg-green-100 text-green-700','denied'=>'bg-red-100 text-red-700']; @endphp
                 <tr>
-                    <td class="px-4 py-2.5 text-sm text-slate-800">{{ $claim->patient?->name ?? '—' }}</td>
+                    <td class="px-4 py-2.5 text-sm text-slate-800">{{ $claim->patient?->name ?? '' }}</td>
                     <td class="px-4 py-2.5 text-sm text-slate-700">{{ $claim->insurer_name ?? $claim->insurer_code }}<span class="block text-xs text-slate-400">{{ $claim->policy_number }}</span></td>
                     <td class="px-4 py-2.5 text-sm">
-                        @if($claim->bill)<a href="{{ route('web.billing.show', $claim->bill->id) }}" class="text-blue-600 hover:text-blue-800">{{ $claim->bill->bill_number }}</a>@else<span class="text-slate-400">—</span>@endif
+                        @if($claim->bill)<a href="{{ route('web.billing.show', $claim->bill->id) }}" class="text-blue-600 hover:text-blue-800">{{ $claim->bill->bill_number }}</a>@else<span class="text-slate-400"></span>@endif
                     </td>
                     <td class="px-4 py-2.5 text-sm text-slate-700 text-right">{{ $currency }}{{ number_format($claim->requested_amount, 2) }}</td>
-                    <td class="px-4 py-2.5 text-sm text-slate-700 text-right">{{ $claim->approved_amount !== null ? $currency.number_format($claim->approved_amount, 2) : '—' }}</td>
+                    <td class="px-4 py-2.5 text-sm text-slate-700 text-right">{{ $claim->approved_amount !== null ? $currency.number_format($claim->approved_amount, 2) : '' }}</td>
                     <td class="px-4 py-2.5 text-xs text-slate-500">{{ optional($claim->submitted_at)->format('d M, Y') }}</td>
                     <td class="px-4 py-2.5 text-center"><span class="text-xs px-2 py-0.5 rounded-full {{ $cs[$claim->status] ?? 'bg-slate-100 text-slate-600' }}">{{ ucfirst(str_replace('_',' ', $claim->status)) }}</span></td>
                 </tr>

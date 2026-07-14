@@ -58,7 +58,7 @@
                             <div class="flex items-start justify-between gap-2">
                                 <div class="min-w-0">
                                     <p class="text-sm font-semibold text-slate-800 truncate">{{ $a->patient?->name ?? 'Unknown' }}</p>
-                                    <p class="text-xs text-slate-400">{{ $a->admission_no }} · {{ $a->ward?->name ?? '—' }}{{ $a->bed?->bed_number ? ' / '.$a->bed->bed_number : '' }}</p>
+                                    <p class="text-xs text-slate-400">{{ $a->admission_no }} · {{ $a->ward?->name ?? '' }}{{ $a->bed?->bed_number ? ' / '.$a->bed->bed_number : '' }}</p>
                                 </div>
                                 <span class="text-xs text-slate-400 whitespace-nowrap">{{ $a->lengthOfDays() }}d</span>
                             </div>
@@ -103,7 +103,7 @@
                     <div class="flex items-center gap-3 px-4 py-2.5">
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-medium text-slate-800">{{ $a->patient?->name ?? 'Unknown' }}</p>
-                            <p class="text-xs text-slate-400">{{ $a->admission_no }} · {{ $a->ward?->name ?? '—' }} · {{ $a->lengthOfDays() }} day(s)</p>
+                            <p class="text-xs text-slate-400">{{ $a->admission_no }} · {{ $a->ward?->name ?? '' }} · {{ $a->lengthOfDays() }} day(s)</p>
                         </div>
                         <span class="text-xs text-slate-400">{{ optional($a->discharged_at)->format('g:i A') }}</span>
                         <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">{{ $a->dischargeTypeLabel() ?? 'Discharged' }}</span>

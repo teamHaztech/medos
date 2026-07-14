@@ -114,9 +114,9 @@
                                 {{ $member->role?->label() ?? 'Staff' }}
                             </span>
                         </td>
-                        <td class="table-cell">{{ $member->department ?? '-' }}</td>
-                        <td class="table-cell text-slate-500">{{ $member->email ?? '-' }}</td>
-                        <td class="table-cell text-slate-500">{{ $member->phone ?? '-' }}</td>
+                        <td class="table-cell">{{ $member->department ?? '' }}</td>
+                        <td class="table-cell text-slate-500">{{ $member->email ?? '' }}</td>
+                        <td class="table-cell text-slate-500">{{ $member->phone ?? '' }}</td>
                         <td class="table-cell">
                             @if($member->is_active)
                                 <span class="inline-flex items-center gap-1 text-xs font-medium text-green-700">

@@ -17,11 +17,11 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
             <div>
                 <span class="text-slate-500">Patient</span>
-                <p class="font-medium text-slate-800">{{ $encounter->patient->name ?? '-' }}</p>
+                <p class="font-medium text-slate-800">{{ $encounter->patient->name ?? '' }}</p>
             </div>
             <div>
                 <span class="text-slate-500">Doctor</span>
-                <p class="font-medium text-slate-800">{{ $encounter->doctor->name ?? '-' }}</p>
+                <p class="font-medium text-slate-800">{{ $encounter->doctor->name ?? '' }}</p>
             </div>
             <div>
                 <span class="text-slate-500">Encounter #</span>

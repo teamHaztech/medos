@@ -375,13 +375,13 @@
                     <tr class="hover:bg-slate-50 transition-colors cursor-pointer"
                         onclick="window.location='{{ url('/voice-calls/' . $call->id) }}'">
                         <td class="px-5 py-3 whitespace-nowrap text-xs text-slate-500">
-                            {{ $call->created_at?->format('h:i A') ?? '-' }}
+                            {{ $call->created_at?->format('h:i A') ?? '' }}
                         </td>
                         <td class="px-5 py-3 whitespace-nowrap">
-                            <span class="font-medium text-slate-700">{{ $call->caller_number ?? '-' }}</span>
+                            <span class="font-medium text-slate-700">{{ $call->caller_number ?? '' }}</span>
                         </td>
                         <td class="px-5 py-3 whitespace-nowrap">
-                            {{ $call->patient?->name ?? '-' }}
+                            {{ $call->patient?->name ?? '' }}
                         </td>
                         <td class="px-5 py-3 whitespace-nowrap">
                             @if($callPurpose)

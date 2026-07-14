@@ -22,7 +22,7 @@
                 <div>
                     <h2 class="text-xl font-bold text-slate-900">{{ $patient->name ?? 'Unknown Patient' }}</h2>
                     <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-slate-500">
-                        <span>{{ $patient->phone ?? '-' }}</span>
+                        <span>{{ $patient->phone ?? '' }}</span>
                         @if($patient->email)
                             <span>{{ $patient->email }}</span>
                         @endif
@@ -34,7 +34,7 @@
                         @if($age)
                             <span>{{ $age }} yrs</span>
                         @endif
-                        <span class="capitalize">{{ $patient->gender ?? '-' }}</span>
+                        <span class="capitalize">{{ $patient->gender ?? '' }}</span>
                         <span class="uppercase">{{ $patient->language_preference ?? 'en' }}</span>
                     </div>
                 </div>
@@ -98,14 +98,14 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
         <h3 class="text-sm font-semibold text-slate-700 mb-4">Registration Details</h3>
         <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Phone</dt><dd class="text-slate-800">{{ $patient->phone ?? '—' }}</dd></div>
-            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Email</dt><dd class="text-slate-800">{{ $patient->email ?? '—' }}</dd></div>
-            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Gender / Age</dt><dd class="text-slate-800">{{ $patient->gender ? ucfirst($patient->gender) : '—' }}{{ $age ? ' · ' . $age . ' yrs' : '' }}</dd></div>
-            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Blood Group</dt><dd class="text-slate-800">{{ $patient->blood_group ?? '—' }}</dd></div>
-            <div><dt class="text-xs uppercase tracking-wide text-slate-400">City</dt><dd class="text-slate-800">{{ $patient->city ?? '—' }}</dd></div>
-            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Emergency Contact</dt><dd class="text-slate-800">{{ $patient->emergency_contact_name ? $patient->emergency_contact_name . ($patient->emergency_contact_phone ? ' · ' . $patient->emergency_contact_phone : '') : '—' }}</dd></div>
-            <div class="col-span-2 sm:col-span-3"><dt class="text-xs uppercase tracking-wide text-slate-400">Address</dt><dd class="text-slate-800">{{ $patient->address ?? '—' }}</dd></div>
-            <div><dt class="text-xs uppercase tracking-wide text-slate-400">{{ $healthLabel }}</dt><dd class="text-slate-800">{{ $patient->abha_number ?? '—' }} @if($patient->abha_number && $patient->abha_verified)<span class="text-green-600 font-semibold">✓ verified</span>@endif</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Phone</dt><dd class="text-slate-800">{{ $patient->phone ?? '' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Email</dt><dd class="text-slate-800">{{ $patient->email ?? '' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Gender / Age</dt><dd class="text-slate-800">{{ $patient->gender ? ucfirst($patient->gender) : '' }}{{ $age ? ' · ' . $age . ' yrs' : '' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Blood Group</dt><dd class="text-slate-800">{{ $patient->blood_group ?? '' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">City</dt><dd class="text-slate-800">{{ $patient->city ?? '' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">Emergency Contact</dt><dd class="text-slate-800">{{ $patient->emergency_contact_name ? $patient->emergency_contact_name . ($patient->emergency_contact_phone ? ' · ' . $patient->emergency_contact_phone : '') : '' }}</dd></div>
+            <div class="col-span-2 sm:col-span-3"><dt class="text-xs uppercase tracking-wide text-slate-400">Address</dt><dd class="text-slate-800">{{ $patient->address ?? '' }}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-slate-400">{{ $healthLabel }}</dt><dd class="text-slate-800">{{ $patient->abha_number ?? '' }} @if($patient->abha_number && $patient->abha_verified)<span class="text-green-600 font-semibold">✓ verified</span>@endif</dd></div>
         </dl>
         @if(!empty($ins))
         <div class="mt-4 pt-4 border-t border-slate-100">
@@ -176,14 +176,14 @@
                     @php
                         $intake = is_array($enc->intake_data) ? $enc->intake_data : [];
                         $encStatus = is_object($enc->status) ? $enc->status->value : ($enc->status ?? 'unknown');
-                        $encType = is_object($enc->type) ? $enc->type->value : ($enc->type ?? '-');
+                        $encType = is_object($enc->type) ? $enc->type->value : ($enc->type ?? '');
                         $triageClass = is_object($enc->triage_classification) ? $enc->triage_classification->value : $enc->triage_classification;
                     @endphp
                     <tr class="hover:bg-slate-50">
-                        <td class="table-cell">{{ $enc->created_at?->format('M d, Y H:i') ?? '-' }}</td>
+                        <td class="table-cell">{{ $enc->created_at?->format('M d, Y H:i') ?? '' }}</td>
                         <td class="table-cell capitalize">{{ str_replace('_', ' ', $encType) }}</td>
-                        <td class="table-cell">{{ $enc->doctor?->name ?? '-' }}</td>
-                        <td class="table-cell">{{ $intake['chief_complaint'] ?? '-' }}</td>
+                        <td class="table-cell">{{ $enc->doctor?->name ?? '' }}</td>
+                        <td class="table-cell">{{ $intake['chief_complaint'] ?? '' }}</td>
                         <td class="table-cell">
                             @if($triageClass)
                                 <x-status-badge :status="$triageClass" type="triage" />
@@ -225,8 +225,8 @@
                         $payStatus = is_object($bill->payment_status) ? $bill->payment_status->value : ($bill->payment_status ?? 'pending');
                     @endphp
                     <tr class="hover:bg-slate-50">
-                        <td class="table-cell font-medium">{{ $bill->bill_number ?? '-' }}</td>
-                        <td class="table-cell">{{ $bill->created_at?->format('M d, Y') ?? '-' }}</td>
+                        <td class="table-cell font-medium">{{ $bill->bill_number ?? '' }}</td>
+                        <td class="table-cell">{{ $bill->created_at?->format('M d, Y') ?? '' }}</td>
                         <td class="table-cell">₹{{ number_format($bill->total_amount ?? 0, 2) }}</td>
                         <td class="table-cell">₹{{ number_format($bill->insurance_covered ?? 0, 2) }}</td>
                         <td class="table-cell font-medium">₹{{ number_format($bill->patient_payable ?? 0, 2) }}</td>

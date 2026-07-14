@@ -207,7 +207,7 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
                         <tbody class="divide-y divide-slate-100">
                             @forelse($treatments as $t)
                             <tr>
-                                <td class="px-4 py-2.5 text-sm text-slate-700">{{ $t->tooth_number ?? '—' }}<span class="block text-xs text-slate-400">{{ $t->surfaces }}</span></td>
+                                <td class="px-4 py-2.5 text-sm text-slate-700">{{ $t->tooth_number ?? '' }}<span class="block text-xs text-slate-400">{{ $t->surfaces }}</span></td>
                                 <td class="px-4 py-2.5 text-sm text-slate-800">{{ $t->procedure }}<span class="block text-xs text-slate-400">{{ $t->notes }}@if($t->bill_id)<span class="text-green-600"> · billed</span>@endif</span></td>
                                 <td class="px-4 py-2.5 text-sm text-slate-700 text-right">{{ $cur }}{{ number_format($t->cost, 2) }}</td>
                                 <td class="px-4 py-2.5">
