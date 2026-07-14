@@ -71,6 +71,12 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::get('api-keys', [AdminWebController::class, 'apiKeys'])->name('api-keys');
         Route::post('api-keys', [AdminWebController::class, 'createApiKey'])->name('api-keys.create');
         Route::post('api-keys/{id}/revoke', [AdminWebController::class, 'revokeApiKey'])->name('api-keys.revoke');
+
+        // Bulk CSV import (patients / medicines / tests)
+        Route::get('import', [\App\Http\Controllers\Web\ImportController::class, 'index'])->name('import');
+        Route::get('import/template/{type}', [\App\Http\Controllers\Web\ImportController::class, 'template'])->name('import.template');
+        Route::post('import/{type}', [\App\Http\Controllers\Web\ImportController::class, 'import'])->name('import.run');
+
         Route::get('slots', [AdminWebController::class, 'slots'])->name('slots');
         Route::post('slots/{staffId}', [AdminWebController::class, 'updateSlots'])->name('slots.update');
         Route::get('tests', [AdminWebController::class, 'tests'])->name('tests');
