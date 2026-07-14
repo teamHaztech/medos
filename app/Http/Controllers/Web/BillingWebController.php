@@ -747,6 +747,12 @@ class BillingWebController extends Controller
     public function audit(Request $request)
     {
         $hospitalId = Auth::user()->hospital_id;
+
+        // Ensure bills created without posting charges (seeded/imported/legacy) are
+        // reflected in the department + GST panels. Idempotent & cheap once done,
+        // so this also covers any future hospital automatically. See BillLedgerBackfill.
+        \App\Modules\Billing\Services\BillLedgerBackfill::backfillHospital($hospitalId);
+
         [$from, $to] = $this->auditRange($request);
         $cur = RegionService::currency();
 
