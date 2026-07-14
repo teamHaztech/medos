@@ -83,15 +83,15 @@
                                 <span class="text-slate-400">{{ optional($a->created_at)->format('h:i:s A') }}</span>
                             </td>
                             <td class="table-cell">
-                                <p class="font-medium text-slate-800">{{ $a->user_name ?? '—' }}</p>
+                                <p class="font-medium text-slate-800">{{ $a->user_name ?? '' }}</p>
                                 <p class="text-xs text-slate-400">{{ $a->user_email }}{{ $a->role ? ' · '.ucwords(str_replace('_',' ', $a->role)) : '' }}</p>
                             </td>
-                            @if($isSuperAdmin)<td class="table-cell text-sm text-slate-600">{{ $a->hospital_name ?? '—' }}</td>@endif
+                            @if($isSuperAdmin)<td class="table-cell text-sm text-slate-600">{{ $a->hospital_name ?? '' }}</td>@endif
                             <td class="table-cell">
                                 <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $badge($a->action) }}">{{ $a->actionLabel() }}</span>
                             </td>
-                            <td class="table-cell text-xs text-slate-500 font-mono break-words" style="max-width:22rem">{{ $a->description ?? '—' }}</td>
-                            <td class="table-cell whitespace-nowrap text-xs text-slate-400 font-mono">{{ $a->ip_address ?? '—' }}</td>
+                            <td class="table-cell text-xs text-slate-500 font-mono break-words" style="max-width:22rem">{{ $a->description ?? '' }}</td>
+                            <td class="table-cell whitespace-nowrap text-xs text-slate-400 font-mono">{{ $a->ip_address ?? '' }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="{{ $isSuperAdmin ? 6 : 5 }}" class="p-10 text-center text-slate-400 text-sm">No activity recorded for these filters.</td></tr>
