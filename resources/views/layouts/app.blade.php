@@ -9,7 +9,9 @@
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-900 antialiased" x-data="{ sidebarOpen: false }">
+<body class="min-h-screen bg-slate-50 text-slate-900 antialiased"
+      x-data="{ sidebarOpen: window.innerWidth >= 1024 ? (localStorage.getItem('medos_sidebar') !== 'false') : false }"
+      x-init="$watch('sidebarOpen', v => { if (window.innerWidth >= 1024) localStorage.setItem('medos_sidebar', v) })">
 
     {{-- Mobile overlay --}}
     <div x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-black/50 lg:hidden" @click="sidebarOpen = false"></div>
@@ -17,7 +19,7 @@
     {{-- Sidebar --}}
     <aside
         x-bind:class="sidebarOpen ? '' : '-translate-x-full'"
-        class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 transition-transform duration-200 ease-in-out flex flex-col lg:!translate-x-0"
+        class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 transition-transform duration-200 ease-in-out flex flex-col"
     >
         {{-- Brand --}}
         <div class="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
@@ -85,14 +87,14 @@
         </div>
     </aside>
 
-    {{-- Main content area --}}
-    <div class="lg:ml-64 flex flex-col min-h-screen">
+    {{-- Main content area — shifts right only while the sidebar is open (desktop) --}}
+    <div class="flex flex-col min-h-screen transition-all duration-200" x-bind:class="sidebarOpen ? 'lg:ml-64' : ''">
         {{-- Top bar --}}
         <header class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 sm:px-6 py-3">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    {{-- Mobile hamburger --}}
-                    <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100">
+                    {{-- Sidebar toggle (all screen sizes) --}}
+                    <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100" title="Toggle menu">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
                     <h1 class="text-lg font-semibold text-slate-800">@yield('page-title', 'Dashboard')</h1>
