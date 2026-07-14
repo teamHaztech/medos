@@ -18,22 +18,41 @@
             <input type="text" x-model="search" class="input-field w-64" placeholder="Search medicines...">
             <p class="text-sm text-slate-500">{{ $medicines->count() }} medicines</p>
         </div>
-        <button @click="showAdd = !showAdd" class="btn-primary">+ Add Medicine</button>
+        <button @click="showAdd = true" class="btn-primary">+ Add Medicine</button>
     </div>
 
-    <div x-show="showAdd" style="display:none" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
-        <form method="POST" action="{{ route('web.admin.medicines.store') }}" class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+    {{-- Add modal (mirrors the Edit modal for a consistent add/edit experience) --}}
+    <x-modal show="showAdd" title="Add Medicine" max="lg">
+        <form method="POST" action="{{ route('web.admin.medicines.store') }}" class="grid grid-cols-2 gap-4">
             @csrf
-            <input type="text" name="name" required class="input-field" placeholder="Medicine name *">
-            <input type="text" name="generic_name" class="input-field" placeholder="Generic name">
-            <input type="text" name="category" class="input-field" placeholder="Category">
-            <input type="text" name="default_dosage" class="input-field" placeholder="Dosage (500mg)">
-            <select name="form" class="input-field">
-                @foreach($forms as $f)<option value="{{ $f }}">{{ ucfirst($f) }}</option>@endforeach
-            </select>
-            <button type="submit" class="btn-success">Save</button>
+            <div class="col-span-2">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Name *</label>
+                <input type="text" name="name" required class="input-field" placeholder="Medicine name">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Generic name</label>
+                <input type="text" name="generic_name" class="input-field">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Category</label>
+                <input type="text" name="category" class="input-field">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Dosage</label>
+                <input type="text" name="default_dosage" class="input-field" placeholder="500mg">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Form</label>
+                <select name="form" class="input-field">
+                    @foreach($forms as $f)<option value="{{ $f }}">{{ ucfirst($f) }}</option>@endforeach
+                </select>
+            </div>
+            <div class="col-span-2 flex items-center gap-3 pt-2">
+                <button type="submit" class="btn-primary px-5 py-2.5">Save Medicine</button>
+                <button type="button" @click="showAdd = false" class="text-sm text-slate-500 hover:text-slate-700 px-2 py-2">Cancel</button>
+            </div>
         </form>
-    </div>
+    </x-modal>
 
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table class="w-full">
@@ -62,7 +81,7 @@
                                 class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
                             <form method="POST" action="{{ route('web.admin.medicines.delete', $med->id) }}" onsubmit="return confirm('Remove?')">
                                 @csrf @method('DELETE')
-                                <button class="text-red-400 hover:text-red-600 text-sm">Remove</button>
+                                <button class="text-sm font-medium text-red-600 hover:text-red-800">Remove</button>
                             </form>
                         </div>
                     </td>
