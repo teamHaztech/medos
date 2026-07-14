@@ -23,13 +23,24 @@ class PharmacyController extends Controller
             ->orderBy('created_at')
             ->get();
 
+        $pending = $orders->whereIn('status', ['ordered', 'accepted']);
+        $stats = [
+            'pending'         => $pending->count(),
+            'urgent'          => $pending->whereIn('priority', ['stat', 'urgent'])->count(),
+            'dispensed_today' => Order::where('hospital_id', $hospitalId)
+                ->where('type', 'pharmacy')->where('status', 'dispensed')
+                ->whereDate('updated_at', today())->count(),
+            'low_stock'       => PharmacyStock::where('hospital_id', $hospitalId)
+                ->where('quantity_available', '<=', 10)->count(),
+        ];
+
         // Polled by the dashboard every few seconds so new prescriptions appear
         // without a manual reload.
         if ($request->wantsJson()) {
-            return response()->json(compact('orders'));
+            return response()->json(compact('orders', 'stats'));
         }
 
-        return view('pharmacy.dashboard', compact('orders'));
+        return view('pharmacy.dashboard', compact('orders', 'stats'));
     }
 
     public function dispense(string $id)

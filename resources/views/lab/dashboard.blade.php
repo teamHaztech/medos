@@ -5,32 +5,17 @@
 @section('content')
 <div x-data="labDashboard()" x-init="init()">
 
+    {{-- Header --}}
+    <x-dashboard-header title="Pathology Lab" subtitle="{{ now()->format('l, F j, Y') }} · orders, results & turnaround" />
+
     {{-- Stats Row --}}
-    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5">
-        <div class="bg-white rounded-lg border border-slate-200 p-2.5 text-center">
-            <p class="text-[9px] font-bold text-slate-400 uppercase">Total</p>
-            <p class="text-lg font-bold text-slate-800" x-text="stats.total">{{ $stats['total'] }}</p>
-        </div>
-        <div class="bg-yellow-50 rounded-lg border border-yellow-200 p-2.5 text-center">
-            <p class="text-[9px] font-bold text-yellow-600 uppercase">Pending</p>
-            <p class="text-lg font-bold text-yellow-700" x-text="stats.pending">{{ $stats['pending'] }}</p>
-        </div>
-        <div class="bg-blue-50 rounded-lg border border-blue-200 p-2.5 text-center">
-            <p class="text-[9px] font-bold text-blue-600 uppercase">Processing</p>
-            <p class="text-lg font-bold text-blue-700" x-text="stats.in_progress">{{ $stats['in_progress'] }}</p>
-        </div>
-        <div class="bg-green-50 rounded-lg border border-green-200 p-2.5 text-center">
-            <p class="text-[9px] font-bold text-green-600 uppercase">Done</p>
-            <p class="text-lg font-bold text-green-700" x-text="stats.completed">{{ $stats['completed'] }}</p>
-        </div>
-        <div class="rounded-lg border p-2.5 text-center" :class="stats.critical > 0 ? 'bg-red-50 border-red-300 ring-1 ring-red-200' : 'bg-white border-slate-200'">
-            <p class="text-[9px] font-bold uppercase" :class="stats.critical > 0 ? 'text-red-600' : 'text-slate-400'">Critical</p>
-            <p class="text-lg font-bold" :class="stats.critical > 0 ? 'text-red-700' : 'text-slate-800'" x-text="stats.critical">{{ $stats['critical'] }}</p>
-        </div>
-        <div class="bg-white rounded-lg border border-slate-200 p-2.5 text-center">
-            <p class="text-[9px] font-bold text-slate-400 uppercase">Avg TAT</p>
-            <p class="text-lg font-bold text-slate-800" x-text="stats.avg_tat">{{ $stats['avg_tat'] }}</p>
-        </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+        <x-stat-card label="Total today" :value="$stats['total']" xtext="stats.total" accent="slate" icon="doc" />
+        <x-stat-card label="Pending" :value="$stats['pending']" xtext="stats.pending" accent="amber" icon="clock" />
+        <x-stat-card label="Processing" :value="$stats['in_progress']" xtext="stats.in_progress" accent="blue" icon="refresh" />
+        <x-stat-card label="Completed" :value="$stats['completed']" xtext="stats.completed" accent="green" icon="check" />
+        <x-stat-card label="Critical" :value="$stats['critical']" xtext="stats.critical" accent="red" icon="alert" />
+        <x-stat-card label="Avg TAT" :value="$stats['avg_tat']" xtext="stats.avg_tat" accent="purple" icon="clock" />
     </div>
 
     {{-- Filters --}}

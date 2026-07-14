@@ -4,6 +4,17 @@
 
 @section('content')
 <div x-data="pharmacyDashboard()" x-init="init()">
+    {{-- Header --}}
+    <x-dashboard-header title="Pharmacy" subtitle="{{ now()->format('l, F j, Y') }} · prescriptions & dispensing" />
+
+    {{-- Stats Row --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <x-stat-card label="Pending prescriptions" :value="$stats['pending']" xtext="stats.pending" accent="amber" icon="doc" />
+        <x-stat-card label="STAT / urgent" :value="$stats['urgent']" xtext="stats.urgent" accent="red" icon="alert" />
+        <x-stat-card label="Dispensed today" :value="$stats['dispensed_today']" xtext="stats.dispensed_today" accent="green" icon="check" />
+        <x-stat-card label="Low stock items" sub="≤ 10 left" :value="$stats['low_stock']" xtext="stats.low_stock" accent="blue" icon="box" />
+    </div>
+
     {{-- Pending Orders --}}
     <div class="mb-8">
         <h3 class="text-sm font-semibold text-slate-700 mb-3">Pending Prescriptions</h3>
@@ -104,6 +115,7 @@
 function pharmacyDashboard() {
     return {
         orders: @json($orders),
+        stats: @json($stats),
 
         init() {
             // Auto-refresh so prescriptions from doctors appear without a reload.
@@ -118,6 +130,7 @@ function pharmacyDashboard() {
                 if (res.ok) {
                     const data = await res.json();
                     this.orders = data.orders;
+                    if (data.stats) this.stats = data.stats;
                 }
             } catch (e) {}
         },
