@@ -229,12 +229,11 @@
                                 <p class="text-sm font-medium text-slate-800" x-text="mod.name"></p>
                                 <p class="text-xs text-slate-500" x-text="mod.description"></p>
                             </div>
-                            <button type="button" @click="mod.enabled = !mod.enabled"
-                                :class="mod.enabled ? 'bg-blue-600' : 'bg-slate-300'"
-                                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0">
+                            <label :class="mod.enabled ? 'bg-blue-600' : 'bg-slate-300'"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 cursor-pointer">
+                                <input type="checkbox" name="modules[]" :value="mod.key" x-model="mod.enabled" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:pointer;">
                                 <span :class="mod.enabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-4 w-4 rounded-full bg-white transition-transform"></span>
-                            </button>
-                            <template x-if="mod.enabled"><input type="hidden" name="modules[]" :value="mod.key"></template>
+                            </label>
                         </div>
                     </template>
                 </div>

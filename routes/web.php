@@ -589,18 +589,6 @@ Route::middleware(['auth', 'super_admin'])->prefix('super-admin')->name('web.sup
     Route::delete('users/{userId}', [\App\Http\Controllers\Web\SuperAdminController::class, 'deleteUser'])->name('users.delete');
 });
 
-// Hospital switcher (super admin only)
-Route::post('switch-hospital', function (\Illuminate\Http\Request $request) {
-    $hospitalId = $request->input('hospital_id');
-    $hospital = \App\Modules\Core\Models\Hospital::findOrFail($hospitalId);
-    $user = auth()->user();
-    if ($user) {
-        $user->update(['hospital_id' => $hospital->id]);
-        \App\Modules\Core\Services\RegionService::reset();
-    }
-    return redirect()->back()->with('success', 'Switched to ' . $hospital->name);
-})->middleware(['auth', 'super_admin'])->name('switch-hospital');
-
 Route::get('/', function () {
     $role = auth()->user()?->role;
     $roleValue = is_object($role) ? $role->value : ($role ?? '');

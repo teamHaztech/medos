@@ -50,35 +50,14 @@
         @endphp
         <div class="px-3 py-2 border-t border-slate-700" x-data="{ open: false }">
             @if($isSuperAdmin)
-            {{-- Super admin can switch hospitals --}}
-            @php $allHospitals = \App\Modules\Core\Models\Hospital::where('is_active', true)->get(['id', 'name', 'country', 'city']); @endphp
-            <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-700 transition-colors">
-                <div class="flex items-center gap-2 min-w-0">
-                    <span class="text-lg">{{ $currentHospital?->country === 'AE' ? '🇦🇪' : '🇮🇳' }}</span>
-                    <div class="min-w-0">
-                        <p class="text-xs font-medium text-white truncate">{{ $currentHospital?->name ?? 'Select Hospital' }}</p>
-                        <p class="text-[10px] text-slate-400">{{ $currentHospital?->city }} · {{ $region['currency'] ?? '' }}</p>
-                    </div>
+            {{-- Super admin operates at the platform level — manage hospitals from the dashboard --}}
+            <a href="{{ route('web.superadmin.index') }}" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-700 transition-colors">
+                <span class="text-lg">🏥</span>
+                <div class="min-w-0">
+                    <p class="text-xs font-medium text-white truncate">All Hospitals</p>
+                    <p class="text-[10px] text-slate-400">Super Admin · Platform</p>
                 </div>
-                <svg class="w-4 h-4 text-slate-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-            </button>
-            <div x-show="open" x-transition class="mt-1 space-y-0.5">
-                @foreach($allHospitals as $h)
-                    @if($h->id !== $currentHospital?->id)
-                    <form method="POST" action="{{ route('switch-hospital') }}">
-                        @csrf
-                        <input type="hidden" name="hospital_id" value="{{ $h->id }}">
-                        <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left hover:bg-slate-700 transition-colors">
-                            <span class="text-lg">{{ $h->country === 'AE' ? '🇦🇪' : '🇮🇳' }}</span>
-                            <div>
-                                <p class="text-xs font-medium text-slate-300">{{ $h->name }}</p>
-                                <p class="text-[10px] text-slate-500">{{ $h->city }}</p>
-                            </div>
-                        </button>
-                    </form>
-                    @endif
-                @endforeach
-            </div>
+            </a>
             @else
             {{-- Non-super admins see their hospital (read only, no switcher) --}}
             <div class="flex items-center gap-2 px-3 py-2">

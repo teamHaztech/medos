@@ -509,12 +509,26 @@ class AdminWebController extends Controller
             ])->values()->all();
 
         $cfg = is_array($hospital?->config) ? $hospital->config : json_decode($hospital?->config ?? '{}', true);
-        $departments = $cfg['departments'] ?? [
-            ['name' => 'General Medicine', 'active' => true],
-            ['name' => 'Cardiology', 'active' => true],
-            ['name' => 'Pediatrics', 'active' => true],
-            ['name' => 'Orthopedics', 'active' => true],
-        ];
+        // Departments may be stored either as {name, active} objects (from this
+        // settings screen) or as a legacy array of plain strings (older seeds).
+        // Normalise to objects so the UI always has a name + active flag.
+        $rawDepartments = $cfg['departments'] ?? null;
+        if (! is_array($rawDepartments)) {
+            $departments = [
+                ['name' => 'General Medicine', 'active' => true],
+                ['name' => 'Cardiology', 'active' => true],
+                ['name' => 'Pediatrics', 'active' => true],
+                ['name' => 'Orthopedics', 'active' => true],
+            ];
+        } else {
+            $departments = collect($rawDepartments)
+                ->map(fn ($d) => is_array($d)
+                    ? ['name' => $d['name'] ?? '', 'active' => (bool) ($d['active'] ?? $d['is_active'] ?? true)]
+                    : ['name' => (string) $d, 'active' => true])
+                ->filter(fn ($d) => trim($d['name']) !== '')
+                ->values()
+                ->all();
+        }
         $areas = array_merge([
             'waiting' => 'Floor 2, Waiting Area',
             'lab'     => 'Sample Collection Counter',
@@ -605,6 +619,13 @@ class AdminWebController extends Controller
         $existing = (array) ($hospital->modules_enabled ?? []);
         $preserved = array_diff($existing, $valid);
         $enabled = array_values(array_unique(array_merge($preserved, array_intersect($valid, $submitted))));
+
+        // An empty list means "all modules on" (never-configured default). Once a
+        // user has explicitly saved, keep a sentinel so disabling everything sticks
+        // instead of silently re-enabling all modules.
+        if (empty($enabled)) {
+            $enabled = ['__configured__'];
+        }
 
         $hospital->update(['modules_enabled' => $enabled]);
 

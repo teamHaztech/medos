@@ -416,6 +416,12 @@ class SuperAdminController extends Controller
         $preserved = array_diff($existing, $valid);
         $enabled = array_values(array_unique(array_merge($preserved, array_intersect($valid, $submitted))));
 
+        // Empty means "all on" (never-configured default); keep a sentinel so an
+        // explicit all-off save sticks instead of silently re-enabling everything.
+        if (empty($enabled)) {
+            $enabled = ['__configured__'];
+        }
+
         $hospital->update(['modules_enabled' => $enabled]);
 
         return redirect()->route('web.superadmin.hospitals.show', $hospital->id)

@@ -103,13 +103,6 @@
             <button type="button"
                 @click="openEdit({ id:'{{ $h->id }}', name: @js($h->name), slug: @js($h->slug), country: @js($h->country ?? 'IN'), city: @js($h->city ?? ''), state: @js($h->state ?? ''), address: @js($h->address ?? ''), phone: @js($h->phone ?? ''), email: @js($h->email ?? ''), is_active: {{ $h->is_active ? 'true' : 'false' }} })"
                 class="btn-secondary text-xs px-3 py-1.5">Edit</button>
-            @if(!$isCurrentHospital)
-            <form method="POST" action="{{ route('switch-hospital') }}" class="inline">
-                @csrf
-                <input type="hidden" name="hospital_id" value="{{ $h->id }}">
-                <button type="submit" class="btn-secondary text-xs px-3 py-1.5">Switch to This</button>
-            </form>
-            @endif
             @if($h->is_active && !$isCurrentHospital)
             <form method="POST" action="{{ route('web.superadmin.hospitals.delete', $h->id) }}" class="inline" onsubmit="return confirm('Deactivate this hospital?')">
                 @csrf @method('DELETE')
