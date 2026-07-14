@@ -11,6 +11,22 @@
         are skipped automatically. Everything imports into <strong>{{ auth()->user()?->hospital?->name ?? 'your hospital' }}</strong>.
     </p>
 
+    @if(session('import_credentials') && count(session('import_credentials')))
+    <div class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
+        <p class="text-sm font-semibold text-green-800 mb-2">Login credentials for {{ count(session('import_credentials')) }} new staff — copy &amp; share securely (they should change on first login):</p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+                <thead><tr class="text-left text-green-700"><th class="pr-4 pb-1">Name</th><th class="pr-4 pb-1">Email (login)</th><th class="pb-1">Temp password</th></tr></thead>
+                <tbody class="text-green-800 font-mono">
+                    @foreach(session('import_credentials') as $cred)
+                    <tr><td class="pr-4 py-0.5">{{ $cred['name'] }}</td><td class="pr-4 py-0.5">{{ $cred['email'] }}</td><td class="py-0.5">{{ $cred['password'] }}</td></tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
     @if(session('import_errors') && count(session('import_errors')))
     <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
         <p class="text-sm font-semibold text-amber-800 mb-2">Some rows need attention ({{ count(session('import_errors')) }} shown):</p>
@@ -25,9 +41,12 @@
     <div class="space-y-4">
         @php
             $cards = [
-                'patients'  => ['title' => 'Patients', 'desc' => 'name, phone (required) + demographics, blood group, health ID.', 'accent' => 'blue'],
-                'medicines' => ['title' => 'Medicines / Pharmacy', 'desc' => 'name (required) + generic name, category, dosage, form.', 'accent' => 'emerald'],
-                'tests'     => ['title' => 'Tests / Imaging', 'desc' => 'name, type=lab/imaging/procedure (required) + category, price, turnaround.', 'accent' => 'violet'],
+                'patients'       => ['title' => 'Patients', 'desc' => 'name, phone (required) + demographics, blood group, health ID.'],
+                'staff'          => ['title' => 'Staff / Users', 'desc' => 'name, email, role=doctor/nurse/receptionist/pharmacist/lab_tech/billing_staff/… (required). A login is created per row; passwords are shown after import.'],
+                'medicines'      => ['title' => 'Medicines', 'desc' => 'name (required) + generic name, category, dosage, form. The pharmacy catalogue.'],
+                'pharmacy_stock' => ['title' => 'Pharmacy Stock', 'desc' => 'medicine_name, batch_number, expiry_date, quantity (required) + purchase/selling price, supplier. Medicine must already exist.'],
+                'tests'          => ['title' => 'Lab Tests / Imaging', 'desc' => 'name, type=lab/imaging/procedure (required) + category, price, turnaround.'],
+                'services'       => ['title' => 'Services / Rate Card', 'desc' => 'name, category, price (required) + code, gst_rate, hsn_sac. The billing service master.'],
             ];
         @endphp
 
@@ -57,8 +76,11 @@
 
     <div class="mt-6 text-xs text-slate-400">
         <p>Tips: the first row must be the column headers (as in the template). Phone numbers with 10 digits get
-        a <code>+91</code> prefix automatically. Dates use <code>YYYY-MM-DD</code>. Duplicate patients (same phone)
-        and existing medicines/tests (same name) are skipped, not overwritten.</p>
+        a <code>+91</code> prefix automatically. Dates use <code>YYYY-MM-DD</code>. Duplicates are skipped, not
+        overwritten — patients by phone, staff by email, medicines/tests/services by name, stock by medicine+batch.
+        <strong>Staff</strong> rows create a login each (temp password shown above after import; add a
+        <code>password</code> column to set your own). <strong>Pharmacy Stock</strong> needs the medicine to exist
+        in the catalogue already (import Medicines first).</p>
     </div>
 
 </div>

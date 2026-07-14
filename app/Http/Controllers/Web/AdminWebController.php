@@ -504,8 +504,35 @@ class AdminWebController extends Controller
      */
     private function effectiveHospitalId(): ?string
     {
-        return Auth::user()->hospital_id
-            ?: Hospital::where('is_active', true)->orderBy('created_at')->value('id');
+        $user = Auth::user();
+        $role = is_object($user->role) ? $user->role->value : $user->role;
+
+        // A super admin has no single tenant. Rather than silently editing the
+        // oldest hospital, they explicitly choose which hospital to configure;
+        // remember that choice in the session so subsequent saves target it.
+        if ($role === 'super_admin') {
+            $requested = request('hospital_id');
+            if ($requested && Hospital::whereKey($requested)->exists()) {
+                session(['sa_settings_hospital' => $requested]);
+                return $requested;
+            }
+            $stored = session('sa_settings_hospital');
+            if ($stored && Hospital::whereKey($stored)->exists()) {
+                return $stored;
+            }
+            return $user->hospital_id
+                ?: Hospital::where('is_active', true)->orderBy('created_at')->value('id');
+        }
+
+        // Everyone else is pinned to their own hospital — never another's.
+        return $user->hospital_id;
+    }
+
+    /** Is the acting user a super admin (used to show the hospital picker on shared tenant screens)? */
+    private function actingIsSuperAdmin(): bool
+    {
+        $user = Auth::user();
+        return (is_object($user->role) ? $user->role->value : $user->role) === 'super_admin';
     }
 
     public function settings()
@@ -599,7 +626,14 @@ class AdminWebController extends Controller
             'bill.cancelled' => 'Cancelled',
         ];
 
-        return view('admin.settings', compact('hospital', 'moduleList', 'departments', 'areas', 'gst', 'aiCfg', 'waCfg', 'biCfg', 'biEvents'));
+        // Super admins get a hospital picker so they choose which hospital they
+        // are configuring instead of silently editing whichever one is oldest.
+        $isSuperAdmin = $this->actingIsSuperAdmin();
+        $manageHospitals = $isSuperAdmin
+            ? Hospital::orderBy('name')->get(['id', 'name', 'is_active'])
+            : collect();
+
+        return view('admin.settings', compact('hospital', 'moduleList', 'departments', 'areas', 'gst', 'aiCfg', 'waCfg', 'biCfg', 'biEvents', 'isSuperAdmin', 'manageHospitals'));
     }
 
     /** Persist the hospital's GST identity (GSTIN + state) for tax invoices. */
