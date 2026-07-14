@@ -326,11 +326,14 @@ class SuperAdminController extends Controller
             'address'             => $v['address'] ?? null,
             'phone'               => $v['phone'] ?? null,
             'email'               => $v['email'] ?? null,
-            'config'              => json_encode([
+            // Pass raw arrays — the Hospital model casts these to 'array' and
+            // encodes them once. json_encode() here would double-encode and the
+            // value would read back as a string (breaks in_array / isModuleEnabled).
+            'config'              => [
                 'departments' => [],
                 'operating_hours' => ['open' => '08:00', 'close' => '21:00'],
-            ]),
-            'modules_enabled'     => json_encode(['ai_receptionist', 'whatsapp', 'triage', 'scheduling', 'queue', 'billing', 'analytics', 'engagement']),
+            ],
+            'modules_enabled'     => ['ai_receptionist', 'whatsapp', 'triage', 'scheduling', 'queue', 'billing', 'analytics', 'engagement'],
             'subscription_plan'   => 'standard',
             'subscription_status' => 'active',
             'is_active'           => true,

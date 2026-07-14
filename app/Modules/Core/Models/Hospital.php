@@ -89,8 +89,14 @@ class Hospital extends Model
     {
         $modules = $this->modules_enabled;
 
+        // Tolerate a legacy/double-encoded value that reads back as a JSON string.
+        if (is_string($modules)) {
+            $decoded = json_decode($modules, true);
+            $modules = is_array($decoded) ? $decoded : [];
+        }
+
         // Not configured yet → every module is on (backward compatible).
-        if (empty($modules)) {
+        if (empty($modules) || ! is_array($modules)) {
             return true;
         }
 
