@@ -9,7 +9,7 @@
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-slate-100 flex items-center justify-center p-4" x-data="whatsappChat()" x-init="init()">
+<body class="min-h-screen bg-slate-100 flex items-center justify-center p-4" x-data="whatsappChat()">
 
     <div class="w-full max-w-md mx-auto">
         {{-- Phone frame --}}
