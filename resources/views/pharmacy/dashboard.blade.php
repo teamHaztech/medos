@@ -15,9 +15,17 @@
         <x-stat-card label="Low stock items" sub="≤ 10 left" :value="$stats['low_stock']" xtext="stats.low_stock" accent="blue" icon="box" />
     </div>
 
+    {{-- Search --}}
+    <div class="mb-4">
+        <input type="text" x-model="search" placeholder="Search patient, medication, doctor..." class="input-field w-full text-sm">
+    </div>
+
     {{-- Pending Orders --}}
     <div class="mb-8">
-        <h3 class="text-sm font-semibold text-slate-700 mb-3">Pending Prescriptions</h3>
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-slate-700">Pending Prescriptions</h3>
+            <span class="text-xs text-slate-400" x-text="pendingOrders.length + (pendingOrders.length === 1 ? ' order' : ' orders')"></span>
+        </div>
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <table class="w-full">
                 <thead class="bg-slate-50 border-b border-slate-200">
@@ -67,7 +75,7 @@
                     </template>
                     <template x-if="pendingOrders.length === 0">
                         <tr>
-                            <td colspan="6" class="table-cell text-center text-slate-400 py-8">No pending prescriptions</td>
+                            <td colspan="6" class="table-cell text-center text-slate-400 py-8" x-text="search ? 'No prescriptions match your search' : 'No pending prescriptions'"></td>
                         </tr>
                     </template>
                 </tbody>
@@ -109,13 +117,19 @@
             </table>
         </div>
     </div>
-</div>
 
+    {{-- Refresh indicator --}}
+    <p class="text-xs text-slate-400 text-center mt-4">Auto-refreshes every 5 seconds</p>
+</div>
+@endsection
+
+@push('scripts')
 <script>
 function pharmacyDashboard() {
     return {
         orders: @json($orders),
         stats: @json($stats),
+        search: '',
 
         init() {
             // Auto-refresh so prescriptions from doctors appear without a reload.
@@ -135,12 +149,21 @@ function pharmacyDashboard() {
             } catch (e) {}
         },
 
+        matchesSearch(o) {
+            const q = this.search.trim().toLowerCase();
+            if (!q) return true;
+            return (o.patient?.name || '').toLowerCase().includes(q)
+                || (o.patient?.phone || '').includes(q)
+                || (o.ordered_by?.name || o.ordered_by_staff?.name || o.ordered_by_name || '').toLowerCase().includes(q)
+                || (o.items || []).some(i => (i.name || '').toLowerCase().includes(q));
+        },
+
         get pendingOrders() {
-            return this.orders.filter(o => o.status === 'ordered' || o.status === 'accepted');
+            return this.orders.filter(o => (o.status === 'ordered' || o.status === 'accepted') && this.matchesSearch(o));
         },
 
         get dispensedOrders() {
-            return this.orders.filter(o => o.status === 'dispensed');
+            return this.orders.filter(o => o.status === 'dispensed' && this.matchesSearch(o));
         },
 
         formatDate(dateStr) {
@@ -169,4 +192,4 @@ function pharmacyDashboard() {
     }
 }
 </script>
-@endsection
+@endpush
