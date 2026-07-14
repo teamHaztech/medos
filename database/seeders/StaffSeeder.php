@@ -298,7 +298,9 @@ class StaffSeeder extends Seeder
             'email'             => 'superadmin@haztech.in',
             'email_verified_at' => $now,
             'password'          => $password,
-            'hospital_id'       => SeedData::CITY_CARE_ID,
+            // Super Admin is platform-level — not pinned to any hospital, so no
+            // "operating here" marker and settings use the hospital picker instead.
+            'hospital_id'       => null,
             'role'              => 'super_admin',
             'staff_id'          => null,
             'phone'             => null,
