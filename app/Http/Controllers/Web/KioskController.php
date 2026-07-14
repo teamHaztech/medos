@@ -712,10 +712,16 @@ class KioskController extends Controller
         ]);
     }
 
-    public function roomDisplay(string $doctorId)
+    public function roomDisplay(Request $request, string $doctorId)
     {
-        // Accept UUID or name (first name, lowercase)
-        $hospital = $this->resolveHospital();
+        // Reserved keywords render the lab / imaging board instead of a doctor.
+        // e.g. /kiosk/room/lab  ·  /kiosk/room/imaging
+        if (in_array(strtolower($doctorId), ['lab', 'laboratory', 'imaging', 'radiology'], true)) {
+            return $this->labDisplay($request, strtolower($doctorId));
+        }
+
+        // Accept UUID or name (first name, lowercase). ?hospital=<slug> scopes it.
+        $hospital = $this->resolveHospital($request);
         $hospitalId = $hospital?->id;
 
         $doctor = Staff::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->find($doctorId);
@@ -754,6 +760,63 @@ class KioskController extends Controller
         return view('kiosk.room-display', [
             'doctor'       => $doctor,
             'appointments' => $appointments,
+        ]);
+    }
+
+    /**
+     * Big-screen board for the lab / imaging queue — the counterpart to a
+     * doctor's room display. Reached via /kiosk/room/lab (or /imaging).
+     * Scope to a hospital with ?hospital=<slug> when several are active.
+     */
+    private function labDisplay(?Request $request, string $kind = 'lab')
+    {
+        $hospital = $this->resolveHospital($request);
+        if (! $hospital) {
+            abort(404, 'Add ?hospital=<slug> to the URL to pick a hospital.');
+        }
+
+        $type  = in_array($kind, ['imaging', 'radiology'], true) ? 'imaging' : 'lab';
+        $label = $type === 'imaging' ? 'Imaging / Radiology' : 'Laboratory';
+
+        $orders = \App\Modules\Core\Models\Order::where('hospital_id', $hospital->id)
+            ->where('type', $type)
+            ->where(function ($q) {
+                $q->whereIn('status', ['ordered', 'accepted', 'in_progress'])
+                  ->orWhere(fn ($q2) => $q2->where('status', 'completed')->whereDate('updated_at', today()));
+            })
+            ->with('patient')
+            ->orderByRaw("CASE status WHEN 'in_progress' THEN 0 WHEN 'accepted' THEN 1 WHEN 'ordered' THEN 2 WHEN 'completed' THEN 3 ELSE 4 END")
+            ->orderByRaw("CASE priority WHEN 'stat' THEN 0 WHEN 'urgent' THEN 1 ELSE 2 END")
+            ->orderBy('created_at')
+            ->get()
+            ->map(function ($o) {
+                $status = is_object($o->status) ? $o->status->value : ($o->status ?? 'ordered');
+                // Collapse the lab statuses into the display's vocabulary so the
+                // same board JS (now-serving / waiting / done) can drive it.
+                $bucket = match ($status) {
+                    'in_progress'          => 'in_progress',
+                    'completed'            => 'completed',
+                    default                => 'checked_in', // ordered / accepted = waiting
+                };
+                $items = collect($o->items ?? [])->pluck('name')->filter()->implode(', ');
+                $pr = $o->priority ?? 'routine';
+
+                return [
+                    'token'      => $o->notes ?: '—',
+                    'name'       => $o->patient?->name ?? 'Patient',
+                    'status'     => $bucket,
+                    'tests'      => $items ?: 'Tests',
+                    'urgency'    => $pr === 'stat' ? 'emergency' : ($pr === 'urgent' ? 'urgent' : ''),
+                    'isReferral' => false,
+                ];
+            })
+            ->values();
+
+        return view('kiosk.lab-display', [
+            'hospital' => $hospital,
+            'label'    => $label,
+            'kind'     => $type,
+            'orders'   => $orders,
         ]);
     }
 

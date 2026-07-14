@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Analytics\Services\RevenueInsights;
 use App\Modules\Core\Models\Order;
 use App\Modules\Core\Models\LabAvailability;
 use App\Modules\Patient\Models\Patient;
@@ -80,6 +81,73 @@ class LabController extends Controller
         }
 
         return view('lab.dashboard', compact('orders', 'stats', 'dateFilter'));
+    }
+
+    /**
+     * Diagnostics business insights — revenue, most-performed tests and test volume
+     * over a day / week / month / year, split by lab / imaging / procedure, with
+     * turnaround performance. Revenue and volume come from the charge-capture ledger
+     * (charge_items, sources lab|imaging|procedure) — the billed reality — while TAT
+     * comes from the order lifecycle timestamps.
+     */
+    public function insights(Request $request, RevenueInsights $insights)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        $period     = $request->get('period', 'month');
+        $sources    = ['lab', 'imaging', 'procedure'];
+
+        $r = $insights->range($period);
+
+        $now  = $insights->totals($hospitalId, $sources, $r['start'], $r['end']);
+        $prev = $insights->totals($hospitalId, $sources, $r['prevStart'], $r['prevEnd']);
+
+        // Verified reports (whole orders completed) in each window.
+        $doneThis = Order::where('hospital_id', $hospitalId)
+            ->whereIn('type', $sources)->where('status', 'completed')
+            ->whereBetween('completed_at', [$r['start'], $r['end']])->count();
+        $donePrev = Order::where('hospital_id', $hospitalId)
+            ->whereIn('type', $sources)->where('status', 'completed')
+            ->whereBetween('completed_at', [$r['prevStart'], $r['prevEnd']])->count();
+
+        // Average turnaround (order → verified) for reports completed in the window.
+        $completed = Order::where('hospital_id', $hospitalId)
+            ->whereIn('type', $sources)->where('status', 'completed')
+            ->whereNotNull('completed_at')
+            ->whereBetween('completed_at', [$r['start'], $r['end']])
+            ->get(['created_at', 'completed_at']);
+        $avgTatMin = 0;
+        if ($completed->count() > 0) {
+            $sum = $completed->sum(fn ($o) => Carbon::parse($o->created_at)->diffInMinutes($o->completed_at));
+            $avgTatMin = (int) round($sum / $completed->count());
+        }
+
+        $kpis = [
+            'revenue'         => $now['revenue'],
+            'revenue_change'  => RevenueInsights::pctChange($now['revenue'], $prev['revenue']),
+            'tests'           => $now['lines'],
+            'tests_change'    => RevenueInsights::pctChange($now['lines'], $prev['lines']),
+            'completed'       => $doneThis,
+            'completed_change'=> RevenueInsights::pctChange($doneThis, $donePrev),
+            'avg_tat'         => $this->formatTat($avgTatMin),
+        ];
+
+        $trend = $insights->trend($hospitalId, $sources, $r['start'], $r['end'], $r['granularity'], $r['labelFormat']);
+
+        $items      = $insights->items($hospitalId, $sources, $r['start'], $r['end']);
+        $byVolume   = $items->sortByDesc('lines')->take(10)->values();
+        $byRevenue  = $items->sortByDesc('revenue')->take(10)->values();
+
+        $categories = $insights->bySource($hospitalId, $sources, $r['start'], $r['end']);
+
+        return view('lab.insights', [
+            'period'      => $period,
+            'periodLabel' => $r['label'],
+            'kpis'        => $kpis,
+            'trend'       => $trend,
+            'byVolume'    => $byVolume,
+            'byRevenue'   => $byRevenue,
+            'categories'  => $categories,
+        ]);
     }
 
     /**

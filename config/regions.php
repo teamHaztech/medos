@@ -74,7 +74,7 @@ return [
     // ---------------------------------------------------------------
     'AE' => [
         'name'     => 'UAE',
-        'currency' => 'AED',
+        'currency' => 'AED ',
         'currency_code' => 'AED',
         'phone_prefix' => '+971',
         'phone_digits' => 9,

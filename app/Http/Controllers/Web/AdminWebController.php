@@ -1921,7 +1921,9 @@ class AdminWebController extends Controller
 
         $tests = $this->queueTests();
 
-        return view('admin.queue', compact('doctorQueue', 'labQueue', 'doctors', 'tests'));
+        $hospital = Hospital::find($hospitalId);
+
+        return view('admin.queue', compact('doctorQueue', 'labQueue', 'doctors', 'tests', 'hospital'));
     }
 
     /** Available tests for the lab-queue picker (safe against schema variance). */

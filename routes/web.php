@@ -182,6 +182,7 @@ Route::middleware('auth')->prefix('doctor')->name('web.doctor.')->group(function
 
 Route::middleware(['auth', 'module:lab'])->prefix('lab')->name('web.lab.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\LabController::class, 'dashboard'])->name('dashboard');
+    Route::get('insights', [\App\Http\Controllers\Web\LabController::class, 'insights'])->name('insights');
     Route::get('bookings', [\App\Http\Controllers\Web\LabController::class, 'bookings'])->name('bookings');
     Route::get('slots', [\App\Http\Controllers\Web\LabController::class, 'slots'])->name('slots');
     Route::post('slots', [\App\Http\Controllers\Web\LabController::class, 'saveSlots'])->name('slots.save');
@@ -199,6 +200,7 @@ Route::middleware(['auth', 'module:lab'])->prefix('lab')->name('web.lab.')->grou
 
 Route::middleware(['auth', 'module:pharmacy'])->prefix('pharmacy')->name('web.pharmacy.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\PharmacyController::class, 'dashboard'])->name('dashboard');
+    Route::get('insights', [\App\Http\Controllers\Web\PharmacyController::class, 'insights'])->name('insights');
     Route::post('{id}/dispense', [\App\Http\Controllers\Web\PharmacyController::class, 'dispense'])->name('dispense');
     Route::get('stock', [\App\Http\Controllers\Web\PharmacyController::class, 'stock'])->name('stock');
     Route::post('stock', [\App\Http\Controllers\Web\PharmacyController::class, 'addStock'])->name('stock.store');

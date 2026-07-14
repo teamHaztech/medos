@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Analytics\Services\RevenueInsights;
 use App\Modules\Core\Models\Order;
 use App\Modules\Pharmacy\Models\PharmacyStock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PharmacyController extends Controller
 {
@@ -41,6 +43,100 @@ class PharmacyController extends Controller
         }
 
         return view('pharmacy.dashboard', compact('orders', 'stats'));
+    }
+
+    /**
+     * Pharmacy business insights — revenue, best-selling medicines and dispensing
+     * volume over a day / week / month / year, plus a live inventory valuation.
+     * Every figure is derived from the charge-capture ledger (charge_items, source
+     * = pharmacy) — the same rows that flow onto patient bills — so the numbers
+     * reconcile with billing rather than being estimates.
+     */
+    public function insights(Request $request, RevenueInsights $insights)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+        $period     = $request->get('period', 'month');
+        $sources    = ['pharmacy'];
+
+        $r = $insights->range($period);
+
+        // Revenue + volume for the window and the equal-length previous window.
+        $now  = $insights->totals($hospitalId, $sources, $r['start'], $r['end']);
+        $prev = $insights->totals($hospitalId, $sources, $r['prevStart'], $r['prevEnd']);
+
+        // Dispensed prescriptions (whole orders) — distinct from medicine lines.
+        $rxThis = Order::where('hospital_id', $hospitalId)
+            ->where('type', 'pharmacy')->where('status', 'dispensed')
+            ->whereBetween('completed_at', [$r['start'], $r['end']])->count();
+        $rxPrev = Order::where('hospital_id', $hospitalId)
+            ->where('type', 'pharmacy')->where('status', 'dispensed')
+            ->whereBetween('completed_at', [$r['prevStart'], $r['prevEnd']])->count();
+
+        $kpis = [
+            'revenue'        => $now['revenue'],
+            'revenue_change' => RevenueInsights::pctChange($now['revenue'], $prev['revenue']),
+            'units'          => $now['units'],
+            'units_change'   => RevenueInsights::pctChange($now['units'], $prev['units']),
+            'rx'             => $rxThis,
+            'rx_change'      => RevenueInsights::pctChange($rxThis, $rxPrev),
+            'avg_rx'         => $rxThis > 0 ? round($now['revenue'] / $rxThis, 2) : 0.0,
+        ];
+
+        $trend = $insights->trend($hospitalId, $sources, $r['start'], $r['end'], $r['granularity'], $r['labelFormat']);
+
+        // Best sellers: every dispensed medicine line, ranked two ways.
+        $items      = $insights->items($hospitalId, $sources, $r['start'], $r['end']);
+        $byRevenue  = $items->sortByDesc('revenue')->take(10)->values();
+        $byVolume   = $items->sortByDesc('units')->take(10)->values();
+
+        // Live inventory valuation + risk (current snapshot, not window-scoped).
+        $inventory = $this->inventorySnapshot($hospitalId);
+
+        return view('pharmacy.insights', [
+            'period'      => $period,
+            'periodLabel' => $r['label'],
+            'kpis'        => $kpis,
+            'trend'       => $trend,
+            'byRevenue'   => $byRevenue,
+            'byVolume'    => $byVolume,
+            'inventory'   => $inventory,
+        ]);
+    }
+
+    /** Current stock valuation (at cost + retail) and stock-risk counts/lists. */
+    private function inventorySnapshot(string $hospitalId): array
+    {
+        if (! Schema::hasTable('pharmacy_stock')) {
+            return ['cost_value' => 0, 'retail_value' => 0, 'low' => 0, 'out' => 0, 'expiring' => collect()];
+        }
+
+        $agg = PharmacyStock::where('hospital_id', $hospitalId)
+            ->selectRaw('
+                COALESCE(SUM(quantity_available * purchase_price),0) as cost_value,
+                COALESCE(SUM(quantity_available * selling_price),0)  as retail_value,
+                SUM(CASE WHEN quantity_available > 0 AND quantity_available <= 10 THEN 1 ELSE 0 END) as low,
+                SUM(CASE WHEN quantity_available <= 0 THEN 1 ELSE 0 END) as out
+            ')->first();
+
+        // Batches expiring within 90 days that still hold stock — money at risk.
+        $expiring = PharmacyStock::where('pharmacy_stock.hospital_id', $hospitalId)
+            ->where('pharmacy_stock.quantity_available', '>', 0)
+            ->whereNotNull('expiry_date')
+            ->whereBetween('expiry_date', [today()->toDateString(), today()->addDays(90)->toDateString()])
+            ->join('medicines', 'pharmacy_stock.medicine_id', '=', 'medicines.id')
+            ->select('medicines.name as medicine_name', 'pharmacy_stock.batch_number',
+                'pharmacy_stock.quantity_available', 'pharmacy_stock.expiry_date')
+            ->orderBy('pharmacy_stock.expiry_date')
+            ->limit(8)
+            ->get();
+
+        return [
+            'cost_value'   => round((float) ($agg->cost_value ?? 0), 2),
+            'retail_value' => round((float) ($agg->retail_value ?? 0), 2),
+            'low'          => (int) ($agg->low ?? 0),
+            'out'          => (int) ($agg->out ?? 0),
+            'expiring'     => $expiring,
+        ];
     }
 
     public function dispense(string $id)
