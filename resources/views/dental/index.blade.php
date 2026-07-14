@@ -34,7 +34,7 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
                     <h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Fee Schedule — dental procedures</h4>
                     <p class="text-xs text-slate-400">The price list dentists chart against. {{ $procedures->count() }} procedures.</p>
                 </div>
-                <button type="button" @click="open(null)" class="btn-secondary text-sm">+ Add procedure</button>
+                <button type="button" @click="open(null)" class="btn-primary text-sm">+ Add procedure</button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full">
@@ -48,7 +48,7 @@ $cur = \App\Modules\Core\Services\RegionService::currency();
                             <td class="px-4 py-2 text-sm text-slate-800">{{ $p->name }}</td>
                             <td class="px-4 py-2 text-xs text-slate-500">{{ DentalProcedure::CATEGORIES[$p->category] ?? $p->category }}</td>
                             <td class="px-4 py-2 text-sm text-slate-700 text-right">{{ $cur }}{{ number_format($p->default_fee, 2) }}</td>
-                            <td class="px-4 py-2 text-right"><button type="button" @click="open({ id: @js($p->id), code: @js($p->code), name: @js($p->name), category: @js($p->category), default_fee: {{ (float) $p->default_fee }}, is_active: {{ $p->is_active ? 'true' : 'false' }} })" class="text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
+                            <td class="px-4 py-2 text-right"><button type="button" @click="open({ id: @js($p->id), code: @js($p->code), name: @js($p->name), category: @js($p->category), default_fee: {{ (float) $p->default_fee }}, is_active: {{ $p->is_active ? 'true' : 'false' }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
                         </tr>
                         @empty
                         <tr><td colspan="5" class="px-4 py-6 text-center text-sm text-slate-400">No procedures in the fee schedule.</td></tr>

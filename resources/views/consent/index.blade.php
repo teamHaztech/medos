@@ -58,7 +58,7 @@
 
     {{-- FORMS --}}
     <div x-show="tab==='forms'" style="display:none">
-        <div class="flex justify-end mb-3"><button type="button" @click="openForm()" class="btn-secondary text-sm">+ Add form</button></div>
+        <div class="flex justify-end mb-3"><button type="button" @click="openForm()" class="btn-primary text-sm">+ Add form</button></div>
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table class="w-full">
                 <thead class="bg-slate-50 border-b border-slate-200"><tr>
@@ -71,7 +71,7 @@
                         <td class="px-4 py-2.5 text-sm text-slate-600">{{ ConsentForm::CATEGORIES[$f->category] ?? $f->category }}</td>
                         <td class="px-4 py-2.5 text-center text-xs">{!! $f->requires_witness ? '<span class="text-amber-600">Required</span>' : '<span class="text-slate-300">—</span>' !!}</td>
                         <td class="px-4 py-2.5 text-center">@if($f->is_active)<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Yes</span>@else<span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">No</span>@endif</td>
-                        <td class="px-4 py-2.5 text-right"><button type="button" @click="openForm({ id: @js($f->id), name: @js($f->name), category: @js($f->category), content: @js($f->content ?? ''), requires_witness: {{ $f->requires_witness ? 'true' : 'false' }}, is_active: {{ $f->is_active ? 'true' : 'false' }} })" class="text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
+                        <td class="px-4 py-2.5 text-right"><button type="button" @click="openForm({ id: @js($f->id), name: @js($f->name), category: @js($f->category), content: @js($f->content ?? ''), requires_witness: {{ $f->requires_witness ? 'true' : 'false' }}, is_active: {{ $f->is_active ? 'true' : 'false' }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
                     </tr>
                     @endforeach
                 </tbody>

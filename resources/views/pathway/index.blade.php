@@ -59,7 +59,7 @@
 
     {{-- TEMPLATES --}}
     <div x-show="tab==='templates'" style="display:none">
-        <div class="flex justify-end mb-3"><button type="button" @click="openTemplate()" class="btn-secondary text-sm">+ Add template</button></div>
+        <div class="flex justify-end mb-3"><button type="button" @click="openTemplate()" class="btn-primary text-sm">+ Add template</button></div>
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table class="w-full">
                 <thead class="bg-slate-50 border-b border-slate-200"><tr>
@@ -72,7 +72,7 @@
                         <td class="px-4 py-2.5 text-sm text-slate-600">{{ PathwayTemplate::CATEGORIES[$t->category] ?? $t->category }}</td>
                         <td class="px-4 py-2.5 text-sm text-slate-600 text-center">{{ count($t->steps ?? []) }}</td>
                         <td class="px-4 py-2.5 text-center">@if($t->is_active)<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Yes</span>@else<span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">No</span>@endif</td>
-                        <td class="px-4 py-2.5 text-right"><button type="button" @click="openTemplate({{ \Illuminate\Support\Js::from(['id'=>$t->id,'name'=>$t->name,'category'=>$t->category,'steps_text'=>implode(chr(10), $t->steps ?? []),'is_active'=>$t->is_active]) }})" class="text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
+                        <td class="px-4 py-2.5 text-right"><button type="button" @click="openTemplate({{ \Illuminate\Support\Js::from(['id'=>$t->id,'name'=>$t->name,'category'=>$t->category,'steps_text'=>implode(chr(10), $t->steps ?? []),'is_active'=>$t->is_active]) }})" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
                     </tr>
                     @endforeach
                 </tbody>

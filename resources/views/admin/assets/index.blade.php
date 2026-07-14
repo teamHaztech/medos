@@ -104,7 +104,7 @@
                             <div class="flex items-center gap-2">
                                 <button type="button"
                                     @click="openEdit({ id:'{{ $a->id }}', asset_name: @js($a->asset_name), asset_type: @js($a->asset_type ?? ''), serial_number: @js($a->serial_number ?? ''), model: @js($a->model ?? ''), manufacturer: @js($a->manufacturer ?? ''), department: @js($a->department ?? ''), location: @js($a->location ?? ''), purchase_date: '{{ optional($a->purchase_date)->toDateString() }}', purchase_cost: '{{ $a->purchase_cost }}', useful_life_years: '{{ $a->useful_life_years }}', salvage_value: '{{ $a->salvage_value }}', vendor_id: '{{ $a->vendor_id }}', status: @js($a->status), notes: @js($a->notes ?? '') })"
-                                    class="text-blue-500 hover:text-blue-700 text-sm font-medium">Edit</button>
+                                    class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
                                 <form method="POST" action="{{ route('web.admin.assets.destroy', $a->id) }}" onsubmit="return confirm('Remove this asset from the register?')">
                                     @csrf @method('DELETE')
                                     <button class="text-red-400 hover:text-red-600 text-sm">Remove</button>

@@ -49,7 +49,7 @@
                         <td class="table-cell">{{ $v->assets_count }}</td>
                         <td class="table-cell">
                             <div class="flex items-center gap-2">
-                                <button type="button" @click="openEdit({ id:'{{ $v->id }}', name: @js($v->name), contact_person: @js($v->contact_person ?? ''), phone: @js($v->phone ?? ''), email: @js($v->email ?? ''), address: @js($v->address ?? ''), service_type: @js($v->service_type ?? '') })" class="text-blue-500 hover:text-blue-700 text-sm font-medium">Edit</button>
+                                <button type="button" @click="openEdit({ id:'{{ $v->id }}', name: @js($v->name), contact_person: @js($v->contact_person ?? ''), phone: @js($v->phone ?? ''), email: @js($v->email ?? ''), address: @js($v->address ?? ''), service_type: @js($v->service_type ?? '') })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
                                 <form method="POST" action="{{ route('web.admin.vendors.destroy', $v->id) }}" onsubmit="return confirm('Remove this vendor?')">
                                     @csrf @method('DELETE')
                                     <button class="text-red-400 hover:text-red-600 text-sm">Remove</button>

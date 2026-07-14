@@ -207,7 +207,7 @@
                 <p class="text-xs text-slate-400">Room accrues automatically per day. Add procedures, consumables and investigations as they happen.</p>
             </div>
             <div class="flex items-center gap-2">
-                @if($admission->isActive())<button @click="chargeOpen = true" class="btn-secondary text-sm">+ Add charge</button>@endif
+                @if($admission->isActive())<button @click="chargeOpen = true" class="btn-primary text-sm">+ Add charge</button>@endif
                 <form method="POST" action="{{ route('web.ip.bill', $admission->id) }}">@csrf
                     <button type="submit" class="btn-primary text-sm whitespace-nowrap">{{ $ipBill ? 'Open bill' : 'Generate bill' }}</button>
                 </form>

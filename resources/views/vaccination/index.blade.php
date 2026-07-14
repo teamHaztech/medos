@@ -62,7 +62,7 @@ use App\Modules\Vaccination\Models\PatientVaccination;
             <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <div class="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
                     <div><h4 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Vaccine Master & National Schedule</h4><p class="text-xs text-slate-400">{{ $vaccines->count() }} vaccines. Scheduled ones drive the DOB-based due list.</p></div>
-                    <button type="button" @click="open(null)" class="btn-secondary text-sm">+ Add vaccine</button>
+                    <button type="button" @click="open(null)" class="btn-primary text-sm">+ Add vaccine</button>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full">
@@ -83,7 +83,7 @@ use App\Modules\Vaccination\Models\PatientVaccination;
                                         <span class="text-slate-400">On-demand</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-2 text-right"><button type="button" @click="open({ id: @js($vac->id), name: @js($vac->name), code: @js($vac->code ?? ''), category: @js($vac->category), route: @js($vac->route), total_doses: {{ $vac->total_doses }}, dose_interval_days: {{ $vac->dose_interval_days ?: "''" }}, is_active: {{ $vac->is_active ? 'true' : 'false' }} })" class="text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
+                                <td class="px-4 py-2 text-right"><button type="button" @click="open({ id: @js($vac->id), name: @js($vac->name), code: @js($vac->code ?? ''), category: @js($vac->category), route: @js($vac->route), total_doses: {{ $vac->total_doses }}, dose_interval_days: {{ $vac->dose_interval_days ?: "''" }}, is_active: {{ $vac->is_active ? 'true' : 'false' }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
                             </tr>
                             @endforeach
                         </tbody>

@@ -76,7 +76,7 @@
                             <div class="flex items-center gap-3">
                                 <button type="button"
                                     @click="edit({ id: '{{ $pkg->id }}', name: @js($pkg->name), price: '{{ $pkg->price }}', description: @js($pkg->description ?? '') })"
-                                    class="text-xs text-slate-700 hover:text-slate-900 font-medium">Edit</button>
+                                    class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
                                 <form method="POST" action="{{ route('web.doctor.packages.toggle', $pkg->id) }}">
                                     @csrf
                                     <button class="text-xs text-blue-600 hover:text-blue-800 font-medium">{{ $pkg->is_active ? 'Hide' : 'Activate' }}</button>

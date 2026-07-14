@@ -112,7 +112,7 @@
 
     {{-- CATALOGUE --}}
     <div x-show="tab==='catalog'" style="display:none">
-        <div class="flex justify-end mb-3"><button type="button" @click="openDiet()" class="btn-secondary text-sm">+ Add diet</button></div>
+        <div class="flex justify-end mb-3"><button type="button" @click="openDiet()" class="btn-primary text-sm">+ Add diet</button></div>
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table class="w-full">
                 <thead class="bg-slate-50 border-b border-slate-200"><tr>
@@ -126,7 +126,7 @@
                         <td class="px-4 py-2.5 text-xs text-slate-600">{{ TD::TEXTURES[$d->default_texture] ?? $d->default_texture }}</td>
                         <td class="px-4 py-2.5 text-xs text-slate-600 text-center">{{ $d->default_kcal ?? '—' }} / {{ $d->default_protein_g ?? '—' }}g</td>
                         <td class="px-4 py-2.5 text-xs text-slate-500 max-w-xs truncate">{{ $d->restrictions ?? '—' }}</td>
-                        <td class="px-4 py-2.5 text-right"><button type="button" @click="openDiet({ id: @js($d->id), code: @js($d->code), name: @js($d->name), category: @js($d->category), default_texture: @js($d->default_texture), indications: @js($d->indications ?? ''), restrictions: @js($d->restrictions ?? ''), default_kcal: {{ $d->default_kcal ?: 'null' }}, default_protein_g: {{ $d->default_protein_g ?: 'null' }}, is_active: {{ $d->is_active ? 'true' : 'false' }} })" class="text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
+                        <td class="px-4 py-2.5 text-right"><button type="button" @click="openDiet({ id: @js($d->id), code: @js($d->code), name: @js($d->name), category: @js($d->category), default_texture: @js($d->default_texture), indications: @js($d->indications ?? ''), restrictions: @js($d->restrictions ?? ''), default_kcal: {{ $d->default_kcal ?: 'null' }}, default_protein_g: {{ $d->default_protein_g ?: 'null' }}, is_active: {{ $d->is_active ? 'true' : 'false' }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button></td>
                     </tr>
                     @endforeach
                 </tbody>

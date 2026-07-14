@@ -59,7 +59,7 @@
                         <div class="flex items-center gap-2">
                             <button type="button"
                                 @click="openEdit({ id:'{{ $med->id }}', name: @js($med->name), generic_name: @js($med->generic_name ?? ''), category: @js($med->category ?? ''), default_dosage: @js($med->default_dosage ?? ''), form: @js($med->form ?? 'tablet') })"
-                                class="text-blue-500 hover:text-blue-700 text-sm font-medium">Edit</button>
+                                class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
                             <form method="POST" action="{{ route('web.admin.medicines.delete', $med->id) }}" onsubmit="return confirm('Remove?')">
                                 @csrf @method('DELETE')
                                 <button class="text-red-400 hover:text-red-600 text-sm">Remove</button>

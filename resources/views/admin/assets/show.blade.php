@@ -89,7 +89,7 @@
                             </div>
                             <div class="flex items-center gap-2">
                                 <button type="button" @click="openRenew({ id:'{{ $w->id }}' })" class="text-green-600 hover:text-green-800 text-xs">Renew</button>
-                                <button type="button" @click="openWEdit({ id:'{{ $w->id }}', warranty_type: @js($w->warranty_type), start_date: '{{ optional($w->start_date)->toDateString() }}', end_date: '{{ optional($w->end_date)->toDateString() }}', vendor_contact: @js($w->vendor_contact ?? ''), terms: @js($w->terms ?? ''), reminder_days_before_expiry: {{ $w->reminder_days_before_expiry }} })" class="text-blue-500 hover:text-blue-700 text-xs">Edit</button>
+                                <button type="button" @click="openWEdit({ id:'{{ $w->id }}', warranty_type: @js($w->warranty_type), start_date: '{{ optional($w->start_date)->toDateString() }}', end_date: '{{ optional($w->end_date)->toDateString() }}', vendor_contact: @js($w->vendor_contact ?? ''), terms: @js($w->terms ?? ''), reminder_days_before_expiry: {{ $w->reminder_days_before_expiry }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
                                 <form method="POST" action="{{ route('web.admin.assets.warranties.destroy', $w->id) }}" onsubmit="return confirm('Remove this warranty?')">
                                     @csrf @method('DELETE')
                                     <button class="text-red-400 hover:text-red-600 text-xs">Remove</button>

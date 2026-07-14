@@ -45,7 +45,7 @@
         $hRev      = $revCounts[$h->id] ?? 0;
         $isCurrentHospital = auth()->user()?->hospital_id === $h->id;
     @endphp
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden {{ !$h->is_active ? 'opacity-50' : '' }} {{ $isCurrentHospital ? 'ring-2 ring-blue-400' : '' }}">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden {{ !$h->is_active ? 'opacity-50' : '' }}">
         {{-- Header --}}
         <div class="p-5 flex items-start justify-between">
             <div class="flex items-start gap-3">
@@ -58,9 +58,6 @@
                             <span class="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-bold rounded">ACTIVE</span>
                         @else
                             <span class="px-2 py-0.5 bg-red-100 text-red-800 text-xs font-bold rounded">INACTIVE</span>
-                        @endif
-                        @if($isCurrentHospital)
-                            <span class="px-2 py-0.5 bg-blue-500 text-white text-xs font-bold rounded">CURRENT</span>
                         @endif
                         <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-medium rounded">{{ $region['currency'] }} {{ $region['currency_code'] }}</span>
                     </div>
@@ -102,7 +99,7 @@
             <a href="{{ route('web.superadmin.hospitals.show', $h->id) }}" class="btn-primary text-xs px-3 py-1.5">Manage</a>
             <button type="button"
                 @click="openEdit({ id:'{{ $h->id }}', name: @js($h->name), slug: @js($h->slug), country: @js($h->country ?? 'IN'), city: @js($h->city ?? ''), state: @js($h->state ?? ''), address: @js($h->address ?? ''), phone: @js($h->phone ?? ''), email: @js($h->email ?? ''), is_active: {{ $h->is_active ? 'true' : 'false' }} })"
-                class="btn-secondary text-xs px-3 py-1.5">Edit</button>
+                class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
             @if($h->is_active && !$isCurrentHospital)
             <form method="POST" action="{{ route('web.superadmin.hospitals.delete', $h->id) }}" class="inline" onsubmit="return confirm('Deactivate this hospital?')">
                 @csrf @method('DELETE')

@@ -21,7 +21,7 @@
         <button type="button" @click="tab='movements'" :class="tab==='movements' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Movements</button>
         <button type="button" @click="tab='expiring'" :class="tab==='expiring' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600'" class="px-3 py-1.5 rounded-lg text-sm font-semibold">Expiring ({{ $counts['expiring'] }})</button>
         <div class="ml-auto flex gap-2">
-            <button type="button" @click="openItem()" class="btn-secondary text-sm">+ Add item</button>
+            <button type="button" @click="openItem()" class="btn-primary text-sm">+ Add item</button>
             <button type="button" @click="openMove('')" class="btn-primary">Record stock</button>
         </div>
     </div>
@@ -45,7 +45,7 @@
                         <td class="px-4 py-2.5 text-center text-xs text-slate-500">{{ $it->reorder_min }} / {{ $it->reorder_max }}</td>
                         <td class="px-4 py-2.5 text-right space-x-2">
                             <button type="button" @click="openMove(@js($it->id))" class="text-xs font-medium text-blue-600 hover:text-blue-800">Stock</button>
-                            <button type="button" @click="openItem({ id: @js($it->id), name: @js($it->name), code: @js($it->code ?? ''), category: @js($it->category), unit: @js($it->unit), reorder_min: {{ (int) $it->reorder_min }}, reorder_max: {{ (int) $it->reorder_max }}, current_stock: {{ (int) $it->current_stock }}, is_active: {{ $it->is_active ? 'true' : 'false' }} })" class="text-xs font-medium text-slate-500 hover:text-slate-700">Edit</button>
+                            <button type="button" @click="openItem({ id: @js($it->id), name: @js($it->name), code: @js($it->code ?? ''), category: @js($it->category), unit: @js($it->unit), reorder_min: {{ (int) $it->reorder_min }}, reorder_max: {{ (int) $it->reorder_max }}, current_stock: {{ (int) $it->current_stock }}, is_active: {{ $it->is_active ? 'true' : 'false' }} })" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
                         </td>
                     </tr>
                     @endforeach

@@ -127,7 +127,7 @@
                         </template>
                         <template x-if="!editing">
                             <td class="table-cell">
-                                <button @click="editing = true" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
+                                <button @click="editing = true" class="text-sm font-medium text-blue-600 hover:text-blue-800">Edit</button>
                             </td>
                         </template>
 
