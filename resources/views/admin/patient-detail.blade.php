@@ -227,9 +227,9 @@
                     <tr class="hover:bg-slate-50">
                         <td class="table-cell font-medium">{{ $bill->bill_number ?? '' }}</td>
                         <td class="table-cell">{{ $bill->created_at?->format('M d, Y') ?? '' }}</td>
-                        <td class="table-cell">₹{{ number_format($bill->total_amount ?? 0, 2) }}</td>
-                        <td class="table-cell">₹{{ number_format($bill->insurance_covered ?? 0, 2) }}</td>
-                        <td class="table-cell font-medium">₹{{ number_format($bill->patient_payable ?? 0, 2) }}</td>
+                        <td class="table-cell">{{ \App\Modules\Core\Services\RegionService::currency() }}{{ number_format($bill->total_amount ?? 0, 2) }}</td>
+                        <td class="table-cell">{{ \App\Modules\Core\Services\RegionService::currency() }}{{ number_format($bill->insurance_covered ?? 0, 2) }}</td>
+                        <td class="table-cell font-medium">{{ \App\Modules\Core\Services\RegionService::currency() }}{{ number_format($bill->patient_payable ?? 0, 2) }}</td>
                         <td class="table-cell">
                             <x-status-badge :status="$payStatus" type="payment" />
                         </td>

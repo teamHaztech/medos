@@ -200,7 +200,7 @@
                             :class="isReferred(t) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300'"
                             class="px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all">
                             <span x-text="t.name"></span>
-                            <span class="opacity-70" x-text="' · ₹' + t.price"></span>
+                            <span class="opacity-70" x-text="' · {{ \App\Modules\Core\Services\RegionService::currency() }}' + t.price"></span>
                         </button>
                     </template>
                     <p x-show="!filteredReferTests.length" class="text-sm text-slate-400 py-6">No tests available.</p>
@@ -208,7 +208,7 @@
             </div>
 
             <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between gap-3">
-                <p class="text-sm text-slate-600"><span class="font-semibold" x-text="referTests.length"></span> selected · <span class="font-semibold" x-text="'₹' + referTotal()"></span></p>
+                <p class="text-sm text-slate-600"><span class="font-semibold" x-text="referTests.length"></span> selected · <span class="font-semibold" x-text="'{{ \App\Modules\Core\Services\RegionService::currency() }}' + referTotal()"></span></p>
                 <div class="flex items-center gap-2">
                     <button type="button" @click="showReferLab = false" class="text-sm text-slate-500 hover:text-slate-700 px-3 py-2">Cancel</button>
                     <button type="button" @click="submitReferLab()" :disabled="!referTests.length" class="btn-primary px-5 py-2.5 disabled:opacity-40">Send to Lab</button>

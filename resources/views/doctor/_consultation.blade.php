@@ -93,7 +93,7 @@
                     <template x-for="t in filteredTests" :key="t.id">
                         <button @click="toggleTest(t)" :class="orders.find(o=>o.id===t.id)?getTestActiveClass(t.type):getTestClass(t.type)" class="px-2 py-1 rounded text-xs font-medium transition-all">
                             <span x-text="t.name"></span>
-                            <span class="text-[10px] opacity-60" x-text="t.price > 0 ? ' ₹'+t.price : ''"></span>
+                            <span class="text-[10px] opacity-60" x-text="t.price > 0 ? ' {{ \App\Modules\Core\Services\RegionService::currency() }}'+t.price : ''"></span>
                         </button>
                     </template>
                 </div>

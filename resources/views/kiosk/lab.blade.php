@@ -34,12 +34,12 @@
             <div class="max-h-[45vh] overflow-y-auto flex flex-wrap gap-2 content-start">
                 <template x-for="t in filteredTests" :key="t.name">
                     <button @click="toggle(t)" :class="picked(t) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200'" class="px-3 py-2 rounded-lg text-sm font-medium border text-left">
-                        <span x-text="t.name"></span> <span class="opacity-70" x-text="'₹' + t.price"></span>
+                        <span x-text="t.name"></span> <span class="opacity-70" x-text="'{{ \App\Modules\Core\Services\RegionService::currency() }}' + t.price"></span>
                     </button>
                 </template>
             </div>
             <div class="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-                <p class="text-sm text-slate-600"><span class="font-semibold" x-text="cart.length"></span> selected · <span class="font-semibold" x-text="'₹' + total()"></span></p>
+                <p class="text-sm text-slate-600"><span class="font-semibold" x-text="cart.length"></span> selected · <span class="font-semibold" x-text="'{{ \App\Modules\Core\Services\RegionService::currency() }}' + total()"></span></p>
                 <div class="flex gap-2">
                     <button @click="step = 1" class="text-sm text-slate-500 px-3 py-2">← Back</button>
                     <button @click="step = 3" :disabled="!cart.length" class="btn-primary px-5 py-2.5 disabled:opacity-40">Next →</button>
@@ -80,7 +80,7 @@
                 <p class="text-xs font-bold text-slate-400 uppercase">Your Lab Token</p>
                 <p class="text-4xl font-black text-indigo-600 my-1" x-text="result.token"></p>
                 <p class="text-sm text-slate-600" x-text="'🗓 ' + result.when"></p>
-                <p class="text-sm text-slate-600" x-text="'Total: ₹' + result.total"></p>
+                <p class="text-sm text-slate-600" x-text="'Total: {{ \App\Modules\Core\Services\RegionService::currency() }}' + result.total"></p>
             </div>
             <p class="text-sm text-slate-500 mb-5">Show this token at the lab / sample-collection counter.</p>
             <a href="{{ route('kiosk.index') }}" class="btn-primary inline-block px-8 py-3">Done</a>
