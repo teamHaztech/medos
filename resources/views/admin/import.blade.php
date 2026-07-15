@@ -89,7 +89,7 @@
                 <form method="POST" action="{{ route('web.admin.import.run', $type) }}"
                       enctype="multipart/form-data" class="flex items-center gap-2 shrink-0">
                     @csrf
-                    <input type="file" name="file" accept=".csv,text/csv" required
+                    <input type="file" name="file" accept=".csv,.xlsx,text/csv" required
                            class="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
                     <button type="submit" class="btn-primary text-xs px-3 py-1.5 whitespace-nowrap">Upload &amp; Import</button>
                 </form>

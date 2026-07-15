@@ -27,7 +27,7 @@
                 @csrf
                 <label class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer">
                     Import CSV
-                    <input type="file" name="file" accept=".csv,text/csv" class="hidden" onchange="if(this.files.length){this.form.submit()}">
+                    <input type="file" name="file" accept=".csv,.xlsx,text/csv" class="hidden" onchange="if(this.files.length){this.form.submit()}">
                 </label>
             </form>
             <a href="{{ route('web.admin.assets.export') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">⤒ Export CSV</a>

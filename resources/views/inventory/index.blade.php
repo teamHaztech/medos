@@ -217,7 +217,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Upload CSV file</label>
-                <input type="file" name="file" accept=".csv,.txt" class="block w-full text-sm text-slate-600 border border-slate-300 rounded-lg p-2">
+                <input type="file" name="file" accept=".csv,.txt,.xlsx" class="block w-full text-sm text-slate-600 border border-slate-300 rounded-lg p-2">
             </div>
             <div class="text-center text-xs text-slate-400">— or paste rows below —</div>
             <div>

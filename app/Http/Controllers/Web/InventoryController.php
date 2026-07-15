@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Modules\Core\Support\SpreadsheetReader;
 use App\Modules\Inventory\Models\InventoryItem;
 use App\Modules\Inventory\Models\StockMovement;
 use Illuminate\Http\Request;
@@ -191,7 +192,21 @@ class InventoryController extends Controller
 
         $raw = '';
         if ($request->hasFile('file')) {
-            $raw = (string) file_get_contents($request->file('file')->getRealPath());
+            $file = $request->file('file');
+            if (strtolower((string) $file->getClientOriginalExtension()) === 'xlsx') {
+                // Convert the sheet to CSV text so the existing parser handles it unchanged.
+                $parsed = SpreadsheetReader::read($file->getRealPath(), $file->getClientOriginalName());
+                $mem = fopen('php://temp', 'r+');
+                fputcsv($mem, $parsed['headers'], ',', '"', '');
+                foreach ($parsed['rows'] as $r) {
+                    fputcsv($mem, array_map(fn ($h) => $r[$h] ?? '', $parsed['headers']), ',', '"', '');
+                }
+                rewind($mem);
+                $raw = (string) stream_get_contents($mem);
+                fclose($mem);
+            } else {
+                $raw = (string) file_get_contents($file->getRealPath());
+            }
         } elseif ($request->filled('rows')) {
             $raw = (string) $request->input('rows');
         }

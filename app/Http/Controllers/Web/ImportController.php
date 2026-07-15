@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Core\Support\SpreadsheetReader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -90,31 +91,21 @@ class ImportController extends Controller
         abort_unless(isset(self::COLUMNS[$type]), 404);
 
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:5120', // 5 MB
+            'file' => 'required|file|mimes:csv,txt,xlsx|max:5120', // 5 MB
         ]);
 
-        $spec  = self::COLUMNS[$type];
-        $path  = $request->file('file')->getRealPath();
-        $handle = fopen($path, 'r');
-        if ($handle === false) {
-            return back()->with('error', 'Could not read the uploaded file.');
-        }
+        $spec = self::COLUMNS[$type];
 
-        // Header row -> normalised keys.
-        $header = fgetcsv($handle);
-        if ($header === false) {
-            fclose($handle);
+        // Parse CSV or XLSX into header-keyed rows (headers normalised to snake_case).
+        $file   = $request->file('file');
+        $parsed = SpreadsheetReader::read($file->getRealPath(), $file->getClientOriginalName());
+        $header = $parsed['headers'];
+        if ($header === []) {
             return back()->with('error', 'The file is empty.');
-        }
-        $header = array_map(fn ($h) => Str::of($h)->trim()->lower()->replace(' ', '_')->value(), $header);
-        // Strip a UTF-8 BOM off the first header cell if present.
-        if (isset($header[0])) {
-            $header[0] = preg_replace('/^\x{FEFF}/u', '', $header[0]);
         }
 
         $missing = array_diff(array_keys(array_filter($spec)), $header);
         if (! empty($missing)) {
-            fclose($handle);
             return back()->with('error', 'Missing required column(s): ' . implode(', ', $missing) . '. Download the template.');
         }
 
@@ -124,16 +115,8 @@ class ImportController extends Controller
         $errors   = [];
         $line     = 1;
 
-        while (($data = fgetcsv($handle)) !== false) {
+        foreach ($parsed['rows'] as $row) {
             $line++;
-            if (count(array_filter($data, fn ($c) => trim((string) $c) !== '')) === 0) {
-                continue; // blank line
-            }
-
-            $row = [];
-            foreach ($header as $i => $key) {
-                $row[$key] = isset($data[$i]) ? trim((string) $data[$i]) : '';
-            }
             // Ensure every known column exists so handlers can read optional
             // fields even when the uploaded file omits those columns.
             foreach (array_keys($spec) as $col) {
@@ -169,8 +152,6 @@ class ImportController extends Controller
                 $errors[] = "Row {$line}: skipped ({$result})";
             }
         }
-
-        fclose($handle);
 
         $msg = "Imported {$imported} " . str_replace('_', ' ', $type) . ($skipped ? ", skipped {$skipped}" : '') . '.';
         return back()

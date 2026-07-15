@@ -9,6 +9,7 @@ use App\Modules\Asset\Models\AssetMaintenanceLog;
 use App\Modules\Asset\Models\AssetServiceRequest;
 use App\Modules\Asset\Models\AssetWarranty;
 use App\Modules\Asset\Models\Vendor;
+use App\Modules\Core\Support\SpreadsheetReader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -553,24 +554,15 @@ class AssetController extends Controller
     {
         $hid = $this->hid();
 
-        $request->validate(['file' => 'required|file|mimes:csv,txt|max:5120']);
+        $request->validate(['file' => 'required|file|mimes:csv,txt,xlsx|max:5120']);
 
-        $handle = fopen($request->file('file')->getRealPath(), 'r');
-        if ($handle === false) {
-            return back()->with('error', 'Could not read the uploaded file.');
-        }
-
-        $header = fgetcsv($handle);
-        if ($header === false) {
-            fclose($handle);
+        // Parse CSV or XLSX into header-keyed rows (headers normalised to snake_case).
+        $file   = $request->file('file');
+        $parsed = SpreadsheetReader::read($file->getRealPath(), $file->getClientOriginalName());
+        if ($parsed['headers'] === []) {
             return back()->with('error', 'The file is empty.');
         }
-        $header = array_map(fn ($h) => Str::of($h)->trim()->lower()->replace(' ', '_')->value(), $header);
-        if (isset($header[0])) {
-            $header[0] = preg_replace('/^\x{FEFF}/u', '', $header[0]); // strip UTF-8 BOM
-        }
-        if (! in_array('asset_name', $header, true)) {
-            fclose($handle);
+        if (! in_array('asset_name', $parsed['headers'], true)) {
             return back()->with('error', 'Missing required column: asset_name. Download the template.');
         }
 
@@ -582,16 +574,8 @@ class AssetController extends Controller
         $errors   = [];
         $line     = 1;
 
-        while (($data = fgetcsv($handle)) !== false) {
+        foreach ($parsed['rows'] as $row) {
             $line++;
-            if (count(array_filter($data, fn ($c) => trim((string) $c) !== '')) === 0) {
-                continue; // blank line
-            }
-
-            $row = [];
-            foreach ($header as $i => $key) {
-                $row[$key] = isset($data[$i]) ? trim((string) $data[$i]) : '';
-            }
 
             $name = $row['asset_name'] ?? '';
             if ($name === '') {
@@ -638,8 +622,6 @@ class AssetController extends Controller
                 $errors[] = "Row {$line}: " . $e->getMessage();
             }
         }
-
-        fclose($handle);
 
         $msg = "Imported {$imported} asset(s)" . ($skipped ? ", skipped {$skipped}" : '') . '.';
 
