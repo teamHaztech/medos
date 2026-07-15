@@ -1507,6 +1507,7 @@ class AdminWebController extends Controller
             'department'                    => 'nullable|string|max:100',
             'specialization'                => 'nullable|string|max:100',
             'qualification'                 => 'nullable|string|max:255',
+            'hpr_id'                        => 'nullable|string|max:60',
             'consultation_duration_default' => 'nullable|integer|min:5|max:120',
             'password'                      => 'nullable|string|min:6',
         ]);
@@ -1526,6 +1527,7 @@ class AdminWebController extends Controller
             'department'                    => $v['department'] ?? null,
             'specialization'                => $v['specialization'] ?? null,
             'qualification'                 => $v['qualification'] ?? null,
+            'hpr_id'                        => $v['hpr_id'] ?? null,
             'consultation_duration_default' => $v['consultation_duration_default'] ?? 15,
             'is_active'                     => true,
             'created_at'                    => now(),
@@ -1722,6 +1724,7 @@ class AdminWebController extends Controller
             'department'                    => 'nullable|string|max:100',
             'specialization'                => 'nullable|string|max:100',
             'qualification'                 => 'nullable|string|max:255',
+            'hpr_id'                        => 'nullable|string|max:60',
             'consultation_duration_default' => 'nullable|integer|min:5|max:120',
         ]);
 
@@ -1733,6 +1736,7 @@ class AdminWebController extends Controller
             'department'                    => $v['department'] ?? null,
             'specialization'                => $v['specialization'] ?? null,
             'qualification'                 => $v['qualification'] ?? null,
+            'hpr_id'                        => $v['hpr_id'] ?? null,
             'consultation_duration_default' => $v['consultation_duration_default'] ?? 15,
             'updated_at'                    => now(),
         ]);

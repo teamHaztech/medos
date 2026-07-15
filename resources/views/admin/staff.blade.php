@@ -139,6 +139,7 @@
                                     department: @js($member->department ?? ''),
                                     specialization: @js($member->specialization ?? ''),
                                     qualification: @js($member->qualification ?? ''),
+                                    hpr_id: @js($member->hpr_id ?? ''),
                                     consultation_duration_default: {{ $member->consultation_duration_default ?? 15 }}
                                 })" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100">Edit</button>
                                 <form method="POST" action="{{ route('web.admin.staff.reset-password', $member->id) }}" onsubmit="return confirm('Generate a new password for {{ $member->name }}? You will see the new password to share.')">
@@ -218,6 +219,10 @@
                         <label class="block text-sm font-medium text-slate-700 mb-1">Qualification</label>
                         <input type="text" name="qualification" x-model="editingStaff.qualification" class="input-field">
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">HPR ID <span class="text-xs text-slate-400 font-normal">(ABDM practitioner registry)</span></label>
+                        <input type="text" name="hpr_id" x-model="editingStaff.hpr_id" class="input-field" placeholder="e.g. 71-2233-4455-6677">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Consultation Duration (minutes)</label>
@@ -274,6 +279,10 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Qualification</label>
                         <input type="text" name="qualification" class="input-field" placeholder="e.g. MBBS, MD">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">HPR ID <span class="text-xs text-slate-400 font-normal">(ABDM practitioner registry)</span></label>
+                        <input type="text" name="hpr_id" class="input-field" placeholder="Optional — add once registered on HPR">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -353,6 +362,7 @@ function staffPage() {
                 department: member.department || '',
                 specialization: member.specialization || '',
                 qualification: member.qualification || '',
+                hpr_id: member.hpr_id || '',
                 consultation_duration_default: member.consultation_duration_default || 15,
             };
             this.showEditModal = true;
