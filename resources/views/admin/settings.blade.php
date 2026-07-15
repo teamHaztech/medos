@@ -237,6 +237,57 @@
         </form>
     </div>
 
+    {{-- ABDM / ABHA (India national health stack) --}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        <div class="flex items-start justify-between mb-4">
+            <div>
+                <h3 class="text-base font-semibold text-slate-800">ABDM / ABHA Integration</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Ayushman Bharat Digital Mission — HIP/HIU linking, ABHA create/verify, HFR facility &amp; HPR practitioner registry. Enter your ABDM credentials once your gateway access is approved.</p>
+            </div>
+            @if($abdmCfg['connected'])
+                <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold whitespace-nowrap">Connected · {{ ucfirst($abdmCfg['environment']) }}</span>
+            @else
+                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold whitespace-nowrap">Not connected · Simulated</span>
+            @endif
+        </div>
+        <form method="POST" action="{{ route('web.admin.settings.abdm') }}" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            @csrf
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Environment</label>
+                <select name="environment" class="input-field">
+                    <option value="sandbox" {{ $abdmCfg['environment'] === 'sandbox' ? 'selected' : '' }}>Sandbox</option>
+                    <option value="production" {{ $abdmCfg['environment'] === 'production' ? 'selected' : '' }}>Production</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">ABDM Gateway Base URL</label>
+                <input type="url" name="base_url" value="{{ $abdmCfg['base_url'] }}" maxlength="255" class="input-field" placeholder="https://dev.abdm.gov.in">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">HFR Facility ID</label>
+                <input type="text" name="hfr_id" value="{{ $abdmCfg['hfr_id'] }}" maxlength="60" class="input-field" placeholder="e.g. IN0710000123">
+                <p class="text-[11px] text-slate-400 mt-1">Required before HIP record-linking works.</p>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Facility Name (as registered on HFR)</label>
+                <input type="text" name="hfr_name" value="{{ $abdmCfg['hfr_name'] }}" maxlength="150" class="input-field" placeholder="{{ $hospital->name ?? '' }}">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Client ID</label>
+                <input type="text" name="client_id" value="{{ $abdmCfg['client_id'] }}" maxlength="120" class="input-field" placeholder="ABDM client id" autocomplete="off">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Client Secret</label>
+                <input type="password" name="client_secret" class="input-field" placeholder="{{ $abdmCfg['hasSecret'] ? '•••••••• saved' : 'ABDM client secret' }}" autocomplete="new-password">
+                <p class="text-[11px] text-slate-400 mt-1">Stored encrypted. Leave blank to keep the existing secret.</p>
+            </div>
+            <div class="sm:col-span-2 flex items-center gap-3">
+                <button type="submit" class="btn-primary text-sm">Save ABDM settings</button>
+                <span class="text-xs text-slate-400">Until connected, ABHA/HIP/HIU actions run in <strong>simulated</strong> mode — nothing is sent to ABDM.</span>
+            </div>
+        </form>
+    </div>
+
     {{-- Department Add/Edit modal --}}
     <x-modal show="deptModal" title-expr="deptIndex === -1 ? 'Add Department' : 'Edit Department'" max="md">
         <div class="space-y-4">

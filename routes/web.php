@@ -68,6 +68,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
         Route::post('settings/gst', [AdminWebController::class, 'saveGstDetails'])->name('settings.gst');
         Route::post('settings/ai', [AdminWebController::class, 'saveAiSettings'])->name('settings.ai');
         Route::post('settings/whatsapp', [AdminWebController::class, 'saveWhatsappSettings'])->name('settings.whatsapp');
+        Route::post('settings/abdm', [AdminWebController::class, 'saveAbdmSettings'])->name('settings.abdm');
         Route::post('settings/billing-integration', [AdminWebController::class, 'saveBillingIntegration'])->name('settings.billing-integration');
         Route::post('settings/billing-integration/test', [AdminWebController::class, 'testBillingIntegration'])->name('settings.billing-integration.test');
         Route::get('activity', [AdminWebController::class, 'activityLog'])->name('activity');

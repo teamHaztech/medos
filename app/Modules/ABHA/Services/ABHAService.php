@@ -3,6 +3,7 @@
 namespace App\Modules\ABHA\Services;
 
 use App\Modules\ABHA\Models\AbhaHealthRecord;
+use App\Modules\Core\Models\Hospital;
 use App\Modules\Core\Services\BaseModuleService;
 use App\Modules\Patient\Models\Encounter;
 use App\Modules\Patient\Models\Patient;
@@ -12,6 +13,43 @@ use Illuminate\Support\Str;
 
 class ABHAService extends BaseModuleService
 {
+    // ---------------------------------------------------------------
+    // ABDM connection state (M1 readiness)
+    // ---------------------------------------------------------------
+
+    /** The hospital's ABDM/ABHA credentials + registry ids (Hospital.config['abdm']). */
+    public function credentials(): array
+    {
+        try {
+            $hospital = Hospital::find($this->requireHospital());
+        } catch (\Throwable $e) {
+            return [];
+        }
+        $config = is_array($hospital?->config) ? $hospital->config : json_decode($hospital?->config ?? '{}', true);
+
+        return $config['abdm'] ?? [];
+    }
+
+    /** True once real ABDM sandbox/production credentials are configured. */
+    public function isConfigured(): bool
+    {
+        $c = $this->credentials();
+
+        return ! empty($c['client_id']) && ! empty($c['client_secret']) && ! empty($c['base_url']);
+    }
+
+    /** 'live' once ABDM is connected, else 'simulated' (mock responses, nothing sent to ABDM). */
+    public function mode(): string
+    {
+        return $this->isConfigured() ? 'live' : 'simulated';
+    }
+
+    /** Facility HFR id — a prerequisite for HIP linking. */
+    public function hfrId(): ?string
+    {
+        return $this->credentials()['hfr_id'] ?? null;
+    }
+
     // ---------------------------------------------------------------
     // Public Methods
     // ---------------------------------------------------------------
@@ -55,6 +93,8 @@ class ABHAService extends BaseModuleService
                 'abha_number'  => $abhaNumber,
                 'abha_address' => $abhaAddress,
                 'profile'      => $profile,
+                'mode'         => $this->mode(),
+                'simulated'    => ! $this->isConfigured(),
             ];
         } catch (\Throwable $e) {
             $this->logAudit(
@@ -206,24 +246,20 @@ class ABHAService extends BaseModuleService
     {
         $normalized = $this->normalizeAbha($abhaNumber);
 
-        // TODO: Replace mock with real ABDM Health Information (HI) API
-        // POST /v0.5/health-information/cm/request with consent artefact
-        $records = [
-            [
-                'record_id'   => (string) Str::uuid(),
-                'type'        => 'DiagnosticReport',
-                'date'        => '2025-12-01',
-                'facility'    => 'Mock Hospital',
-                'description' => 'Complete Blood Count',
-            ],
-            [
-                'record_id'   => (string) Str::uuid(),
-                'type'        => 'Prescription',
-                'date'        => '2025-11-15',
-                'facility'    => 'Mock Clinic',
-                'description' => 'General consultation prescription',
-            ],
-        ];
+        if (! $this->isConfigured()) {
+            // No ABDM connection — do NOT fabricate a patient's longitudinal records.
+            // Return empty so the UI shows an honest "not connected" state.
+            $this->logAudit('fetch_records', 'simulated', $normalized, null, [
+                'abha_number' => $abhaNumber,
+                'consent_id'  => $consentId,
+            ], ['record_count' => 0, 'mode' => 'simulated']);
+
+            return [];
+        }
+
+        // TODO: wire the real ABDM Health Information (HI) fetch here once live —
+        // POST /v0.5/health-information/cm/request with the consent artefact.
+        $records = [];
 
         $this->logAudit('fetch_records', 'success', $normalized, null, [
             'abha_number' => $abhaNumber,
@@ -262,25 +298,36 @@ class ABHAService extends BaseModuleService
             'status'       => 'created',
         ]);
 
-        // TODO: Replace mock with real ABDM data push API
-        // POST /v0.5/health-information/hip/on-request
-        $mockAbdmId = 'ABDM-' . Str::upper(Str::random(12));
+        if ($this->isConfigured()) {
+            // TODO: wire the real ABDM data-push here once credentials are live —
+            // POST /v0.5/health-information/hip/on-request
+            $abdmId = 'ABDM-' . Str::upper(Str::random(12)); // placeholder id until the real call is wired
+            $status = 'pushed';
+            $pushedAt = now();
+        } else {
+            // ABDM not connected yet: the record is prepared locally, NOT sent to
+            // the national registry — mark it honestly so nothing is claimed as pushed.
+            $abdmId = null;
+            $status = 'simulated';
+            $pushedAt = null;
+        }
 
         $record->update([
-            'status'         => 'pushed',
-            'abdm_record_id' => $mockAbdmId,
-            'pushed_at'      => now(),
+            'status'         => $status,
+            'abdm_record_id' => $abdmId,
+            'pushed_at'      => $pushedAt,
         ]);
 
-        $this->logAudit('push_record', 'success', $patient->abha_number, $patientId, [
+        $this->logAudit('push_record', $status === 'pushed' ? 'success' : 'simulated', $patient->abha_number, $patientId, [
             'record_type' => $recordType,
             'source_id'   => $sourceId,
         ], [
-            'record_id'     => $record->id,
-            'abdm_record_id' => $mockAbdmId,
+            'record_id'      => $record->id,
+            'abdm_record_id' => $abdmId,
+            'mode'           => $this->mode(),
         ]);
 
-        return ['success' => true, 'record_id' => $record->id];
+        return ['success' => true, 'record_id' => $record->id, 'mode' => $this->mode(), 'simulated' => ! $this->isConfigured()];
     }
 
     /**

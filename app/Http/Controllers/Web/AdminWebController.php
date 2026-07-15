@@ -706,6 +706,17 @@ class AdminWebController extends Controller
             'bill.cancelled' => 'Cancelled',
         ];
 
+        $abdmRaw = $cfg['abdm'] ?? [];
+        $abdmCfg = [
+            'environment' => $abdmRaw['environment'] ?? 'sandbox',
+            'base_url'    => $abdmRaw['base_url'] ?? '',
+            'hfr_id'      => $abdmRaw['hfr_id'] ?? '',
+            'hfr_name'    => $abdmRaw['hfr_name'] ?? '',
+            'client_id'   => $abdmRaw['client_id'] ?? '',
+            'hasSecret'   => ! empty($abdmRaw['client_secret']),
+            'connected'   => ! empty($abdmRaw['client_id']) && ! empty($abdmRaw['client_secret']) && ! empty($abdmRaw['base_url']),
+        ];
+
         // Super admins get a hospital picker so they choose which hospital they
         // are configuring instead of silently editing whichever one is oldest.
         $isSuperAdmin = $this->actingIsSuperAdmin();
@@ -713,7 +724,7 @@ class AdminWebController extends Controller
             ? Hospital::orderBy('name')->get(['id', 'name', 'is_active'])
             : collect();
 
-        return view('admin.settings', compact('hospital', 'moduleList', 'departments', 'areas', 'gst', 'aiCfg', 'waCfg', 'biCfg', 'biEvents', 'isSuperAdmin', 'manageHospitals'));
+        return view('admin.settings', compact('hospital', 'moduleList', 'departments', 'areas', 'gst', 'aiCfg', 'waCfg', 'biCfg', 'biEvents', 'abdmCfg', 'isSuperAdmin', 'manageHospitals'));
     }
 
     /** Persist the hospital's GST identity (GSTIN + state) for tax invoices. */
@@ -892,6 +903,38 @@ class AdminWebController extends Controller
         $hospital->update(['config' => $config]);
 
         return response()->json(['success' => true, 'message' => 'WhatsApp settings saved.']);
+    }
+
+    /** Persist the hospital's ABDM / ABHA connection config (M1 readiness). */
+    public function saveAbdmSettings(Request $request)
+    {
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
+        $v = $request->validate([
+            'environment'   => 'required|in:sandbox,production',
+            'base_url'      => 'nullable|url|max:255',
+            'hfr_id'        => 'nullable|string|max:60',
+            'hfr_name'      => 'nullable|string|max:150',
+            'client_id'     => 'nullable|string|max:120',
+            'client_secret' => 'nullable|string|max:500',
+        ]);
+
+        $config = is_array($hospital->config) ? $hospital->config : json_decode($hospital->config ?? '{}', true);
+        $abdm = $config['abdm'] ?? [];
+
+        $abdm['environment'] = $v['environment'];
+        $abdm['base_url']    = $v['base_url'] ?? ($abdm['base_url'] ?? '');
+        $abdm['hfr_id']      = $v['hfr_id'] ?? ($abdm['hfr_id'] ?? '');
+        $abdm['hfr_name']    = $v['hfr_name'] ?? ($abdm['hfr_name'] ?? '');
+        $abdm['client_id']   = $v['client_id'] ?? ($abdm['client_id'] ?? '');
+        // Secret is write-only: only overwrite when a new value is supplied, and store encrypted.
+        if (! empty($v['client_secret'])) {
+            $abdm['client_secret'] = encrypt($v['client_secret']);
+        }
+
+        $config['abdm'] = $abdm;
+        $hospital->update(['config' => $config]);
+
+        return back()->with('success', 'ABDM / ABHA settings saved.');
     }
 
     /** Persist the hospital's external billing-software integration config. */
