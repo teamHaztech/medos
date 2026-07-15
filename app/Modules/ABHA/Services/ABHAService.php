@@ -498,37 +498,20 @@ class ABHAService extends BaseModuleService
      */
     private function toFhirBundle(string $recordType, array $data): array
     {
-        // TODO: Replace with proper FHIR R4 bundle generation using a FHIR library
-        $resourceTypeMap = [
-            'encounter'         => 'Encounter',
-            'prescription'      => 'MedicationRequest',
-            'lab_result'        => 'DiagnosticReport',
-            'discharge_summary' => 'Composition',
-            'diagnostic_report' => 'DiagnosticReport',
-            'immunization'      => 'Immunization',
-        ];
+        // Real FHIR R4 document bundle, enriched with the facility's HFR identity.
+        $creds = $this->credentials();
+        $data['organization'] = array_merge([
+            'name'   => $creds['hfr_name'] ?? null,
+            'hfr_id' => $creds['hfr_id'] ?? null,
+        ], $data['organization'] ?? []);
 
-        $fhirResourceType = $resourceTypeMap[$recordType] ?? 'DocumentReference';
+        return (new FhirBundleBuilder())->build($recordType, $data);
+    }
 
-        return [
-            'resourceType' => 'Bundle',
-            'type'         => 'collection',
-            'timestamp'    => now()->toIso8601String(),
-            'entry'        => [
-                [
-                    'fullUrl'  => 'urn:uuid:' . Str::uuid(),
-                    'resource' => [
-                        'resourceType' => $fhirResourceType,
-                        'status'       => 'final',
-                        'meta'         => [
-                            'lastUpdated' => now()->toIso8601String(),
-                            'source'      => 'MedOS',
-                        ],
-                        'data' => $data,
-                    ],
-                ],
-            ],
-        ];
+    /** ABDM gateway transport for this hospital (session token + authed requests). */
+    public function gateway(): AbdmGateway
+    {
+        return AbdmGateway::for($this->requireHospital());
     }
 
     /**
