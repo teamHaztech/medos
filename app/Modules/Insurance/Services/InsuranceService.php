@@ -400,27 +400,21 @@ class InsuranceService extends BaseModuleService
     {
         $this->logInfo('Parsing insurance card image', ['path' => $imagePath]);
 
-        // TODO: Replace stub with actual OCR integration
-        // Example integration points:
-        // - Google Cloud Vision API
-        // - AWS Textract
-        // - Azure Computer Vision
-        // - Tesseract OCR (on-premise)
-
-        // Stub: return example structured data
+        // TODO: integrate a real OCR provider (Google Cloud Vision / AWS Textract
+        // / Azure Computer Vision / Tesseract). Until then, do NOT fabricate a
+        // policy — return an unparsed result so staff enter the details manually
+        // rather than being shown an invented member/policy number.
         return [
-            'insurer_name'    => 'Daman Health Insurance',
-            'insurer_code'    => 'daman',
-            'plan_name'       => 'Enhanced Plan - Network B',
-            'member_id'       => 'DMN-' . rand(100000, 999999),
-            'policy_number'   => 'POL-' . rand(100000, 999999),
-            'member_name'     => 'Extracted from card',
-            'expiry_date'     => now()->addYear()->format('Y-m-d'),
-            'network'         => 'B',
-            'copay'           => '20%',
-            'confidence'      => 0.85,
-            'raw_text'        => 'Stub OCR output - replace with real extraction',
-            'ocr_provider'    => 'stub',
+            'parsed'        => false,
+            'ocr_provider'  => 'none',
+            'message'       => 'Automatic card scanning is not configured — please enter the insurance details manually.',
+            'insurer_name'  => null,
+            'insurer_code'  => null,
+            'plan_name'     => null,
+            'member_id'     => null,
+            'policy_number' => null,
+            'member_name'   => null,
+            'expiry_date'   => null,
         ];
     }
 

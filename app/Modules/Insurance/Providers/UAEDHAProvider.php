@@ -29,6 +29,10 @@ class UAEDHAProvider extends BaseInsuranceProvider
             'member_id' => $insuranceDetails['member_id'] ?? null,
         ]);
 
+        if (! $this->isConfigured()) {
+            return $this->notConnected('eligibility');
+        }
+
         // TODO: Replace stub with real DHA API call
         // Real implementation would POST to {endpoint}/eligibility
         // with DHA-specific XML/JSON payload format
@@ -85,6 +89,10 @@ class UAEDHAProvider extends BaseInsuranceProvider
             'encounter_id' => $data['encounter_id'] ?? null,
         ]);
 
+        if (! $this->isConfigured()) {
+            return $this->notConnected('pre-authorization');
+        }
+
         // TODO: Replace stub with real DHA pre-auth API call
         // Real implementation would POST to {endpoint}/preauth
         $requestPayload = $this->buildPreAuthPayload($data);
@@ -125,6 +133,10 @@ class UAEDHAProvider extends BaseInsuranceProvider
             'encounter_id' => $data['encounter_id'] ?? null,
         ]);
 
+        if (! $this->isConfigured()) {
+            return $this->notConnected('claim');
+        }
+
         // TODO: Replace stub with real DHA claim submission API call
         // Real implementation would POST to {endpoint}/claims
         $requestPayload = $this->buildClaimPayload($data);
@@ -160,6 +172,10 @@ class UAEDHAProvider extends BaseInsuranceProvider
     public function checkStatus(string $referenceId): array
     {
         $this->log('info', 'Checking DHA transaction status', ['reference_id' => $referenceId]);
+
+        if (! $this->isConfigured()) {
+            return $this->notConnected('status check');
+        }
 
         // TODO: Replace stub with real DHA status check API call
         // Real implementation would GET {endpoint}/status/{referenceId}

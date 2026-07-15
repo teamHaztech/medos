@@ -35,6 +35,10 @@ class IndiaTPAProvider extends BaseInsuranceProvider
             'member_id' => $insuranceDetails['member_id'] ?? null,
         ]);
 
+        if (! $this->isConfigured()) {
+            return $this->notConnected('eligibility');
+        }
+
         // TODO: Replace stubs with real TPA API calls
         // Each TPA (MediAssist, Paramount, Vidal Health) has its own API format.
         // PMJAY uses the National Health Authority (NHA) API.
@@ -95,6 +99,10 @@ class IndiaTPAProvider extends BaseInsuranceProvider
             'encounter_id' => $data['encounter_id'] ?? null,
         ]);
 
+        if (! $this->isConfigured()) {
+            return $this->notConnected('pre-authorization');
+        }
+
         // TODO: Replace stub with real TPA cashless authorization API call
         // Cashless flow: Hospital submits pre-auth -> TPA reviews -> approves/denies
         // MediAssist uses REST API, Paramount uses SOAP, etc.
@@ -137,6 +145,10 @@ class IndiaTPAProvider extends BaseInsuranceProvider
             'encounter_id' => $data['encounter_id'] ?? null,
         ]);
 
+        if (! $this->isConfigured()) {
+            return $this->notConnected('claim');
+        }
+
         // TODO: Replace stub with real TPA claim API call
 
         try {
@@ -173,6 +185,10 @@ class IndiaTPAProvider extends BaseInsuranceProvider
             'tpa'          => $this->tpaCode,
             'reference_id' => $referenceId,
         ]);
+
+        if (! $this->isConfigured()) {
+            return $this->notConnected('status check');
+        }
 
         // TODO: Replace stub with real TPA status API call
 
@@ -218,6 +234,10 @@ class IndiaTPAProvider extends BaseInsuranceProvider
         $this->log('info', 'Verifying PMJAY eligibility via NHA API', [
             'abha_id' => $insuranceDetails['abha_id'] ?? $insuranceDetails['member_id'] ?? null,
         ]);
+
+        if (! $this->isConfigured()) {
+            return $this->notConnected('PMJAY eligibility');
+        }
 
         // TODO: Replace stub with real NHA/PMJAY API call
         // NHA API endpoint: https://pmjay.gov.in/api/v1/verify

@@ -44,6 +44,36 @@ abstract class BaseInsuranceProvider
     abstract public function checkStatus(string $referenceId): array;
 
     /**
+     * True once the provider has real API credentials (endpoint + key).
+     * Subclasses set protected $endpoint / $apiKey in their constructors.
+     */
+    public function isConfigured(): bool
+    {
+        return ! empty($this->endpoint ?? '') && ! empty($this->apiKey ?? '');
+    }
+
+    /**
+     * Honest response when the provider is NOT connected — never claims a fake
+     * eligibility/approval. Callers should surface "recorded for manual
+     * processing" instead of a verified/approved result.
+     */
+    protected function notConnected(string $action): array
+    {
+        $this->log('info', "Insurance {$action} requested but provider not connected — returning simulated result", []);
+
+        return [
+            'eligible'  => null,
+            'verified'  => false,
+            'approved'  => false,
+            'status'    => 'not_connected',
+            'simulated' => true,
+            'message'   => 'Insurance provider is not connected. Details recorded for manual verification by billing.',
+            'reference' => null,
+            'benefits'  => [],
+        ];
+    }
+
+    /**
      * Log a provider-level message.
      */
     protected function log(string $level, string $message, array $context = []): void
