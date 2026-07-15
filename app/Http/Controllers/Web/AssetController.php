@@ -577,6 +577,12 @@ class AssetController extends Controller
         foreach ($parsed['rows'] as $row) {
             $line++;
 
+            // Backfill every column read below so a file that omits optional
+            // columns doesn't trip an "undefined array key" error.
+            foreach (['asset_type', 'serial_number', 'model', 'manufacturer', 'department', 'location', 'purchase_date', 'purchase_cost', 'useful_life_years', 'salvage_value', 'vendor', 'status', 'notes'] as $k) {
+                $row[$k] = $row[$k] ?? '';
+            }
+
             $name = $row['asset_name'] ?? '';
             if ($name === '') {
                 $errors[] = "Row {$line}: missing asset_name";
