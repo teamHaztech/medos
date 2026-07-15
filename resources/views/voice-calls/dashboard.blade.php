@@ -167,17 +167,7 @@
     @endphp
 
     @foreach($kpis as $kpi)
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-{{ $kpi['accent'] }}-100 text-{{ $kpi['accent'] }}-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $kpi['icon'] }}"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-2xl font-bold text-slate-800 mt-3">{{ $kpi['value'] }}</p>
-            <p class="text-xs text-slate-500 mt-0.5">{{ $kpi['label'] }}</p>
-        </div>
+        <x-stat-card :label="$kpi['label']" :value="$kpi['value']" :accent="$kpi['accent']" :icon="$kpi['icon']" />
     @endforeach
 </div>
 

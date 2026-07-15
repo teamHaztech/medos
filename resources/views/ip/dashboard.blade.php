@@ -16,26 +16,13 @@
 
     {{-- KPIs --}}
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Inpatients</p>
-            <p class="text-3xl font-bold text-slate-800 mt-1">{{ $stats['inpatients'] }}</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Beds</p>
-            <p class="text-3xl font-bold text-slate-800 mt-1">{{ $stats['total_beds'] }}</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Available</p>
-            <p class="text-3xl font-bold text-green-600 mt-1">{{ $stats['available'] }}</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Occupancy</p>
-            <p class="text-3xl font-bold {{ $stats['occupancy_pct'] >= 85 ? 'text-red-600' : 'text-slate-800' }} mt-1">{{ $stats['occupancy_pct'] }}%</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Avg. Stay</p>
-            <p class="text-3xl font-bold text-slate-800 mt-1">{{ $stats['avg_los'] }}<span class="text-base text-slate-400"> d</span></p>
-        </div>
+        <x-stat-card label="Inpatients" accent="blue" icon="users" :value="$stats['inpatients']" />
+        <x-stat-card label="Total Beds" accent="slate" icon="box" :value="$stats['total_beds']" />
+        <x-stat-card label="Available" accent="green" icon="check" :value="$stats['available']" />
+        <x-stat-card label="Occupancy" icon="alert"
+            :accent="$stats['occupancy_pct'] >= 85 ? 'red' : 'slate'"
+            :value="$stats['occupancy_pct'] . '%'" />
+        <x-stat-card label="Avg. Stay" accent="purple" icon="clock" :value="$stats['avg_los'] . ' d'" />
     </div>
 
     {{-- Ward bed board --}}

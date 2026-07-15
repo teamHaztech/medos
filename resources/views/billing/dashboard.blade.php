@@ -21,24 +21,17 @@
 
     {{-- KPIs --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Today's Collection</p>
-            <p class="text-3xl font-bold text-green-600 mt-1">{{ $cur }}{{ number_format($stats['today_collection']) }}</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Collection (range)</p>
-            <p class="text-3xl font-bold text-slate-800 mt-1">{{ $cur }}{{ number_format($stats['range_collection']) }}</p>
-            <p class="text-xs text-slate-400 mt-1">{{ \Illuminate\Support\Carbon::parse($from)->format('M d') }} – {{ \Illuminate\Support\Carbon::parse($to)->format('M d') }}</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Outstanding</p>
-            <p class="text-3xl font-bold {{ $stats['outstanding'] > 0 ? 'text-red-600' : 'text-slate-800' }} mt-1">{{ $cur }}{{ number_format($stats['outstanding']) }}</p>
-            <p class="text-xs text-slate-400 mt-1">{{ $stats['bills_pending'] }} pending · {{ $stats['bills_partial'] }} partial</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Paid Bills</p>
-            <p class="text-3xl font-bold text-slate-800 mt-1">{{ $stats['bills_paid'] }}</p>
-        </div>
+        <x-stat-card label="Today's Collection" accent="green" icon="currency"
+            :value="$cur . number_format($stats['today_collection'])" />
+        <x-stat-card label="Collection (range)" accent="blue" icon="calendar"
+            :value="$cur . number_format($stats['range_collection'])"
+            :sub="\Illuminate\Support\Carbon::parse($from)->format('M d') . ' – ' . \Illuminate\Support\Carbon::parse($to)->format('M d')" />
+        <x-stat-card label="Outstanding" icon="alert"
+            :accent="$stats['outstanding'] > 0 ? 'red' : 'slate'"
+            :value="$cur . number_format($stats['outstanding'])"
+            :sub="$stats['bills_pending'] . ' pending · ' . $stats['bills_partial'] . ' partial'" />
+        <x-stat-card label="Paid Bills" accent="purple" icon="check"
+            :value="$stats['bills_paid']" />
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
