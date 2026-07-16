@@ -166,22 +166,48 @@
 
 {{-- Event explorer --}}
 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="px-5 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-        <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Event Explorer</h3>
-        <div class="flex items-center gap-2">
-            <form method="GET" action="{{ route('web.admin.security') }}" class="flex items-center gap-2">
-                <select name="action" onchange="this.form.submit()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white">
-                    <option value="">All events</option>
+    <div class="px-5 py-3 border-b border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Event Explorer</h3>
+            <a href="{{ route('web.admin.security.export') }}" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">Export JSON</a>
+        </div>
+        <form method="GET" action="{{ route('web.admin.security') }}" class="flex flex-wrap items-end gap-2">
+            <div class="flex-1 min-w-40">
+                <label class="block text-slate-400 mb-1" style="font-size:10px">SEARCH</label>
+                <input type="text" name="q" value="{{ $fSearch }}" placeholder="User, email, IP, or detail…" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 w-full">
+            </div>
+            @if($isSuper)
+            <div>
+                <label class="block text-slate-400 mb-1" style="font-size:10px">HOSPITAL</label>
+                <select name="hospital" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white">
+                    <option value="">All hospitals</option>
+                    @foreach($hospitals as $hidOpt => $hname)
+                        <option value="{{ $hidOpt }}" {{ $fHospital === $hidOpt ? 'selected' : '' }}>{{ $hname }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
+            <div>
+                <label class="block text-slate-400 mb-1" style="font-size:10px">ACTION</label>
+                <select name="action" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white">
+                    <option value="">All actions</option>
                     <option value="login" {{ $fAction === 'login' ? 'selected' : '' }}>Sign-in</option>
                     <option value="failed_login" {{ $fAction === 'failed_login' ? 'selected' : '' }}>Failed sign-in</option>
                     <option value="logout" {{ $fAction === 'logout' ? 'selected' : '' }}>Sign-out</option>
                     <option value="update" {{ $fAction === 'update' ? 'selected' : '' }}>Admin action</option>
                 </select>
-                <input type="text" name="q" value="{{ $fSearch }}" placeholder="Search user / IP…" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 w-40">
-                <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Filter</button>
-            </form>
-            <a href="{{ route('web.admin.security.export') }}" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">Export JSON</a>
-        </div>
+            </div>
+            <div>
+                <label class="block text-slate-400 mb-1" style="font-size:10px">FROM</label>
+                <input type="date" name="from" value="{{ $fFrom }}" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5">
+            </div>
+            <div>
+                <label class="block text-slate-400 mb-1" style="font-size:10px">TO</label>
+                <input type="date" name="to" value="{{ $fTo }}" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5">
+            </div>
+            <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Apply</button>
+            <a href="{{ route('web.admin.security') }}" class="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">Reset</a>
+        </form>
     </div>
     <div class="divide-y divide-slate-100">
         @forelse($events as $a)
@@ -205,6 +231,9 @@
             <div class="px-5 py-8 text-center text-sm text-slate-400">No matching events.</div>
         @endforelse
     </div>
-    <div class="px-5 py-2 border-t border-slate-100 text-xs text-slate-400">Showing {{ $events->count() }} of the most recent events{{ ($fAction || $fSearch !== '') ? ' (filtered)' : '' }}. Use Export for the full log.</div>
+    <div class="px-5 py-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+        <span class="text-xs text-slate-400">{{ $events->total() }} event{{ $events->total() === 1 ? '' : 's' }} match{{ $events->total() === 1 ? 'es' : '' }}.</span>
+        <div>{{ $events->links() }}</div>
+    </div>
 </div>
 @endsection

@@ -184,20 +184,38 @@ class SecurityController extends Controller
         usort($topIps, fn ($a, $b) => $b['total'] <=> $a['total']);
         $topIps = array_slice($topIps, 0, 8);
 
-        // ---- SIEM: filterable event explorer ----
-        $fAction = $request->get('action');
-        $fSearch = trim((string) $request->get('q', ''));
-        $events = $activity
-            ->when($fAction, fn ($c) => $c->where('action', $fAction))
-            ->when($fSearch !== '', fn ($c) => $c->filter(fn ($a) => str_contains(strtolower(
-                (string) $a->user_name . ' ' . $a->user_email . ' ' . $a->ip_address . ' ' . $a->description
-            ), strtolower($fSearch))))
-            ->take(150)->values();
+        // ---- SIEM: filterable, paginated event explorer (own DB query) ----
+        $fAction   = $request->get('action');
+        $fSearch   = trim((string) $request->get('q', ''));
+        $fHospital = $isSuper ? $request->get('hospital') : null;
+        $fFrom     = $request->get('from');
+        $fTo       = $request->get('to');
+
+        $events = AccountActivity::query()
+            ->when(! $isSuper, function ($q) use ($hid, $emails) {
+                $q->where(function ($w) use ($hid, $emails) {
+                    $w->where('hospital_id', $hid)
+                        ->orWhere(fn ($x) => $x->where('action', 'failed_login')
+                            ->whereIn(\DB::raw('lower(user_email)'), $emails));
+                });
+            })
+            ->when($fHospital, fn ($q) => $q->where('hospital_id', $fHospital))
+            ->when($fAction, fn ($q) => $q->where('action', $fAction))
+            ->when($fSearch !== '', fn ($q) => $q->where(fn ($w) => $w
+                ->where('user_name', 'like', "%{$fSearch}%")
+                ->orWhere('user_email', 'like', "%{$fSearch}%")
+                ->orWhere('ip_address', 'like', "%{$fSearch}%")
+                ->orWhere('description', 'like', "%{$fSearch}%")))
+            ->when($fFrom, fn ($q) => $q->whereDate('created_at', '>=', $fFrom))
+            ->when($fTo, fn ($q) => $q->whereDate('created_at', '<=', $fTo))
+            ->orderByDesc('created_at')
+            ->paginate(50)->withQueryString();
 
         $hospitals = Hospital::orderBy('name')->pluck('name', 'id');
 
         return view('admin.security', compact('actor', 'role', 'isSuper', 'hid', 'users', 'kpis',
-            'flags', 'threats', 'trend', 'maxTrend', 'topIps', 'events', 'recent', 'fAction', 'fSearch', 'hospitals'));
+            'flags', 'threats', 'trend', 'maxTrend', 'topIps', 'events', 'recent', 'hospitals',
+            'fAction', 'fSearch', 'fHospital', 'fFrom', 'fTo'));
     }
 
     /** Export the scoped security event log as JSON for an external SIEM. */
