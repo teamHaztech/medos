@@ -61,6 +61,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
     Route::middleware('admin')->group(function () {
         // Security Center — hospital admin (own hospital) + super admin (platform-wide)
         Route::get('security', [\App\Http\Controllers\Web\SecurityController::class, 'index'])->name('security');
+        Route::get('security/export', [\App\Http\Controllers\Web\SecurityController::class, 'export'])->name('security.export');
         Route::post('security/users/{userId}/toggle', [\App\Http\Controllers\Web\SecurityController::class, 'toggleActive'])->name('security.toggle');
         Route::post('security/users/{userId}/reset', [\App\Http\Controllers\Web\SecurityController::class, 'resetPassword'])->name('security.reset');
 

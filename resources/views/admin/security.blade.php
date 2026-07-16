@@ -3,7 +3,7 @@
 @section('page-title', 'Security Center')
 
 @section('content')
-<x-dashboard-header :subtitle="$isSuper ? 'Platform-wide account security & activity' : 'Your hospital\'s account security & activity'" />
+<x-dashboard-header :subtitle="$isSuper ? 'Platform-wide security monitoring (SIEM)' : 'Your hospital\'s security monitoring (SIEM)'" />
 
 @if(session('success'))<div class="mb-4 px-4 py-2.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm">{{ session('success') }}</div>@endif
 @if(session('error'))<div class="mb-4 px-4 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">{{ session('error') }}</div>@endif
@@ -18,26 +18,92 @@
     <x-stat-card label="Never signed in" :value="$kpis['never']" accent="amber" icon="clock" />
 </div>
 
-{{-- Security alerts --}}
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-    <div class="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Security Alerts</h3>
-        @if(count($flags))<span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">{{ count($flags) }} to review</span>@endif
+{{-- 14-day sign-in trend --}}
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Sign-in Activity — 14 days</h3>
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-green-500"></span>Success</span>
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-red-400"></span>Failed</span>
+        </div>
     </div>
-    <div class="divide-y divide-slate-100">
-        @forelse($flags as $f)
-            <div class="px-5 py-3 flex items-start gap-3">
-                <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 {{ $f['level'] === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600' }}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                </span>
-                <div class="min-w-0">
-                    <p class="text-sm font-semibold text-slate-800">{{ $f['title'] }}</p>
-                    <p class="text-xs text-slate-500">{{ $f['detail'] }}</p>
+    <div class="flex items-end justify-between gap-1" style="height:120px">
+        @foreach($trend as $t)
+            <div class="flex-1 flex flex-col items-center justify-end" title="{{ $t['label'] }}: {{ $t['logins'] }} sign-ins, {{ $t['failed'] }} failed">
+                <div class="w-full flex items-end justify-center gap-0.5" style="height:104px">
+                    <div class="bg-green-500 rounded-t" style="width:42%; height:{{ $t['logins'] ? max(3, round($t['logins']/$maxTrend*100)) : 0 }}%"></div>
+                    <div class="bg-red-400 rounded-t" style="width:42%; height:{{ $t['failed'] ? max(3, round($t['failed']/$maxTrend*100)) : 0 }}%"></div>
                 </div>
+                <span class="text-slate-400 mt-1" style="font-size:9px">{{ substr($t['dow'], 0, 1) }}</span>
             </div>
-        @empty
-            <div class="px-5 py-8 text-center text-sm text-slate-400">No security alerts — all clear.</div>
-        @endforelse
+        @endforeach
+    </div>
+</div>
+
+{{-- Threat correlation + account alerts --}}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Threat Correlation</h3>
+            @if(count($threats))<span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">{{ count($threats) }}</span>@endif
+        </div>
+        <div class="divide-y divide-slate-100">
+            @forelse($threats as $t)
+                <div class="px-5 py-3 flex items-start gap-3">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 {{ $t['level'] === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/></svg>
+                    </span>
+                    <div class="min-w-0"><p class="text-sm font-semibold text-slate-800">{{ $t['title'] }}</p><p class="text-xs text-slate-500">{{ $t['detail'] }}</p></div>
+                </div>
+            @empty
+                <div class="px-5 py-8 text-center text-sm text-slate-400">No correlated threats detected.</div>
+            @endforelse
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Account Alerts</h3>
+            @if(count($flags))<span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">{{ count($flags) }}</span>@endif
+        </div>
+        <div class="divide-y divide-slate-100">
+            @forelse($flags as $f)
+                <div class="px-5 py-3 flex items-start gap-3">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 {{ $f['level'] === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </span>
+                    <div class="min-w-0"><p class="text-sm font-semibold text-slate-800">{{ $f['title'] }}</p><p class="text-xs text-slate-500">{{ $f['detail'] }}</p></div>
+                </div>
+            @empty
+                <div class="px-5 py-8 text-center text-sm text-slate-400">No account alerts — all clear.</div>
+            @endforelse
+        </div>
+    </div>
+</div>
+
+{{-- Top source IPs --}}
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+    <div class="px-5 py-3 border-b border-slate-200"><h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Top Source IPs</h3></div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-slate-50 border-b border-slate-200"><tr>
+                <th class="table-header">IP address</th><th class="table-header text-right">Events</th><th class="table-header text-right">Success</th><th class="table-header text-right">Failed</th><th class="table-header text-right">Accounts</th><th class="table-header">Last seen</th>
+            </tr></thead>
+            <tbody class="divide-y divide-slate-100 text-sm">
+                @forelse($topIps as $r)
+                    <tr class="{{ $r['failed'] >= 5 || $r['accounts'] >= 3 ? 'bg-red-50/40' : '' }}">
+                        <td class="px-4 py-2 font-mono text-slate-700">{{ $r['ip'] }}</td>
+                        <td class="px-4 py-2 text-right text-slate-600">{{ $r['total'] }}</td>
+                        <td class="px-4 py-2 text-right text-green-600">{{ $r['success'] }}</td>
+                        <td class="px-4 py-2 text-right {{ $r['failed'] > 0 ? 'text-red-600 font-semibold' : 'text-slate-400' }}">{{ $r['failed'] }}</td>
+                        <td class="px-4 py-2 text-right {{ $r['accounts'] >= 3 ? 'text-red-600 font-semibold' : 'text-slate-600' }}">{{ $r['accounts'] }}</td>
+                        <td class="px-4 py-2 text-xs text-slate-400">{{ optional($r['last'])->diffForHumans() }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="6" class="px-4 py-6 text-center text-slate-400">No IP activity recorded.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -98,11 +164,27 @@
     </div>
 </div>
 
-{{-- Recent activity --}}
+{{-- Event explorer --}}
 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="px-5 py-3 border-b border-slate-200"><h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Recent Activity</h3></div>
+    <div class="px-5 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Event Explorer</h3>
+        <div class="flex items-center gap-2">
+            <form method="GET" action="{{ route('web.admin.security') }}" class="flex items-center gap-2">
+                <select name="action" onchange="this.form.submit()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white">
+                    <option value="">All events</option>
+                    <option value="login" {{ $fAction === 'login' ? 'selected' : '' }}>Sign-in</option>
+                    <option value="failed_login" {{ $fAction === 'failed_login' ? 'selected' : '' }}>Failed sign-in</option>
+                    <option value="logout" {{ $fAction === 'logout' ? 'selected' : '' }}>Sign-out</option>
+                    <option value="update" {{ $fAction === 'update' ? 'selected' : '' }}>Admin action</option>
+                </select>
+                <input type="text" name="q" value="{{ $fSearch }}" placeholder="Search user / IP…" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 w-40">
+                <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-white">Filter</button>
+            </form>
+            <a href="{{ route('web.admin.security.export') }}" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">Export JSON</a>
+        </div>
+    </div>
     <div class="divide-y divide-slate-100">
-        @forelse($recent as $a)
+        @forelse($events as $a)
             @php
                 $badge = match($a->action) {
                     'login' => 'bg-green-100 text-green-700',
@@ -120,8 +202,9 @@
                 <span class="ml-auto text-xs text-slate-400 whitespace-nowrap">{{ optional($a->created_at)->diffForHumans() }}</span>
             </div>
         @empty
-            <div class="px-5 py-8 text-center text-sm text-slate-400">No activity recorded yet.</div>
+            <div class="px-5 py-8 text-center text-sm text-slate-400">No matching events.</div>
         @endforelse
     </div>
+    <div class="px-5 py-2 border-t border-slate-100 text-xs text-slate-400">Showing {{ $events->count() }} of the most recent events{{ ($fAction || $fSearch !== '') ? ' (filtered)' : '' }}. Use Export for the full log.</div>
 </div>
 @endsection

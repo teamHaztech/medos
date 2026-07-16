@@ -124,10 +124,120 @@ class SecurityController extends Controller
             }
         }
 
-        // Hospital names for display (super admin view).
+        // ---- SIEM: correlation / threat detection (higher-order than the flags) ----
+        $threats = [];
+
+        // Credential stuffing: one IP failing sign-in across >= 3 distinct accounts.
+        foreach ($last7d->where('action', 'failed_login')->whereNotNull('ip_address')->groupBy('ip_address') as $ip => $rows) {
+            $accts = $rows->pluck('user_email')->filter()->unique();
+            if ($accts->count() >= 3) {
+                $threats[] = ['level' => 'high', 'title' => 'Possible credential stuffing',
+                    'detail' => $ip . ' hit ' . $accts->count() . ' accounts with ' . $rows->count() . ' failures (7d)'];
+            }
+        }
+        // Possible compromise: >= 3 failures then a success for the same account in a day.
+        foreach ($last7d->whereIn('action', ['login', 'failed_login'])->groupBy(fn ($a) => strtolower((string) $a->user_email) . '|' . optional($a->created_at)->format('Y-m-d')) as $k => $rows) {
+            if ($rows->where('action', 'failed_login')->count() >= 3 && $rows->where('action', 'login')->count() >= 1) {
+                $threats[] = ['level' => 'high', 'title' => 'Sign-in succeeded after repeated failures',
+                    'detail' => explode('|', $k)[0] . ' — review for account takeover'];
+            }
+        }
+        // Off-hours admin sign-in (before 06:00 or after 22:00).
+        $offHours = 0;
+        foreach ($last7d->where('action', 'login') as $a) {
+            $r = $a->role;
+            $h = (int) optional($a->created_at)->format('G');
+            if (in_array($r, ['super_admin', 'hospital_admin'], true) && ($h < 6 || $h >= 22)) {
+                if ($offHours++ < 3) {
+                    $threats[] = ['level' => 'warn', 'title' => 'Off-hours admin sign-in',
+                        'detail' => ($a->user_name ?: $a->user_email) . ' at ' . optional($a->created_at)->format('H:i') . ' · ' . optional($a->created_at)->diffForHumans()];
+                }
+            }
+        }
+        $threats = array_slice($threats, 0, 12);
+
+        // ---- SIEM: 14-day sign-in vs failure trend ----
+        $trend = [];
+        $maxTrend = 1;
+        for ($d = 13; $d >= 0; $d--) {
+            $day = $now->copy()->subDays($d);
+            $key = $day->format('Y-m-d');
+            $rows = $activity->filter(fn ($a) => optional($a->created_at)->format('Y-m-d') === $key);
+            $ok = $rows->where('action', 'login')->count();
+            $bad = $rows->where('action', 'failed_login')->count();
+            $maxTrend = max($maxTrend, $ok, $bad);
+            $trend[] = ['label' => $day->format('M j'), 'dow' => $day->format('D'), 'logins' => $ok, 'failed' => $bad];
+        }
+
+        // ---- SIEM: top source IPs (last 30 days in-scope) ----
+        $topIps = [];
+        foreach ($activity->whereNotNull('ip_address')->groupBy('ip_address') as $ip => $rows) {
+            $topIps[] = [
+                'ip'       => $ip,
+                'total'    => $rows->count(),
+                'failed'   => $rows->where('action', 'failed_login')->count(),
+                'success'  => $rows->where('action', 'login')->count(),
+                'accounts' => $rows->pluck('user_email')->filter()->unique()->count(),
+                'last'     => $rows->max('created_at'),
+            ];
+        }
+        usort($topIps, fn ($a, $b) => $b['total'] <=> $a['total']);
+        $topIps = array_slice($topIps, 0, 8);
+
+        // ---- SIEM: filterable event explorer ----
+        $fAction = $request->get('action');
+        $fSearch = trim((string) $request->get('q', ''));
+        $events = $activity
+            ->when($fAction, fn ($c) => $c->where('action', $fAction))
+            ->when($fSearch !== '', fn ($c) => $c->filter(fn ($a) => str_contains(strtolower(
+                (string) $a->user_name . ' ' . $a->user_email . ' ' . $a->ip_address . ' ' . $a->description
+            ), strtolower($fSearch))))
+            ->take(150)->values();
+
         $hospitals = Hospital::orderBy('name')->pluck('name', 'id');
 
-        return view('admin.security', compact('actor', 'role', 'isSuper', 'hid', 'users', 'kpis', 'flags', 'recent', 'hospitals'));
+        return view('admin.security', compact('actor', 'role', 'isSuper', 'hid', 'users', 'kpis',
+            'flags', 'threats', 'trend', 'maxTrend', 'topIps', 'events', 'recent', 'fAction', 'fSearch', 'hospitals'));
+    }
+
+    /** Export the scoped security event log as JSON for an external SIEM. */
+    public function export(Request $request)
+    {
+        [$actor, $role, $isSuper, $hid] = $this->actor();
+
+        $emails = User::query()
+            ->when(! $isSuper, fn ($q) => $q->where('hospital_id', $hid))
+            ->pluck('email')->filter()->map(fn ($e) => strtolower($e))->all();
+
+        $rows = AccountActivity::query()
+            ->when(! $isSuper, function ($q) use ($hid, $emails) {
+                $q->where(function ($w) use ($hid, $emails) {
+                    $w->where('hospital_id', $hid)
+                        ->orWhere(fn ($x) => $x->where('action', 'failed_login')
+                            ->whereIn(\DB::raw('lower(user_email)'), $emails));
+                });
+            })
+            ->orderByDesc('created_at')->limit(5000)->get()
+            ->map(fn ($a) => [
+                'timestamp'   => optional($a->created_at)->toIso8601String(),
+                'action'      => $a->action,
+                'user'        => $a->user_name,
+                'email'       => $a->user_email,
+                'role'        => $a->role,
+                'hospital'    => $a->hospital_name,
+                'ip'          => $a->ip_address,
+                'user_agent'  => $a->user_agent,
+                'description' => $a->description,
+            ]);
+
+        $filename = 'medos-security-events-' . now()->format('Ymd-His') . '.json';
+
+        return response()->json([
+            'exported_at' => now()->toIso8601String(),
+            'scope'       => $isSuper ? 'platform' : 'hospital',
+            'count'       => $rows->count(),
+            'events'      => $rows,
+        ], 200, ['Content-Disposition' => 'attachment; filename="' . $filename . '"'], JSON_PRETTY_PRINT);
     }
 
     /** Enable / disable an account (hospital admin scoped to own hospital). */
