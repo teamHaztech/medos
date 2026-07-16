@@ -59,6 +59,11 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
 
     // Admin-only: manage slots, tests, medicines, settings
     Route::middleware('admin')->group(function () {
+        // Security Center — hospital admin (own hospital) + super admin (platform-wide)
+        Route::get('security', [\App\Http\Controllers\Web\SecurityController::class, 'index'])->name('security');
+        Route::post('security/users/{userId}/toggle', [\App\Http\Controllers\Web\SecurityController::class, 'toggleActive'])->name('security.toggle');
+        Route::post('security/users/{userId}/reset', [\App\Http\Controllers\Web\SecurityController::class, 'resetPassword'])->name('security.reset');
+
         Route::get('settings', [AdminWebController::class, 'settings'])->name('settings');
         Route::post('settings', [AdminWebController::class, 'saveSettings'])->name('settings.save');
         Route::post('settings/hours', [AdminWebController::class, 'saveOperatingHours'])->name('settings.hours');
