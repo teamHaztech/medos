@@ -28,7 +28,11 @@ class ResolveHospital
         if ($hospitalId === null) {
             return response()->json([
                 'error' => 'Hospital context could not be resolved.',
-                'message' => 'Provide an X-Hospital-ID header, use a hospital subdomain, or authenticate with a hospital-bound user.',
+                'message' => 'Send an X-Hospital-ID header naming the target hospital. Call GET /api/v1/hospitals to list the hospitals your token may act for. Platform / super-admin tokens must specify the hospital; hospital-bound tokens resolve automatically.',
+                'how_to_fix' => [
+                    'list_hospitals' => 'GET /api/v1/hospitals',
+                    'then_send_header' => 'X-Hospital-ID: <hospital_id>',
+                ],
             ], 422);
         }
 

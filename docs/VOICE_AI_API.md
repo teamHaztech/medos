@@ -59,8 +59,8 @@ MedOS hosts many hospitals. Every request runs against **one** hospital, chosen 
 
 | Token type | How the hospital is chosen |
 |---|---|
-| **Super-admin (platform)** | The `X-Hospital-ID` header you send. Omit it and it defaults to the bot's home hospital. |
-| **Hospital-specific** | Always its own hospital. Sending a *different* `X-Hospital-ID` is rejected (`422`). |
+| **Super-admin (platform)** | The `X-Hospital-ID` header you send. **Required** — the super-admin account is not bound to any hospital, so omitting it returns `422`. |
+| **Hospital-specific** | Always its own hospital — no header needed. Sending a *different* `X-Hospital-ID` is rejected (`422`). |
 
 So the voice vendor should:
 1. Call `GET /hospitals` once to get every hospital's `hospital_id` (map each inbound phone line / DID to a `hospital_id`).
