@@ -95,8 +95,40 @@
         $ins = (array) ($patient->insurance_details ?? []);
         $healthLabel = \App\Modules\Core\Services\RegionService::healthIdLabel();
     @endphp
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <h3 class="text-sm font-semibold text-slate-700 mb-4">Registration Details</h3>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6" x-data="{ copied: false }">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div>
+                <h3 class="text-sm font-semibold text-slate-700">Registration Details</h3>
+                @if($completeness['missing'])
+                    <p class="text-xs text-slate-400 mt-0.5">Missing: {{ implode(', ', $completeness['missing']) }}</p>
+                @else
+                    <p class="text-xs text-green-600 mt-0.5">✓ Profile complete</p>
+                @endif
+            </div>
+            <div class="flex items-center gap-2">
+                {{-- Completeness meter --}}
+                <div class="text-right mr-1">
+                    <p class="text-xs text-slate-400">{{ $completeness['filled'] }}/{{ $completeness['total'] }} filled</p>
+                    <div class="w-24 h-1.5 bg-slate-200 rounded-full mt-1 overflow-hidden">
+                        <div class="h-1.5 rounded-full {{ $completeness['percent'] >= 80 ? 'bg-green-500' : ($completeness['percent'] >= 40 ? 'bg-amber-500' : 'bg-red-500') }}" style="width:{{ $completeness['percent'] }}%"></div>
+                    </div>
+                </div>
+                @if($completeness['missing'])
+                    {{-- Let the patient fill it in themselves, rather than interrogating them at booking --}}
+                    <button type="button"
+                        @click="navigator.clipboard.writeText(@js($profileLink)).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
+                        class="btn-secondary text-xs px-3 py-1.5">
+                        <span x-show="!copied">Copy link</span>
+                        <span x-show="copied" style="display:none" class="text-green-600">Copied ✓</span>
+                    </button>
+                    <form method="POST" action="{{ route('web.admin.patients.send-profile-link', $patient->id) }}" class="inline"
+                          onsubmit="return confirm('Send {{ $patient->name }} a WhatsApp link to complete their details?')">
+                        @csrf
+                        <button type="submit" class="btn-primary text-xs px-3 py-1.5">Ask patient via WhatsApp</button>
+                    </form>
+                @endif
+            </div>
+        </div>
         <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
             <div><dt class="text-xs uppercase tracking-wide text-slate-400">Phone</dt><dd class="text-slate-800">{{ $patient->phone ?? '' }}</dd></div>
             <div><dt class="text-xs uppercase tracking-wide text-slate-400">Email</dt><dd class="text-slate-800">{{ $patient->email ?? '' }}</dd></div>

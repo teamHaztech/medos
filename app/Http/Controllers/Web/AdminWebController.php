@@ -365,6 +365,40 @@ class AdminWebController extends Controller
         return redirect()->route('web.admin.patients')->with('success', 'Patient deleted successfully.');
     }
 
+    /**
+     * WhatsApp the patient their self-service link so they can fill in the
+     * details we don't ask for at booking time.
+     */
+    public function sendProfileLink($id)
+    {
+        $patient = Patient::where('hospital_id', Auth::user()->hospital_id)->findOrFail($id);
+
+        if (empty($patient->phone)) {
+            return back()->with('error', 'This patient has no phone number on file.');
+        }
+
+        $hospital = Hospital::find($patient->hospital_id);
+        $link = \App\Http\Controllers\Web\PatientProfileController::linkFor($patient);
+        $first = \Illuminate\Support\Str::of($patient->name)->explode(' ')->first();
+
+        $text = "Hello {$first}, this is " . ($hospital->name ?? 'your hospital') . ".\n\n"
+            . "Please complete your patient details so we have the right information for your care:\n{$link}\n\n"
+            . 'The link is private to you and expires in ' . \App\Http\Controllers\Web\PatientProfileController::LINK_DAYS . ' days.';
+
+        try {
+            app(\App\Modules\WhatsApp\Services\WhatsAppService::class)->sendTextMessage($patient->phone, $text);
+        } catch (\Throwable $e) {
+            \Log::warning('[ProfileLink] WhatsApp send failed: ' . $e->getMessage());
+
+            return back()->with('error', 'Could not send on WhatsApp (' . $e->getMessage() . '). Use "Copy link" and send it manually.');
+        }
+
+        \App\Modules\Core\Models\AccountActivity::record(Auth::user(), 'action', request(), null,
+            'Sent profile-completion link to ' . $patient->name);
+
+        return back()->with('success', 'Sent ' . $patient->name . ' a WhatsApp link to complete their details.');
+    }
+
     public function patientDetail($id)
     {
         $patient = Patient::where('hospital_id', Auth::user()->hospital_id)->findOrFail($id);
@@ -414,7 +448,12 @@ class AdminWebController extends Controller
 
         $timeline = $timeline->sortByDesc('sort_date')->values()->toArray();
 
-        return view('admin.patient-detail', compact('patient', 'encounters', 'bills', 'timeline'));
+        // Self-service completion: how thin is this profile, and the signed link
+        // the patient can use to fill it in themselves.
+        $completeness = \App\Http\Controllers\Web\PatientProfileController::completeness($patient);
+        $profileLink  = \App\Http\Controllers\Web\PatientProfileController::linkFor($patient);
+
+        return view('admin.patient-detail', compact('patient', 'encounters', 'bills', 'timeline', 'completeness', 'profileLink'));
     }
 
     public function appointments(Request $request)

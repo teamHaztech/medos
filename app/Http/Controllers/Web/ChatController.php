@@ -2027,7 +2027,7 @@ class ChatController extends Controller
         $state['step'] = 'completed';
         $state['token'] = $token;
 
-        return [
+        $messages = [
             $this->t('booking_confirmed', $lang, [
                 'token' => $token,
                 'doctor' => $state['doctor_name'],
@@ -2036,6 +2036,50 @@ class ChatController extends Controller
             ]),
             $this->t('arrival_instructions', $lang, ['token' => $token]),
         ];
+
+        // The booking has succeeded, so this is the safest moment to ask for the
+        // details we deliberately skip during booking — the patient is engaged and
+        // nothing can fail. Only ask if we're actually missing something.
+        if ($ask = $this->profileCompletionOffer($state['patient_id'] ?? null, $lang)) {
+            $messages[] = $ask;
+        }
+
+        return $messages;
+    }
+
+    /**
+     * A one-line nudge + signed link asking the patient to fill in the details
+     * we don't collect at booking time. Returns null when nothing is missing.
+     */
+    private function profileCompletionOffer(?string $patientId, string $lang): ?string
+    {
+        if (! $patientId) {
+            return null;
+        }
+
+        try {
+            $patient = Patient::find($patientId);
+            if (! $patient) {
+                return null;
+            }
+
+            $missing = \App\Http\Controllers\Web\PatientProfileController::completeness($patient)['missing'];
+            if (count($missing) < 2) {
+                return null; // basically complete — don't nag
+            }
+
+            $link = \App\Http\Controllers\Web\PatientProfileController::linkFor($patient);
+
+            return match ($lang) {
+                'hi' => "📝 एक छोटा सा अनुरोध — कृपया अपनी जानकारी पूरी करें ताकि हमारे पास आपके इलाज के लिए सही विवरण हो:\n{$link}",
+                'ar' => "📝 طلب صغير — يرجى إكمال بياناتك حتى تكون لدينا المعلومات الصحيحة لرعايتك:\n{$link}",
+                default => "📝 One small thing — please complete your details so we have the right information for your care:\n{$link}\n\n(Takes under a minute. The link is private to you.)",
+            };
+        } catch (\Throwable $e) {
+            \Log::warning('[ChatBot] profile link offer failed: ' . $e->getMessage());
+
+            return null; // never let this break a confirmed booking
+        }
     }
 
     // ---------------------------------------------------------------

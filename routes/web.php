@@ -33,6 +33,7 @@ Route::middleware('auth')->prefix('admin')->name('web.admin.')->group(function (
     Route::get('patients/{id}', [AdminWebController::class, 'patientDetail'])->name('patients.show');
     Route::put('patients/{id}', [AdminWebController::class, 'updatePatient'])->name('patients.update');
     Route::delete('patients/{id}', [AdminWebController::class, 'deletePatient'])->name('patients.delete');
+    Route::post('patients/{id}/send-profile-link', [AdminWebController::class, 'sendProfileLink'])->name('patients.send-profile-link');
     Route::get('appointments', [AdminWebController::class, 'appointments'])->name('appointments');
     Route::get('appointments/schedule', [AdminWebController::class, 'scheduleForm'])->name('appointments.schedule');
     Route::post('appointments', [AdminWebController::class, 'storeAppointment'])->name('appointments.store');
@@ -311,6 +312,13 @@ Route::prefix('kiosk')->name('kiosk.')->group(function () {
 // ---------------------------------------------------------------
 // Public "Book Online" — patient-facing web & mobile booking (no auth)
 // ---------------------------------------------------------------
+// Patient self-service profile completion — signed link, no login. Lets the
+// patient fill in the details we deliberately don't ask for at booking time.
+Route::prefix('my-details')->name('patient-profile.')->middleware(['signed', 'throttle:30,1'])->group(function () {
+    Route::get('{patient}', [\App\Http\Controllers\Web\PatientProfileController::class, 'edit'])->name('edit');
+    Route::post('{patient}', [\App\Http\Controllers\Web\PatientProfileController::class, 'update'])->name('update');
+});
+
 Route::prefix('book')->name('book.')->middleware('throttle:60,1')->group(function () {
     Route::get('/', [\App\Http\Controllers\Web\PublicBookingController::class, 'index'])->name('index');
     Route::get('doctors', [\App\Http\Controllers\Web\PublicBookingController::class, 'doctors'])->name('doctors');
