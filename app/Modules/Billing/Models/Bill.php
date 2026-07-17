@@ -112,10 +112,15 @@ class Bill extends Model
 
     /**
      * Get the patient for this bill.
+     *
+     * withTrashed(): a bill is a financial record — it must never forget who it
+     * belongs to. Patients are soft-deleted, and without this the relation
+     * silently resolves to null, blanking the name/phone on the bill, receipt
+     * and exports while the bill itself still stands.
      */
     public function patient(): BelongsTo
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(Patient::class)->withTrashed();
     }
 
     /**

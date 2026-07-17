@@ -70,11 +70,16 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                     <div>
                         <span class="text-slate-500">Name</span>
-                        <p class="font-medium text-slate-800">{{ $bill->patient->name ?? '' }}</p>
+                        <p class="font-medium text-slate-800">
+                            {{ $bill->patient->name ?? 'Patient record unavailable' }}
+                            @if($bill->patient?->trashed())
+                                <span class="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-normal">deleted</span>
+                            @endif
+                        </p>
                     </div>
                     <div>
                         <span class="text-slate-500">Phone</span>
-                        <p class="font-medium text-slate-800">{{ $bill->patient->phone ?? '' }}</p>
+                        <p class="font-medium text-slate-800">{{ $bill->patient->phone ?? '—' }}</p>
                     </div>
                     <div>
                         <span class="text-slate-500">Encounter</span>
