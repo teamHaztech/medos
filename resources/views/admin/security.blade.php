@@ -172,7 +172,7 @@
             <a href="{{ route('web.admin.security.export') }}" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">Export JSON</a>
         </div>
         <form method="GET" action="{{ route('web.admin.security') }}" class="flex flex-wrap items-end gap-2">
-            <div class="flex-1 min-w-40">
+            <div class="flex-1" style="min-width:220px">
                 <label class="block text-slate-400 mb-1" style="font-size:10px">SEARCH</label>
                 <input type="text" name="q" value="{{ $fSearch }}" placeholder="User, email, IP, or detail…" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 w-full">
             </div>

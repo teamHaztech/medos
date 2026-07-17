@@ -19,13 +19,16 @@
 
     {{-- Filters --}}
     <form method="GET" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
-            <div class="lg:col-span-2">
+        {{-- Wrapping row: each field keeps a usable minimum width, so the date
+             inputs (which can't shrink below their dd/mm/yyyy intrinsic width)
+             wrap to the next line instead of overflowing the card. --}}
+        <div class="flex flex-wrap items-end gap-3">
+            <div class="flex-1" style="min-width:220px">
                 <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Search</label>
                 <input type="text" name="search" value="{{ request('search') }}" class="input-field text-sm" placeholder="User, email, IP, or detail…">
             </div>
             @if($isSuperAdmin)
-            <div>
+            <div style="width:190px">
                 <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Hospital</label>
                 <select name="hospital" class="input-field text-sm">
                     <option value="">All hospitals</option>
@@ -35,7 +38,7 @@
                 </select>
             </div>
             @endif
-            <div>
+            <div style="width:170px">
                 <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Action</label>
                 <select name="action" class="input-field text-sm">
                     <option value="">All actions</option>
@@ -44,20 +47,18 @@
                     @endforeach
                 </select>
             </div>
-            <div class="flex items-end gap-2">
-                <div class="flex-1">
-                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">From</label>
-                    <input type="date" name="from" value="{{ request('from') }}" class="input-field text-sm">
-                </div>
-                <div class="flex-1">
-                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">To</label>
-                    <input type="date" name="to" value="{{ request('to') }}" class="input-field text-sm">
-                </div>
+            <div style="width:165px">
+                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">From</label>
+                <input type="date" name="from" value="{{ request('from') }}" class="input-field text-sm">
             </div>
-        </div>
-        <div class="flex items-center gap-2 mt-3">
-            <button class="btn-primary text-sm px-4">Apply</button>
-            <a href="{{ url()->current() }}" class="btn-secondary text-sm">Reset</a>
+            <div style="width:165px">
+                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">To</label>
+                <input type="date" name="to" value="{{ request('to') }}" class="input-field text-sm">
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="btn-primary text-sm px-4">Apply</button>
+                <a href="{{ url()->current() }}" class="btn-secondary text-sm">Reset</a>
+            </div>
         </div>
     </form>
 
