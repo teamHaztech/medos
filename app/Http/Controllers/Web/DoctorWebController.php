@@ -185,7 +185,7 @@ class DoctorWebController extends Controller
                 return [
                     'id' => $e->id, 'date' => $e->created_at?->format('M d, Y h:i A'),
                     'patient' => $e->patient?->name ?? 'Unknown', 'patient_id' => $e->patient_id,
-                    'complaint' => $intake ?? '', 'type' => $type, 'status' => $status,
+                    'complaint' => $this->complaintText($intake), 'type' => $type, 'status' => $status,
                 ];
             });
 
@@ -215,6 +215,23 @@ class DoctorWebController extends Controller
         return view('doctor.my-patients', compact('patients'));
     }
 
+    /**
+     * Chief complaint as a printable string. intake_data is an array cast, and
+     * chief_complaint has historically been either a string or a list — always
+     * return a string so Blade can never be handed an array.
+     */
+    private function complaintText(array $intake): string
+    {
+        $c = $intake['chief_complaint'] ?? null;
+
+        if (is_array($c)) {
+            $c = implode(', ', array_filter($c, 'is_scalar'));
+        }
+        $c = trim((string) $c);
+
+        return $c !== '' ? $c : 'Not recorded';
+    }
+
     public function patientDetail(string $id)
     {
         $doctorId = $this->doctorId();
@@ -227,7 +244,7 @@ class DoctorWebController extends Controller
                 $type = is_object($e->type) ? $e->type->value : ($e->type ?? '');
                 return [
                     'id' => $e->id, 'date' => $e->created_at?->format('M d, Y h:i A'),
-                    'complaint' => $intake ?? '', 'type' => $type,
+                    'complaint' => $this->complaintText($intake), 'type' => $type,
                     'status' => $status, 'encounter_number' => $e->encounter_number,
                 ];
             });
