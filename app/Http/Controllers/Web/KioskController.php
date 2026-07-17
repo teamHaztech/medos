@@ -720,20 +720,51 @@ class KioskController extends Controller
             return $this->labDisplay($request, strtolower($doctorId));
         }
 
-        // Accept UUID or name (first name, lowercase). ?hospital=<slug> scopes it.
-        $hospital = $this->resolveHospital($request);
-        $hospitalId = $hospital?->id;
+        $doctor = $this->resolveRoomDoctor($request, $doctorId);
 
-        $doctor = Staff::when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))->find($doctorId);
-        if (!$doctor) {
-            $doctor = Staff::whereRaw("LOWER(name) LIKE ?", ['%' . strtolower($doctorId) . '%'])
-                ->when($hospitalId, fn($q) => $q->where('hospital_id', $hospitalId))
+        return view('kiosk.room-display', [
+            'doctor'       => $doctor,
+            'appointments' => $this->roomAppointments($doctor),
+        ]);
+    }
+
+    /**
+     * The room display's live queue as JSON. The board polls this every 10s
+     * instead of re-fetching its own HTML and regex-scraping the data out of it.
+     */
+    public function roomDisplayJson(Request $request, string $doctorId)
+    {
+        $doctor = $this->resolveRoomDoctor($request, $doctorId);
+
+        return response()->json([
+            'patients'   => $this->roomAppointments($doctor)->values(),
+            'updated_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    /** Resolve a room-display doctor by UUID or name; ?hospital=<slug> scopes it. */
+    private function resolveRoomDoctor(?Request $request, string $doctorId): Staff
+    {
+        $hospitalId = $this->resolveHospital($request)?->id;
+
+        $doctor = Staff::when($hospitalId, fn ($q) => $q->where('hospital_id', $hospitalId))->find($doctorId);
+        if (! $doctor) {
+            $doctor = Staff::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($doctorId) . '%'])
+                ->when($hospitalId, fn ($q) => $q->where('hospital_id', $hospitalId))
                 ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
                 ->first();
         }
-        if (!$doctor) abort(404, 'Doctor not found');
+        if (! $doctor) {
+            abort(404, 'Doctor not found');
+        }
 
-        $appointments = Appointment::where('doctor_id', $doctor->id)
+        return $doctor;
+    }
+
+    /** Today's checked-in / in-progress / completed queue for one doctor. */
+    private function roomAppointments(Staff $doctor)
+    {
+        return Appointment::where('doctor_id', $doctor->id)
             ->where('hospital_id', $doctor->hospital_id)
             ->whereDate('slot_start', today())
             ->whereIn('status', ['checked_in', 'in_progress', 'completed'])
@@ -756,11 +787,6 @@ class KioskController extends Controller
                     'isReferral' => ($intake['source'] ?? '') === 'referral',
                 ];
             });
-
-        return view('kiosk.room-display', [
-            'doctor'       => $doctor,
-            'appointments' => $appointments,
-        ]);
     }
 
     /**

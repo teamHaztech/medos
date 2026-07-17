@@ -304,6 +304,7 @@ Route::prefix('kiosk')->name('kiosk.')->group(function () {
     Route::get('queue-display', [KioskController::class, 'queueDisplay'])->name('queue-display');
     Route::get('queue-display/json', [KioskController::class, 'queueDisplayJson'])->name('queue-display.json');
     Route::get('room/{doctorId}', [KioskController::class, 'roomDisplay'])->name('room-display');
+    Route::get('room/{doctorId}/json', [KioskController::class, 'roomDisplayJson'])->name('room-display.json');
     Route::get('q/{doctorId}', [KioskController::class, 'patientQueueView'])->name('queue-live');
 });
 

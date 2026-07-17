@@ -160,9 +160,11 @@
     {{-- Footer with QR Code --}}
     <footer class="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur border-t border-white/10 px-6 py-2 z-40">
         <div class="flex items-center justify-between text-xs text-slate-500">
-            <span class="flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                Live · Refreshes every 10s
+            {{-- Honest connection state: if a poll fails the board stops claiming
+                 it's live, so staff can see the queue has gone stale. --}}
+            <span class="flex items-center gap-1.5" :class="connected ? 'text-slate-500' : 'text-amber-400'">
+                <span class="w-1.5 h-1.5 rounded-full" :class="connected ? 'bg-green-500 animate-pulse' : 'bg-amber-400'"></span>
+                <span x-text="connected ? 'Live · Refreshes every 10s' : 'Reconnecting… queue may be out of date'"></span>
             </span>
             <span class="flex items-center gap-3">
                 <span>Scan to view queue on your phone →</span>
@@ -177,6 +179,7 @@
         return {
             allPatients: @json($appointments),
             announcedTokens: [],
+            connected: true,
             audioEnabled: false,
             audioCtx: null,
             speechQueue: [],
@@ -237,27 +240,38 @@
                 if (this.announcing) return;
 
                 try {
-                    const res = await fetch(window.location.href);
-                    const html = await res.text();
-                    const match = html.match(/allPatients:\s*(\[.*?\]),\s*announcedTokens/s);
-                    if (match) {
-                        const newData = JSON.parse(match[1]);
-                        this.allPatients = newData;
-                        const nowServing = newData.filter(p => p.status === 'in_progress');
-                        // Announce any patient who just entered "in_progress" and
-                        // hasn't been announced yet. Handles multiple simultaneous
-                        // in_progress patients (doctor calling several at once).
-                        const fresh = nowServing.find(p => !this.announcedTokens.includes(p.token));
-                        if (fresh) {
-                            this.announcedTokens.push(fresh.token);
-                            if (this.audioEnabled) this.announce(fresh);
-                        }
-                        // Forget tokens no longer being served, so if the same token
-                        // is called again later it will announce again.
-                        this.announcedTokens = this.announcedTokens.filter(t => nowServing.some(p => p.token === t));
+                    // Poll the queue JSON endpoint (not this page's HTML) so the
+                    // board never depends on scraping its own markup.
+                    const res = await fetch('{{ route('kiosk.room-display.json', $doctor->id) }}', {
+                        headers: { 'Accept': 'application/json' },
+                        cache: 'no-store',
+                    });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+                    const data = await res.json();
+                    const newData = Array.isArray(data.patients) ? data.patients : [];
+                    this.allPatients = newData;
+
+                    const nowServing = newData.filter(p => p.status === 'in_progress');
+                    // Announce any patient who just entered "in_progress" and
+                    // hasn't been announced yet. Handles multiple simultaneous
+                    // in_progress patients (doctor calling several at once).
+                    const fresh = nowServing.find(p => !this.announcedTokens.includes(p.token));
+                    if (fresh) {
+                        this.announcedTokens.push(fresh.token);
+                        if (this.audioEnabled) this.announce(fresh);
                     }
-                } catch(e) {}
-                this.lastUpdated = new Date().toLocaleTimeString();
+                    // Forget tokens no longer being served, so if the same token
+                    // is called again later it will announce again.
+                    this.announcedTokens = this.announcedTokens.filter(t => nowServing.some(p => p.token === t));
+
+                    this.connected = true;
+                    this.lastUpdated = new Date().toLocaleTimeString();
+                } catch (e) {
+                    // Surface the failure instead of silently freezing a screen
+                    // that still says "Live". lastUpdated keeps the stale time.
+                    this.connected = false;
+                }
             },
 
             announce(patient) {
