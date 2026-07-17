@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Analytics\Services\RevenueInsights;
 use App\Modules\Appointment\Models\Appointment;
 use App\Modules\Billing\Models\Bill;
+use App\Modules\Core\Models\Order;
 use App\Modules\Patient\Models\Encounter;
 use App\Modules\Patient\Models\Patient;
 use Carbon\Carbon;
@@ -232,24 +233,81 @@ class DoctorWebController extends Controller
         return $c !== '' ? $c : 'Not recorded';
     }
 
+    /**
+     * A patient's clinical history with this doctor: every encounter expanded with
+     * the vitals, diagnosis, SOAP notes, advice, follow-up and the labs/medicines
+     * ordered during that visit — so the doctor sees what actually happened, not
+     * just a row of dates.
+     */
     public function patientDetail(string $id)
     {
         $doctorId = $this->doctorId();
         $patient = Patient::findOrFail($id);
 
-        $encounters = Encounter::where('doctor_id', $doctorId)->where('patient_id', $id)
-            ->latest()->get()->map(function ($e) {
-                $intake = is_array($e->intake_data) ? $e->intake_data : [];
-                $status = is_object($e->status) ? $e->status->value : ($e->status ?? '');
-                $type = is_object($e->type) ? $e->type->value : ($e->type ?? '');
-                return [
-                    'id' => $e->id, 'date' => $e->created_at?->format('M d, Y h:i A'),
-                    'complaint' => $this->complaintText($intake), 'type' => $type,
-                    'status' => $status, 'encounter_number' => $e->encounter_number,
-                ];
-            });
+        $rows = Encounter::where('doctor_id', $doctorId)->where('patient_id', $id)
+            ->latest()->get();
 
-        return view('doctor.patient-detail', compact('patient', 'encounters'));
+        // Orders raised during these encounters, grouped so each visit shows its own.
+        $ordersByEncounter = Order::where('patient_id', $id)
+            ->whereIn('encounter_id', $rows->pluck('id')->filter())
+            ->latest()->get()->groupBy('encounter_id');
+
+        $history = $rows->map(function ($e) use ($ordersByEncounter) {
+            $intake = is_array($e->intake_data) ? $e->intake_data : [];
+            $orders = $ordersByEncounter->get($e->id, collect());
+
+            $labs = $orders->whereIn('type', ['lab', 'imaging'])->map(fn ($o) => [
+                'type'     => $o->type,
+                'status'   => $o->status,
+                'critical' => (bool) ($o->has_critical ?? false),
+                'items'    => collect(is_array($o->items) ? $o->items : [])
+                    ->map(fn ($i) => is_array($i) ? ($i['name'] ?? $i['test'] ?? '') : (string) $i)
+                    ->filter()->values()->all(),
+            ])->values();
+
+            $meds = $orders->where('type', 'pharmacy')
+                ->flatMap(fn ($o) => collect(is_array($o->items) ? $o->items : [])->map(fn ($i) => [
+                    'name'   => is_array($i) ? ($i['name'] ?? '') : (string) $i,
+                    'dosage' => is_array($i) ? ($i['dosage'] ?? '') : '',
+                    'freq'   => is_array($i) ? ($i['frequency'] ?? '') : '',
+                    'days'   => is_array($i) ? ($i['duration'] ?? '') : '',
+                ]))->filter(fn ($m) => $m['name'] !== '')->values();
+
+            return [
+                'id'               => $e->id,
+                'date'             => $e->created_at?->format('M d, Y'),
+                'time'             => $e->created_at?->format('h:i A'),
+                'ago'              => $e->created_at?->diffForHumans(),
+                'encounter_number' => $e->encounter_number,
+                'type'             => is_object($e->type) ? $e->type->value : ($e->type ?? ''),
+                'status'           => is_object($e->status) ? $e->status->value : ($e->status ?? ''),
+                'triage'           => is_object($e->triage_classification) ? $e->triage_classification->value : ($e->triage_classification ?? ''),
+                'complaint'        => $this->complaintText($intake),
+                'duration_days'    => $intake['duration_days'] ?? null,
+                'vitals'           => array_filter(is_array($e->vitals) ? $e->vitals : [], fn ($v) => $v !== null && $v !== ''),
+                'soap'             => is_array($e->soap_notes) ? $e->soap_notes : [],
+                'diagnosis'        => collect(is_array($e->diagnosis_codes) ? $e->diagnosis_codes : [])
+                    ->map(fn ($d) => is_array($d) ? trim(($d['code'] ?? '') . ' ' . ($d['description'] ?? $d['name'] ?? '')) : (string) $d)
+                    ->filter()->values()->all(),
+                'advice'           => collect(is_array($e->patient_advice) ? $e->patient_advice : [])
+                    ->map(fn ($a) => is_array($a) ? implode(' ', array_filter($a, 'is_scalar')) : (string) $a)
+                    ->filter()->values()->all(),
+                'follow_up'        => $e->follow_up_date?->format('M d, Y'),
+                'follow_up_notes'  => $e->follow_up_notes,
+                'labs'             => $labs,
+                'meds'             => $meds,
+            ];
+        });
+
+        $kpis = [
+            'visits'     => $history->count(),
+            'last_visit' => $rows->first()?->created_at,
+            'first_seen' => $rows->last()?->created_at,
+            'labs'       => $history->sum(fn ($h) => $h['labs']->count()),
+            'meds'       => $history->sum(fn ($h) => $h['meds']->count()),
+        ];
+
+        return view('doctor.patient-detail', compact('patient', 'history', 'kpis'));
     }
 
     public function myAppointments(Request $request)
