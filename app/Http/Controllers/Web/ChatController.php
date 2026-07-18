@@ -871,15 +871,33 @@ class ChatController extends Controller
         $token = 'LAB-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4));
         $scheduledFor = $state['lab_scheduled_for'] ?? null;
 
+        // A self-booked lab has no doctor visit, but every Bill needs an encounter
+        // and compileBill() gathers charges by encounter_id — so create a lightweight
+        // walk-in billing encounter and hang the orders + charges off it. This is the
+        // same pattern the counter uses for standalone bills; without it, self-booked
+        // labs post no charges and never surface in billing (unlike consultations,
+        // pharmacy, and doctor-ordered labs).
+        $encounter = Encounter::create([
+            'id'               => Str::uuid()->toString(),
+            'hospital_id'      => $hospital->id,
+            'patient_id'       => $state['patient_id'],
+            'encounter_number' => 'ENC-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4)),
+            'type'             => 'consultation',
+            'status'           => 'completed',
+            'channel'          => 'walk_in',
+            'intake_data'      => ['source' => 'chat_lab'],
+        ]);
+
         // One order per test type (lab / imaging / procedure) so each lands in the
         // right workflow bucket.
+        $cc = app(\App\Modules\Billing\Services\ChargeCapture::class);
         $byType = collect($cart)->groupBy('type');
         foreach ($byType as $type => $items) {
-            \App\Modules\Core\Models\Order::create([
+            $order = \App\Modules\Core\Models\Order::create([
                 'id'             => Str::uuid()->toString(),
                 'hospital_id'    => $hospital->id,
                 'patient_id'     => $state['patient_id'],
-                'encounter_id'   => null,
+                'encounter_id'   => $encounter->id,
                 'ordered_by'     => null, // self-booked, no doctor
                 'type'           => $type,
                 'status'         => 'ordered',
@@ -889,6 +907,21 @@ class ChatController extends Controller
                 'booking_source' => 'chat_lab',
                 'notes'          => $token,
             ]);
+
+            // Capture the test charges into the ledger (non-fatal — a billing
+            // hiccup must never block the booking the patient just confirmed).
+            try {
+                $cc->captureOrder($order, 'Self-booked (chat)');
+            } catch (\Throwable $e) {
+                \Log::warning('[ChatBot] lab charge capture failed: ' . $e->getMessage());
+            }
+        }
+
+        // Compile the captured charges into a payable bill the lab/counter can collect.
+        try {
+            $cc->compileBill($encounter, 'Self-booked (chat)');
+        } catch (\Throwable $e) {
+            \Log::warning('[ChatBot] lab bill compile failed: ' . $e->getMessage());
         }
 
         $total = collect($cart)->sum('price');
