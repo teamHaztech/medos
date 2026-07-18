@@ -83,13 +83,32 @@ POST /api/v1/book-appointment
 ### `GET /api/v1/hospitals`
 Lists the hospitals your token may act for (super-admin → all; hospital token → its own). No `X-Hospital-ID` needed.
 
-**Response**
+**Response** — note `phone` is the hospital's reception number; give it out when a caller asks.
 ```json
 { "success": true, "data": { "hospitals": [
   { "hospital_id": "11111111-...", "name": "City Care Hospital", "slug": "city-care", "city": "Panaji", "phone": "+91..." },
   { "hospital_id": "22222222-...", "name": "Gulf Medical Center", "slug": "gulf-medical", "city": "Dubai", "phone": "+971..." }
 ] } }
 ```
+
+### `GET /api/v1/departments`
+Every department and its doctors — so the AI can say "we have Cardiology, Pediatrics…" and route the caller.
+```json
+{ "success": true, "data": { "count": 9, "departments": [
+  { "department": "Cardiology", "doctor_count": 1, "doctors": [ { "doctor_id": "a0..", "name": "Dr. Amit Patel", "specialty": "..." } ] }
+] } }
+```
+
+### `GET /api/v1/doctors[?department=Cardiology]`
+List doctors (optionally filtered by department), each with their **next available slot** — so the AI can answer "which doctors do you have?", "who is in Cardiology?", "who is available?" and pick a `doctor_id` to book.
+```json
+{ "success": true, "data": { "count": 11, "doctors": [
+  { "doctor_id": "a0..", "name": "Dr. Amit Patel", "department": "Cardiology", "specialty": "Interventional Cardiology",
+    "available": true, "next_available": { "date": "2026-07-20", "day": "Monday", "time": "09:00" } }
+] } }
+```
+
+**Typical voice flow:** `GET /departments` (or `/doctors?department=X`) → pick a `doctor_id` → `GET /doctor-schedule?name=…` (or use `next_available`) → `POST /book-appointment`. For a new caller, `POST /register-patient` first (name + phone), then book.
 
 ---
 

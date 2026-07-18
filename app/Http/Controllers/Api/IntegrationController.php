@@ -68,6 +68,71 @@ class IntegrationController extends Controller
         return response()->json(['success' => true, 'data' => ['hospitals' => $hospitals]]);
     }
 
+    /**
+     * List the hospital's doctors so the AI can answer "which doctors do you
+     * have?", "who is in Cardiology?" and "who is available?" — and get a
+     * doctor_id to book with. Optional ?department= filters; each doctor carries
+     * their next available slot.
+     *
+     * GET /api/v1/doctors?department=Cardiology
+     */
+    public function doctors(Request $request): JsonResponse
+    {
+        $hid = $this->hid();
+        $dept = trim((string) $request->query('department', ''));
+
+        $doctors = Staff::where('hospital_id', $hid)->where('is_active', true)
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
+            ->when($dept !== '', fn ($q) => $q->whereRaw('LOWER(department) = ?', [strtolower($dept)]))
+            ->orderBy('department')->orderBy('name')->get()
+            ->map(function (Staff $d) {
+                $schedule = $this->buildSchedule($d, 14);      // next 14 days of free slots
+                $first    = $schedule[0] ?? null;
+
+                return [
+                    'doctor_id'      => $d->id,
+                    'name'           => $d->name,
+                    'department'     => $d->department,
+                    'specialty'      => $d->specialization,
+                    'available'      => $first !== null,
+                    'next_available' => $first
+                        ? ['date' => $first['date'], 'day' => $first['day'], 'time' => $first['available_slots'][0] ?? null]
+                        : null,
+                ];
+            })->values();
+
+        return response()->json(['success' => true, 'data' => [
+            'count'   => $doctors->count(),
+            'doctors' => $doctors,
+        ]]);
+    }
+
+    /**
+     * List the hospital's departments (each with its doctors) so the AI can say
+     * "we have Cardiology, Pediatrics…" and route the caller.
+     *
+     * GET /api/v1/departments
+     */
+    public function departments(Request $request): JsonResponse
+    {
+        $hid = $this->hid();
+
+        $byDept = Staff::where('hospital_id', $hid)->where('is_active', true)
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
+            ->whereNotNull('department')->orderBy('name')->get()
+            ->groupBy('department')
+            ->map(fn ($docs, $name) => [
+                'department'   => $name,
+                'doctor_count' => $docs->count(),
+                'doctors'      => $docs->map(fn ($d) => ['doctor_id' => $d->id, 'name' => $d->name, 'specialty' => $d->specialization])->values(),
+            ])->values();
+
+        return response()->json(['success' => true, 'data' => [
+            'count'       => $byDept->count(),
+            'departments' => $byDept,
+        ]]);
+    }
+
     /** staff.schedule may be an array (Eloquent cast) or a JSON string — normalise to array. */
     private function scheduleArray(Staff $doctor): array
     {
