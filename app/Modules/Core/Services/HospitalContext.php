@@ -43,24 +43,27 @@ class HospitalContext
     /**
      * Resolve hospital from the incoming request.
      *
-     * Resolution order:
-     *   1. X-Hospital-ID header
+     * Integrators can name the hospital whichever way is easiest for their
+     * platform — a header, a URL query param, or a JSON body field — and as a
+     * UUID or a readable slug. Resolution order:
+     *   1. Explicit hospital ref: X-Hospital-ID header, or ?hospital_id= / ?hospital=
+     *      query param, or a hospital_id / hospital body field (UUID or slug)
      *   2. Subdomain (first segment of host)
-     *   3. Authenticated user's hospital_id
+     *   3. Authenticated user's own hospital_id
      *
      * Returns the hospital ID or null if unresolvable.
      */
     public function resolveFromRequest(Request $request): ?string
     {
-        $header = $request->header('X-Hospital-ID');
+        $explicit = $this->explicitHospitalRef($request);
         $user = $request->user();
 
         // Authenticated non-super-admin users are pinned to their own hospital.
-        // A mismatching X-Hospital-ID header is a cross-tenant attempt → unresolvable.
+        // A mismatching explicit hospital is a cross-tenant attempt → unresolvable.
         if ($user && isset($user->hospital_id)) {
             $role = is_object($user->role) ? $user->role->value : $user->role;
             if ($role !== 'super_admin') {
-                if ($header && $header !== $user->hospital_id) {
+                if ($explicit !== null && $explicit !== $user->hospital_id) {
                     return null;
                 }
 
@@ -68,9 +71,9 @@ class HospitalContext
             }
         }
 
-        // 1. Explicit header (super admin, or unauthenticated webhook context)
-        if ($header) {
-            return $header;
+        // 1. Explicit hospital ref (super admin, or unauthenticated webhook context)
+        if ($explicit !== null) {
+            return $explicit;
         }
 
         // 2. Subdomain resolution
@@ -84,12 +87,35 @@ class HospitalContext
             }
         }
 
-        // 3. Authenticated user's hospital (super admin without header)
+        // 3. Authenticated user's hospital (super admin without an explicit ref)
         if ($user && isset($user->hospital_id)) {
             return $user->hospital_id;
         }
 
         return null;
+    }
+
+    /**
+     * The hospital the caller named — from a header, query param, or body field —
+     * normalised to a hospital id. Accepts a UUID or a slug. Returns null if the
+     * caller didn't name one, or named one that doesn't exist.
+     */
+    private function explicitHospitalRef(Request $request): ?string
+    {
+        $ref = $request->header('X-Hospital-ID')
+            ?? $request->input('hospital_id')   // query string OR JSON body
+            ?? $request->input('hospital');
+
+        if (! is_string($ref) || ($ref = trim($ref)) === '') {
+            return null;
+        }
+
+        // A UUID is used as-is; anything else is treated as a slug and looked up.
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $ref)) {
+            return $ref;
+        }
+
+        return Hospital::where('slug', $ref)->value('id');
     }
 
     /**

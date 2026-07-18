@@ -63,12 +63,22 @@ MedOS hosts many hospitals. Every request runs against **one** hospital, chosen 
 | **Hospital-specific** | Always its own hospital — no header needed. Sending a *different* `X-Hospital-ID` is rejected (`422`). |
 
 So the voice vendor should:
-1. Call `GET /hospitals` once to get every hospital's `hospital_id` (map each inbound phone line / DID to a `hospital_id`).
-2. On every call, send the header for the hospital that owns the phone line:
+1. Call `GET /hospitals` once to get every hospital's `hospital_id` and `slug` (map each inbound phone line / DID to one hospital).
+2. On every call, name that hospital **whichever way is easiest** — by id **or** slug:
 
 ```
-X-Hospital-ID: 22222222-2222-2222-2222-222222222222
+# a) header
+X-Hospital-ID: gulf-medical
+
+# b) URL query param (easiest on most platforms — no custom header needed)
+GET /api/v1/customer?phone=9876543210&hospital=gulf-medical
+
+# c) JSON body field (for POST calls)
+POST /api/v1/book-appointment
+{ "hospital_id": "gulf-medical", "doctor_id": "...", ... }
 ```
+
+**Easiest of all:** issue a **hospital-specific API token** (that hospital's admin → *API Keys*). It's pinned to its own hospital, so you send **no** header/param at all — every call just works.
 
 ### `GET /api/v1/hospitals`
 Lists the hospitals your token may act for (super-admin → all; hospital token → its own). No `X-Hospital-ID` needed.

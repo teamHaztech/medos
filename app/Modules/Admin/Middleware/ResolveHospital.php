@@ -28,10 +28,13 @@ class ResolveHospital
         if ($hospitalId === null) {
             return response()->json([
                 'error' => 'Hospital context could not be resolved.',
-                'message' => 'Send an X-Hospital-ID header naming the target hospital. Call GET /api/v1/hospitals to list the hospitals your token may act for. Platform / super-admin tokens must specify the hospital; hospital-bound tokens resolve automatically.',
+                'message' => 'Tell us which hospital this request is for. Call GET /api/v1/hospitals to list the hospitals your token may act for, then name one — by header, URL, or body — using its id or slug. (Hospital-bound tokens resolve automatically and need none of this.)',
                 'how_to_fix' => [
-                    'list_hospitals' => 'GET /api/v1/hospitals',
-                    'then_send_header' => 'X-Hospital-ID: <hospital_id>',
+                    'list_hospitals'   => 'GET /api/v1/hospitals',
+                    'option_1_header'  => 'X-Hospital-ID: <hospital_id_or_slug>',
+                    'option_2_query'   => '?hospital=<slug>   (e.g. ...?phone=99...&hospital=city-care)',
+                    'option_3_body'    => '{ "hospital_id": "<id_or_slug>", ... }   (for POST calls)',
+                    'easiest'          => 'Use a hospital-specific API token (from that hospital admin → API Keys) — then no header/param is needed at all.',
                 ],
             ], 422);
         }
