@@ -81,7 +81,11 @@
         <div class="section-title">Encounter Details</div>
         <div class="info-grid">
             <div class="item"><span class="label">Encounter #:</span> <span class="value">{{ $encounter->encounter_number }}</span></div>
+            @if($doctor)
             <div class="item"><span class="label">Consulting Doctor:</span> <span class="value">Dr. {{ $doctor->name ?? '' }} ({{ $doctor->department ?? '' }})</span></div>
+            @else
+            <div class="item"><span class="label">Type:</span> <span class="value">Self-booked (no consultation)</span></div>
+            @endif
             <div class="item"><span class="label">Date of Visit:</span> <span class="value">{{ $encounter->created_at->format('M d, Y') }}</span></div>
             <div class="item"><span class="label">Date of Discharge:</span> <span class="value">{{ $encounter->updated_at->format('M d, Y') }}</span></div>
         </div>
@@ -232,8 +236,13 @@
 
     <div class="signature">
         <div class="line"></div>
+        @if($doctor)
         <div class="name">Dr. {{ $doctor->name ?? '' }}</div>
-        <div class="dept">{{ $doctor->department ?? '' }}{{ $doctor->specialization ? ' - ' . $doctor->specialization : '' }}</div>
+        <div class="dept">{{ $doctor->department ?? '' }}{{ $doctor?->specialization ? ' - ' . $doctor->specialization : '' }}</div>
+        @else
+        <div class="name">{{ $hospital->name ?? 'Hospital' }}</div>
+        <div class="dept">Authorised Signatory</div>
+        @endif
     </div>
 </body>
 </html>
