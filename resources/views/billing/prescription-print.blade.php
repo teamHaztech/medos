@@ -44,7 +44,7 @@
         $doctor = $encounter->doctor;
         $items = $pharmacyOrder->items ?? [];
         $soapNotes = $encounter->soap_notes ?? [];
-        $age = $patient->date_of_birth ? $patient->date_of_birth->age : ($patient->age_approximate ?? '');
+        $age = $patient?->date_of_birth ? $patient->date_of_birth->age : ($patient?->age_approximate ?? '');
     @endphp
 
     <button class="print-btn" onclick="window.print()">Print Prescription</button>
@@ -60,8 +60,12 @@
     </div>
 
     <div class="doctor-info">
-        <strong>Doctor:</strong> Dr. {{ $doctor->name ?? '' }}{{ $doctor->specialization ? ', ' . $doctor->specialization : '' }}
-        {{ $doctor->department ? ' (' . $doctor->department . ')' : '' }}
+        @if($doctor)
+        <strong>Doctor:</strong> Dr. {{ $doctor->name ?? '' }}{{ $doctor?->specialization ? ', ' . $doctor->specialization : '' }}
+        {{ $doctor?->department ? ' (' . $doctor->department . ')' : '' }}
+        @else
+        <strong>Booking:</strong> Self-booked (no consultation)
+        @endif
     </div>
     <div class="date">Date: {{ $encounter->created_at->format('M d, Y') }}</div>
 

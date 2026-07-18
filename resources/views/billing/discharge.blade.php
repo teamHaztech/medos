@@ -46,7 +46,7 @@
         $diagnosisCodes = $encounter->diagnosis_codes ?? [];
         $encounterStatus = is_object($encounter->status) ? $encounter->status->value : $encounter->status;
         $encounterType = is_object($encounter->type) ? $encounter->type->value : $encounter->type;
-        $age = $patient->date_of_birth ? $patient->date_of_birth->age : ($patient->age_approximate ?? '');
+        $age = $patient?->date_of_birth ? $patient->date_of_birth->age : ($patient?->age_approximate ?? '');
 
         $pharmacyOrders = $orders->where('type', 'pharmacy');
         $labOrders = $orders->where('type', 'lab');
@@ -70,7 +70,7 @@
             <div class="item"><span class="label">Phone:</span> <span class="value">{{ $patient->phone ?? '' }}</span></div>
             <div class="item"><span class="label">Age:</span> <span class="value">{{ $age }}</span></div>
             <div class="item"><span class="label">Gender:</span> <span class="value">{{ ucfirst($patient->gender ?? '') }}</span></div>
-            @if($patient->abha_number)
+            @if($patient?->abha_number)
             <div class="item"><span class="label">{{ \App\Modules\Core\Services\RegionService::healthIdLabel() }}:</span> <span class="value">{{ \App\Modules\Core\Services\RegionService::formatHealthId($patient->abha_number) }}</span></div>
             @endif
         </div>

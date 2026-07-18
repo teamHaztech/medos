@@ -975,8 +975,10 @@ class BillingWebController extends Controller
      */
     public function printPrescription(string $encounterId)
     {
+        // withTrashed: a printed record must still name the patient even after
+        // they've been deleted (mirrors Bill::patient()).
         $encounter = Encounter::where('hospital_id', Auth::user()->hospital_id)
-            ->with(['patient', 'doctor'])
+            ->with(['patient' => fn ($q) => $q->withTrashed(), 'doctor'])
             ->findOrFail($encounterId);
 
         $pharmacyOrder = Order::where('encounter_id', $encounterId)
@@ -993,8 +995,10 @@ class BillingWebController extends Controller
      */
     public function dischargeSummary(string $encounterId)
     {
+        // withTrashed: a discharge summary must still name the patient even after
+        // they've been deleted (mirrors Bill::patient()).
         $encounter = Encounter::where('hospital_id', Auth::user()->hospital_id)
-            ->with(['patient', 'doctor'])
+            ->with(['patient' => fn ($q) => $q->withTrashed(), 'doctor'])
             ->findOrFail($encounterId);
 
         $orders = Order::where('encounter_id', $encounterId)->get();
