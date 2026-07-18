@@ -5,6 +5,7 @@ namespace App\Modules\Core\Services;
 use App\Modules\Core\Models\LabAvailability;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class LabSlotService
 {
@@ -17,7 +18,29 @@ class LabSlotService
      */
     public static function availableSlots(string $hospitalId, int $days = 7, int $limit = 12): array
     {
-        $avail = LabAvailability::where('hospital_id', $hospitalId)->first();
+        // Slot generation depends on the lab_availabilities table and the
+        // orders.scheduled_for column. On a Hostinger DB where the schema lags
+        // the code (migrations run manually via deploy.php), or if a hospital
+        // saved a malformed schedule, any of the queries/date parsing below can
+        // throw. Never let that surface as a chat crash — degrade to "no slots"
+        // so the caller falls back to a same-day walk-in booking.
+        try {
+            return self::buildSlots($hospitalId, $days, $limit);
+        } catch (\Throwable $e) {
+            \Log::warning('[LabSlotService] availableSlots failed, falling back to walk-in: ' . $e->getMessage(), [
+                'hospital_id' => $hospitalId,
+            ]);
+
+            return [];
+        }
+    }
+
+    /** @return array<int, array{start:string, label:string, remaining:int}> */
+    private static function buildSlots(string $hospitalId, int $days, int $limit): array
+    {
+        $avail = Schema::hasTable('lab_availabilities')
+            ? LabAvailability::where('hospital_id', $hospitalId)->first()
+            : null;
 
         $schedule = $avail && ! empty($avail->schedule) ? $avail->schedule : LabAvailability::defaultSchedule();
         $duration = $avail->slot_duration ?? 15;
@@ -28,15 +51,18 @@ class LabSlotService
         }
 
         // Count existing lab bookings per slot start time (scheduled_for).
-        $booked = DB::table('orders')
-            ->where('hospital_id', $hospitalId)
-            ->whereIn('type', ['lab', 'imaging', 'procedure'])
-            ->whereNotNull('scheduled_for')
-            ->whereNotIn('status', ['cancelled'])
-            ->where('scheduled_for', '>=', now()->startOfDay())
-            ->selectRaw('scheduled_for, count(*) as c')
-            ->groupBy('scheduled_for')
-            ->pluck('c', 'scheduled_for'); // keyed by datetime string
+        // Guard the column too — an un-migrated orders table has no scheduled_for.
+        $booked = Schema::hasColumn('orders', 'scheduled_for')
+            ? DB::table('orders')
+                ->where('hospital_id', $hospitalId)
+                ->whereIn('type', ['lab', 'imaging', 'procedure'])
+                ->whereNotNull('scheduled_for')
+                ->whereNotIn('status', ['cancelled'])
+                ->where('scheduled_for', '>=', now()->startOfDay())
+                ->selectRaw('scheduled_for, count(*) as c')
+                ->groupBy('scheduled_for')
+                ->pluck('c', 'scheduled_for') // keyed by datetime string
+            : collect();
 
         $slots = [];
         for ($d = 0; $d < $days && count($slots) < $limit; $d++) {
