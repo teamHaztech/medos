@@ -217,24 +217,11 @@ class IntegrationController extends Controller
         $query = strtolower(trim(preg_replace('/^\s*dr\.?\s+/i', '', $request->query('name'))));
 
         $doctors = Staff::where('hospital_id', $hid)->where('is_active', true)
-            ->whereIn('role', ['doctor', 'hospital_admin'])->get();
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])->get();
 
-        // Substring match first, then best fuzzy similarity.
-        $doctor = $doctors->first(fn ($d) => str_contains(strtolower($d->name), $query));
-        if (! $doctor) {
-            $best = null;
-            $bestScore = 0.0;
-            foreach ($doctors as $d) {
-                similar_text($query, strtolower($d->name), $pct);
-                if ($pct > $bestScore) {
-                    $bestScore = $pct;
-                    $best = $d;
-                }
-            }
-            if ($bestScore >= 45) {
-                $doctor = $best;
-            }
-        }
+        // Token-aware match: a full-name match must always beat a first-name-only
+        // fuzzy hit (so "Neha Kapoor" never resolves to "Neha Gupta").
+        $doctor = $this->matchDoctorByName($doctors, $query);
 
         if (! $doctor) {
             return response()->json(['success' => false, 'message' => 'No doctor matched "' . $request->query('name') . '".'], 404);
@@ -248,6 +235,58 @@ class IntegrationController extends Controller
             'consultation_duration' => $doctor->consultation_duration_default ?? 15,
             'schedule'              => $this->buildSchedule($doctor, $days),
         ]]);
+    }
+
+    /**
+     * Resolve a free-text doctor name to a single Staff row using tiered,
+     * token-aware scoring so a full-name match always beats a first-name-only
+     * fuzzy hit (e.g. "Neha Kapoor" must never resolve to "Neha Gupta").
+     * Returns null when nothing clears the confidence bar.
+     */
+    private function matchDoctorByName($doctors, string $query): ?Staff
+    {
+        $norm = fn (string $s) => trim(preg_replace('/\s+/', ' ',
+            strtolower(preg_replace('/^\s*dr\.?\s+/i', '', $s))));
+
+        $q = $norm($query);
+        if ($q === '') {
+            return null;
+        }
+        $qTokens = array_values(array_filter(explode(' ', $q)));
+
+        $best = null;
+        $bestScore = 0.0;
+
+        foreach ($doctors as $d) {
+            $name = $norm($d->name);
+            $nameTokens = array_values(array_filter(explode(' ', $name)));
+            similar_text($q, $name, $pct);           // 0–100 string similarity
+
+            if ($name === $q) {
+                $score = 1000.0;                     // exact full-name match — unbeatable
+            } else {
+                $matched = count(array_intersect($qTokens, $nameTokens));
+                $surnameMatch = in_array(end($qTokens), $nameTokens, true) ? 1 : 0;
+
+                if ($matched > 0 && $matched === count($qTokens)) {
+                    $score = 500.0 + $matched;       // every query word is in the name
+                } elseif ($matched > 0) {
+                    // Some words match; surname carries more weight, fuzzy breaks ties.
+                    $score = 100.0 + ($matched * 10) + ($surnameMatch * 20) + ($pct / 10);
+                } elseif (str_contains($name, $q)) {
+                    $score = 80.0;                   // substring containment
+                } else {
+                    $score = $pct >= 60 ? $pct / 2 : 0.0;  // lone fuzzy, stricter bar
+                }
+            }
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best = $d;
+            }
+        }
+
+        return $bestScore >= 30 ? $best : null;
     }
 
     /** N-day list of available (free, future) time slots from the doctor's weekly schedule. */

@@ -1,0 +1,200 @@
+{
+  "info": {
+    "name": "MedOS Voice AI — Department & Doctor APIs",
+    "description": "Voice-AI / chatbot integration APIs for MedOS.\n\n**Quick start**\n1. Set the collection variables `baseUrl` and (for login) `email` / `password`.\n2. Run **Auth › Login** once — it auto-saves the Bearer token into the `token` variable used by every other request.\n3. Run **Departments › Get Departments**, then **Departments › Get Doctors in Department** (set the `department` variable, e.g. `Cardiology`).\n\nAll data endpoints are Sanctum-authenticated and throttled to 30 req/min. Each token is scoped to one hospital.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://medos.haztech.cloud", "type": "string" },
+    { "key": "email", "value": "admin@haztech.in", "type": "string" },
+    { "key": "password", "value": "password123", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "hospitalId", "value": "", "type": "string" },
+    { "key": "department", "value": "Cardiology", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (get token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('login ok', () => pm.expect(res.success).to.be.true);",
+                  "if (res && res.data && res.data.token) {",
+                  "  pm.collectionVariables.set('token', res.data.token);",
+                  "  console.log('Saved token to collection variable {{token}}');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Authenticate and receive a Sanctum bearer token. The test script auto-saves `data.token` into the `token` collection variable, so every other request is ready to run. For production, prefer a long-lived key issued at Admin › Settings › API Keys."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Departments & Doctors",
+      "item": [
+        {
+          "name": "1. Get Departments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success true', () => pm.expect(res.success).to.be.true);",
+                  "const depts = res.data && res.data.departments;",
+                  "if (depts && depts.length) {",
+                  "  pm.collectionVariables.set('department', depts[0].department);",
+                  "  console.log('Set {{department}} =', depts[0].department);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "X-Hospital-ID", "value": "{{hospitalId}}", "disabled": true, "description": "Only needed for a platform/super-admin token. A hospital token is auto-pinned to its own hospital." }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/departments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "departments"]
+            },
+            "description": "List every department in the hospital, each with its `doctor_count` and the doctors nested inside. Use this so the voice AI can read out available departments when the caller doesn't name a doctor.\n\n**Response**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"count\": 9,\n    \"departments\": [\n      { \"department\": \"Cardiology\", \"doctor_count\": 1, \"doctors\": [ { \"doctor_id\": \"uuid\", \"name\": \"Dr. Amit Patel\", \"specialty\": \"Cardiology\" } ] }\n    ]\n  }\n}\n```"
+          }
+        },
+        {
+          "name": "2. Get Doctors in Department",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success true', () => pm.expect(res.success).to.be.true);",
+                  "const docs = res.data && res.data.doctors;",
+                  "if (docs && docs.length) {",
+                  "  pm.collectionVariables.set('doctorId', docs[0].doctor_id);",
+                  "  pm.collectionVariables.set('doctorName', docs[0].name);",
+                  "  console.log('First doctor:', docs[0].name, docs[0].doctor_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "X-Hospital-ID", "value": "{{hospitalId}}", "disabled": true, "description": "Only needed for a platform/super-admin token." }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/doctors?department={{department}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "doctors"],
+              "query": [
+                { "key": "department", "value": "{{department}}", "description": "Department name from the departments list (case-insensitive, e.g. Cardiology). Omit to list all doctors across the hospital." }
+              ]
+            },
+            "description": "List the doctors in a department. Each doctor includes their next available slot — ideal for offering a caller a doctor + time in one step. Omit the `department` query param to return all doctors.\n\n**Response**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"count\": 1,\n    \"doctors\": [\n      {\n        \"doctor_id\": \"a0000001-0000-0000-0000-000000000003\",\n        \"name\": \"Dr. Amit Patel\",\n        \"department\": \"Cardiology\",\n        \"specialty\": \"Cardiology\",\n        \"available\": true,\n        \"next_available\": { \"date\": \"2026-07-22\", \"day\": \"Wednesday\", \"time\": \"09:00\" }\n      }\n    ]\n  }\n}\n```"
+          }
+        }
+      ],
+      "description": "The two discovery APIs: list departments, then get the doctors in a chosen department. This is the department → doctor path for the voice AI booking flow."
+    },
+    {
+      "name": "Booking Flow (rest of the set)",
+      "item": [
+        {
+          "name": "Get Customer by Phone",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customer?phone=9876543210",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "customer"],
+              "query": [ { "key": "phone", "value": "9876543210", "description": "Patient phone, 10 digits." } ]
+            },
+            "description": "Look up a patient by phone number. Returns the patient profile + last visit if found, else `success:false`."
+          }
+        },
+        {
+          "name": "Get Doctor Schedule (fuzzy name)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/doctor-schedule?name=Dr+Sharma",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "doctor-schedule"],
+              "query": [
+                { "key": "name", "value": "Dr Sharma", "description": "Doctor name, partial or full (fuzzy matched)." },
+                { "key": "date", "value": "", "description": "Optional YYYY-MM-DD. Default: next 7 days.", "disabled": true }
+              ]
+            },
+            "description": "Find a doctor by name (fuzzy match) and return available slots for the next 7 days."
+          }
+        },
+        {
+          "name": "Book Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_id\": \"\",\n  \"patient_name\": \"Test Patient\",\n  \"patient_phone\": \"9876543210\",\n  \"staff_id\": \"{{doctorId}}\",\n  \"slot_start\": \"2026-07-22 09:00:00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/book-appointment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "book-appointment"]
+            },
+            "description": "Book an appointment. For an existing patient send `patient_id`; for a new patient send `patient_name` + `patient_phone` (auto-registered). `staff_id` is the doctor UUID from the doctors / doctor-schedule response. Returns the appointment token + confirmed slot."
+          }
+        }
+      ],
+      "description": "The remaining voice-AI booking APIs, for a complete end-to-end run: customer lookup → doctor schedule → book."
+    }
+  ]
+}
