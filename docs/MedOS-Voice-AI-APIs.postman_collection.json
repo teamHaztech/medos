@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "MedOS Voice AI — Department & Doctor APIs",
-    "description": "Voice-AI / chatbot integration APIs for MedOS.\n\n**Quick start**\n1. Set the collection variables `baseUrl` and (for login) `email` / `password`.\n2. Run **Auth › Login** once — it auto-saves the Bearer token into the `token` variable used by every other request.\n3. Run **Departments › Get Departments**, then **Departments › Get Doctors in Department** (set the `department` variable, e.g. `Cardiology`).\n\nAll data endpoints are Sanctum-authenticated and throttled to 30 req/min. Each token is scoped to one hospital.",
+    "description": "Voice-AI / chatbot integration APIs for MedOS. Field names here match the DEPLOYED API exactly — do not rename params.\n\n**Quick start**\n1. Set collection variables `baseUrl`, `email`, `password`.\n2. Run **Auth › Login** once — it auto-saves the Bearer token.\n3. Discovery: **Get Departments** → **Get Doctors in Department** (auto-saves `doctorId`).\n4. New patient booking (the reliable flow): **Register Patient** (auto-saves `patientId`) → **Book Appointment** (books with that `patientId`).\n\nAll data endpoints are Sanctum-authenticated, throttled 30 req/min, and the hospital is auto-resolved from the token. Book/reschedule/cancel resolve the patient by `patient_id` (preferred) or `phone` (last-10-digit match) — always prefer the `patient_id` returned by Register Patient.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -16,7 +16,12 @@
     { "key": "password", "value": "password123", "type": "string" },
     { "key": "token", "value": "", "type": "string" },
     { "key": "hospitalId", "value": "", "type": "string" },
-    { "key": "department", "value": "Cardiology", "type": "string" }
+    { "key": "department", "value": "Cardiology", "type": "string" },
+    { "key": "doctorId", "value": "", "type": "string" },
+    { "key": "patientId", "value": "", "type": "string" },
+    { "key": "patientPhone", "value": "9876543210", "type": "string" },
+    { "key": "patientName", "value": "Test Caller", "type": "string" },
+    { "key": "appointmentId", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -34,7 +39,7 @@
                   "pm.test('login ok', () => pm.expect(res.success).to.be.true);",
                   "if (res && res.data && res.data.token) {",
                   "  pm.collectionVariables.set('token', res.data.token);",
-                  "  console.log('Saved token to collection variable {{token}}');",
+                  "  console.log('Saved token');",
                   "}"
                 ]
               }
@@ -47,16 +52,9 @@
               { "key": "Accept", "value": "application/json" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login"]
-            },
-            "description": "Authenticate and receive a Sanctum bearer token. The test script auto-saves `data.token` into the `token` collection variable, so every other request is ready to run. For production, prefer a long-lived key issued at Admin › Settings › API Keys."
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] },
+            "description": "Authenticate → returns `data.token`. Test script auto-saves it. For production, prefer a long-lived key from Admin › Settings › API Keys."
           }
         }
       ]
@@ -65,136 +63,183 @@
       "name": "Departments & Doctors",
       "item": [
         {
-          "name": "1. Get Departments",
+          "name": "Get Departments",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const res = pm.response.json();",
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('success true', () => pm.expect(res.success).to.be.true);",
-                  "const depts = res.data && res.data.departments;",
-                  "if (depts && depts.length) {",
-                  "  pm.collectionVariables.set('department', depts[0].department);",
-                  "  console.log('Set {{department}} =', depts[0].department);",
-                  "}"
-                ]
-              }
-            }
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const res = pm.response.json();",
+              "pm.test('success', () => pm.expect(res.success).to.be.true);",
+              "const d = res.data && res.data.departments;",
+              "if (d && d.length) pm.collectionVariables.set('department', d[0].department);"
+            ] } }
           ],
           "request": {
             "method": "GET",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "X-Hospital-ID", "value": "{{hospitalId}}", "disabled": true, "description": "Only needed for a platform/super-admin token. A hospital token is auto-pinned to its own hospital." }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/departments",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "departments"]
-            },
-            "description": "List every department in the hospital, each with its `doctor_count` and the doctors nested inside. Use this so the voice AI can read out available departments when the caller doesn't name a doctor.\n\n**Response**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"count\": 9,\n    \"departments\": [\n      { \"department\": \"Cardiology\", \"doctor_count\": 1, \"doctors\": [ { \"doctor_id\": \"uuid\", \"name\": \"Dr. Amit Patel\", \"specialty\": \"Cardiology\" } ] }\n    ]\n  }\n}\n```"
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/api/v1/departments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "departments"] },
+            "description": "List every department with its doctor_count and nested doctors."
           }
         },
         {
-          "name": "2. Get Doctors in Department",
+          "name": "Get Doctors in Department",
           "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const res = pm.response.json();",
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('success true', () => pm.expect(res.success).to.be.true);",
-                  "const docs = res.data && res.data.doctors;",
-                  "if (docs && docs.length) {",
-                  "  pm.collectionVariables.set('doctorId', docs[0].doctor_id);",
-                  "  pm.collectionVariables.set('doctorName', docs[0].name);",
-                  "  console.log('First doctor:', docs[0].name, docs[0].doctor_id);",
-                  "}"
-                ]
-              }
-            }
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const res = pm.response.json();",
+              "pm.test('success', () => pm.expect(res.success).to.be.true);",
+              "const docs = res.data && res.data.doctors;",
+              "if (docs && docs.length) {",
+              "  pm.collectionVariables.set('doctorId', docs[0].doctor_id);",
+              "  console.log('doctorId =', docs[0].doctor_id, docs[0].name);",
+              "}"
+            ] } }
           ],
           "request": {
             "method": "GET",
-            "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "X-Hospital-ID", "value": "{{hospitalId}}", "disabled": true, "description": "Only needed for a platform/super-admin token." }
-            ],
+            "header": [ { "key": "Accept", "value": "application/json" } ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/doctors?department={{department}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "doctors"],
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctors"],
+              "query": [ { "key": "department", "value": "{{department}}", "description": "Department name (case-insensitive). Omit to list all doctors." } ]
+            },
+            "description": "Doctors in a department, each with next_available slot. Auto-saves the first doctor's id into {{doctorId}}."
+          }
+        },
+        {
+          "name": "Doctor Schedule (fuzzy name)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/doctor-schedule?name=priya&days=7",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "doctor-schedule"],
               "query": [
-                { "key": "department", "value": "{{department}}", "description": "Department name from the departments list (case-insensitive, e.g. Cardiology). Omit to list all doctors across the hospital." }
+                { "key": "name", "value": "priya", "description": "Doctor name, partial/full (fuzzy, handles typos + 'Dr.' prefix). REQUIRED." },
+                { "key": "days", "value": "7", "description": "Days of slots to return (1-30, default 7). NOTE: param is 'days', not 'date'." }
               ]
             },
-            "description": "List the doctors in a department. Each doctor includes their next available slot — ideal for offering a caller a doctor + time in one step. Omit the `department` query param to return all doctors.\n\n**Response**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"count\": 1,\n    \"doctors\": [\n      {\n        \"doctor_id\": \"a0000001-0000-0000-0000-000000000003\",\n        \"name\": \"Dr. Amit Patel\",\n        \"department\": \"Cardiology\",\n        \"specialty\": \"Cardiology\",\n        \"available\": true,\n        \"next_available\": { \"date\": \"2026-07-22\", \"day\": \"Wednesday\", \"time\": \"09:00\" }\n      }\n    ]\n  }\n}\n```"
+            "description": "Find a doctor by name and return doctor_id + N-day available_slots."
           }
         }
-      ],
-      "description": "The two discovery APIs: list departments, then get the doctors in a chosen department. This is the department → doctor path for the voice AI booking flow."
+      ]
     },
     {
-      "name": "Booking Flow (rest of the set)",
+      "name": "Patient",
       "item": [
         {
-          "name": "Get Customer by Phone",
+          "name": "Customer Lookup by Phone",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const res = pm.response.json();",
+              "if (res.success && res.data && res.data.patient_id) {",
+              "  pm.collectionVariables.set('patientId', res.data.patient_id);",
+              "}"
+            ] } }
+          ],
           "request": {
             "method": "GET",
             "header": [ { "key": "Accept", "value": "application/json" } ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/customer?phone=9876543210",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "customer"],
-              "query": [ { "key": "phone", "value": "9876543210", "description": "Patient phone, 10 digits." } ]
+              "raw": "{{baseUrl}}/api/v1/customer?phone={{patientPhone}}",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "customer"],
+              "query": [ { "key": "phone", "value": "{{patientPhone}}", "description": "Matched by last 10 digits. REQUIRED." } ]
             },
-            "description": "Look up a patient by phone number. Returns the patient profile + last visit if found, else `success:false`."
+            "description": "Look up an existing patient by phone. 404 if not found (then use Register Patient). Saves patient_id when found."
           }
         },
         {
-          "name": "Get Doctor Schedule (fuzzy name)",
-          "request": {
-            "method": "GET",
-            "header": [ { "key": "Accept", "value": "application/json" } ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/doctor-schedule?name=Dr+Sharma",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "doctor-schedule"],
-              "query": [
-                { "key": "name", "value": "Dr Sharma", "description": "Doctor name, partial or full (fuzzy matched)." },
-                { "key": "date", "value": "", "description": "Optional YYYY-MM-DD. Default: next 7 days.", "disabled": true }
-              ]
-            },
-            "description": "Find a doctor by name (fuzzy match) and return available slots for the next 7 days."
-          }
-        },
-        {
-          "name": "Book Appointment",
+          "name": "Register Patient",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const res = pm.response.json();",
+              "pm.test('success', () => pm.expect(res.success).to.be.true);",
+              "if (res.data && res.data.patient_id) {",
+              "  pm.collectionVariables.set('patientId', res.data.patient_id);",
+              "  pm.collectionVariables.set('patientPhone', res.data.phone);",
+              "  console.log('patientId =', res.data.patient_id, '| already_registered =', res.data.already_registered);",
+              "}"
+            ] } }
+          ],
           "request": {
             "method": "POST",
             "header": [
               { "key": "Accept", "value": "application/json" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"patient_id\": \"\",\n  \"patient_name\": \"Test Patient\",\n  \"patient_phone\": \"9876543210\",\n  \"staff_id\": \"{{doctorId}}\",\n  \"slot_start\": \"2026-07-22 09:00:00\"\n}"
-            },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{patientName}}\",\n  \"phone\": \"{{patientPhone}}\",\n  \"gender\": \"unknown\",\n  \"age\": 30\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/register-patient", "host": ["{{baseUrl}}"], "path": ["api", "v1", "register-patient"] },
+            "description": "Register a new patient. Only name + phone required (gender/age optional). Idempotent — an existing phone returns that patient with already_registered:true. Auto-saves patient_id into {{patientId}} — Book Appointment uses it next."
+          }
+        },
+        {
+          "name": "My Appointments",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/book-appointment",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "book-appointment"]
+              "raw": "{{baseUrl}}/api/v1/my-appointments?phone={{patientPhone}}&include_past=false",
+              "host": ["{{baseUrl}}"], "path": ["api", "v1", "my-appointments"],
+              "query": [
+                { "key": "phone", "value": "{{patientPhone}}", "description": "phone OR patient_id" },
+                { "key": "include_past", "value": "false" }
+              ]
             },
-            "description": "Book an appointment. For an existing patient send `patient_id`; for a new patient send `patient_name` + `patient_phone` (auto-registered). `staff_id` is the doctor UUID from the doctors / doctor-schedule response. Returns the appointment token + confirmed slot."
+            "description": "List a patient's appointments (appointment_id, doctor, date, time, status)."
           }
         }
-      ],
-      "description": "The remaining voice-AI booking APIs, for a complete end-to-end run: customer lookup → doctor schedule → book."
+      ]
+    },
+    {
+      "name": "Appointments",
+      "item": [
+        {
+          "name": "Book Appointment",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const res = pm.response.json();",
+              "pm.test('booked', () => pm.expect(res.success).to.be.true);",
+              "if (res.data && res.data.appointment_id) {",
+              "  pm.collectionVariables.set('appointmentId', res.data.appointment_id);",
+              "  console.log('appointment_id =', res.data.appointment_id, '| token =', res.data.token);",
+              "}"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"doctor_id\": \"{{doctorId}}\",\n  \"patient_id\": \"{{patientId}}\",\n  \"date\": \"2026-07-23\",\n  \"time\": \"09:00\",\n  \"notes\": \"\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/book-appointment", "host": ["{{baseUrl}}"], "path": ["api", "v1", "book-appointment"] },
+            "description": "Book an appointment. EXACT params: doctor_id (required uuid), patient_id (uuid) OR phone (string), date (YYYY-MM-DD), time (HH:mm), notes (optional).\n\nReliable flow: run Register Patient first so {{patientId}} is set, then this books with that id — no phone ambiguity. To book by phone instead, replace \"patient_id\": \"{{patientId}}\" with \"phone\": \"{{patientPhone}}\".\n\nValidates: doctor exists & active · patient exists · slot in future · doctor working then · slot free. Returns appointment_id, token (e.g. CAR-002), doctor, patient, date, time, status."
+          }
+        },
+        {
+          "name": "Reschedule Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"appointment_id\": \"{{appointmentId}}\",\n  \"date\": \"2026-07-24\",\n  \"time\": \"10:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/reschedule-appointment", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reschedule-appointment"] },
+            "description": "Move an appointment. Params: appointment_id (required), date, time. Same slot validations as booking."
+          }
+        },
+        {
+          "name": "Cancel Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"appointment_id\": \"{{appointmentId}}\",\n  \"reason\": \"Patient request\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/cancel-appointment", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cancel-appointment"] },
+            "description": "Cancel an appointment. Params: appointment_id (required), reason (optional)."
+          }
+        }
+      ]
     }
   ]
 }
