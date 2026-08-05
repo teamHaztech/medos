@@ -38,14 +38,14 @@ class DoctorWebController extends Controller
                 ->whereDate('slot_start', today())
                 ->whereIn('status', ['checked_in', 'in_progress', 'confirmed', 'scheduled', 'completed'])
                 ->orderByRaw("CASE status WHEN 'in_progress' THEN 0 WHEN 'checked_in' THEN 1 WHEN 'confirmed' THEN 2 WHEN 'scheduled' THEN 3 WHEN 'completed' THEN 4 ELSE 5 END, slot_start")
-                ->with(['patient'])
+                ->with(['patient', 'encounter'])
                 ->get();
 
             $position = 0;
             $queue = $appointments->map(function ($apt) use (&$position) {
                 $position++;
                 $patient = $apt->patient;
-                $encounter = Encounter::where('patient_id', $apt->patient_id)
+                $encounter = $apt->encounter ?? Encounter::where('patient_id', $apt->patient_id)
                     ->where('doctor_id', $apt->doctor_id)
                     ->whereDate('created_at', today())
                     ->first();
@@ -343,14 +343,14 @@ class DoctorWebController extends Controller
             ->whereDate('slot_start', today())
             ->whereIn('status', ['checked_in', 'in_progress', 'confirmed', 'scheduled', 'completed'])
             ->orderByRaw("CASE status WHEN 'in_progress' THEN 0 WHEN 'checked_in' THEN 1 WHEN 'confirmed' THEN 2 WHEN 'scheduled' THEN 3 WHEN 'completed' THEN 4 ELSE 5 END, slot_start")
-            ->with(['patient'])
+            ->with(['patient', 'encounter'])
             ->get();
 
         $position = 0;
         $queue = $appointments->map(function ($apt) use (&$position, $staff) {
             $position++;
             $patient = $apt->patient;
-            $encounter = Encounter::where('patient_id', $apt->patient_id)
+            $encounter = $apt->encounter ?? Encounter::where('patient_id', $apt->patient_id)
                 ->where('doctor_id', $apt->doctor_id)
                 ->whereDate('created_at', today())->first();
 
@@ -402,7 +402,7 @@ class DoctorWebController extends Controller
         ]);
 
         // Also update encounter
-        $encounter = Encounter::where('patient_id', $apt->patient_id)
+        $encounter = $apt->encounter ?? Encounter::where('patient_id', $apt->patient_id)
             ->where('doctor_id', $apt->doctor_id)
             ->whereDate('created_at', today())
             ->first();
@@ -428,7 +428,7 @@ class DoctorWebController extends Controller
             'tests.*.type'  => 'nullable|string',
         ]);
 
-        $encounter = Encounter::where('patient_id', $apt->patient_id)
+        $encounter = $apt->encounter ?? Encounter::where('patient_id', $apt->patient_id)
             ->where('doctor_id', $apt->doctor_id)
             ->whereDate('created_at', today())
             ->first();
@@ -497,7 +497,7 @@ class DoctorWebController extends Controller
             'consultation_start_time' => null,
         ]);
 
-        $encounter = Encounter::where('patient_id', $apt->patient_id)
+        $encounter = $apt->encounter ?? Encounter::where('patient_id', $apt->patient_id)
             ->where('doctor_id', $apt->doctor_id)
             ->whereDate('created_at', today())
             ->first();
@@ -518,11 +518,17 @@ class DoctorWebController extends Controller
         ]);
 
         // Close out the linked, still-open encounter so it doesn't linger as active work.
-        Encounter::where('patient_id', $apt->patient_id)
-            ->where('doctor_id', $apt->doctor_id)
-            ->whereDate('created_at', today())
-            ->whereIn('status', ['checked_in', 'in_progress'])
-            ->update(['status' => 'cancelled']);
+        if ($apt->encounter_id) {
+            Encounter::where('id', $apt->encounter_id)
+                ->whereIn('status', ['checked_in', 'in_progress'])
+                ->update(['status' => 'cancelled']);
+        } else {
+            Encounter::where('patient_id', $apt->patient_id)
+                ->where('doctor_id', $apt->doctor_id)
+                ->whereDate('created_at', today())
+                ->whereIn('status', ['checked_in', 'in_progress'])
+                ->update(['status' => 'cancelled']);
+        }
 
         return response()->json(['success' => true]);
     }
@@ -542,7 +548,7 @@ class DoctorWebController extends Controller
         ]);
 
         // Update encounter
-        $encounter = Encounter::where('patient_id', $apt->patient_id)
+        $encounter = $apt->encounter ?? Encounter::where('patient_id', $apt->patient_id)
             ->where('doctor_id', $apt->doctor_id)
             ->whereDate('created_at', today())
             ->first();
