@@ -769,11 +769,11 @@ class KioskController extends Controller
             ->whereDate('slot_start', today())
             ->whereIn('status', ['checked_in', 'in_progress', 'completed'])
             ->orderByRaw("CASE status WHEN 'in_progress' THEN 0 WHEN 'checked_in' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END, slot_start")
-            ->with('patient')
+            ->with(['patient', 'encounter'])
             ->get()
             ->map(function ($apt) {
                 $status = is_object($apt->status) ? $apt->status->value : ($apt->status ?? '');
-                $encounter = Encounter::where('patient_id', $apt->patient_id)
+                $encounter = $apt->encounter ?? Encounter::where('patient_id', $apt->patient_id)
                     ->where('doctor_id', $apt->doctor_id)
                     ->whereDate('created_at', today())->first();
                 $intake = is_array($encounter?->intake_data) ? $encounter->intake_data : [];
