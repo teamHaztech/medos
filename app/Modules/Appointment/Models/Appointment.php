@@ -65,9 +65,9 @@ class Appointment extends Model
     /**
      * Get the encounter spawned from this appointment.
      */
-    public function encounter(): HasOne
+    public function encounter(): BelongsTo
     {
-        return $this->hasOne(Encounter::class);
+        return $this->belongsTo(Encounter::class);
     }
 
     /**
