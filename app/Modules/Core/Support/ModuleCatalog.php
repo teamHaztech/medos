@@ -27,6 +27,7 @@ class ModuleCatalog
         'vaccination'          => ['name' => 'Vaccination', 'description' => 'Vaccine records and due tracking', 'category' => 'Clinical'],
         'dietary'              => ['name' => 'Dietary', 'description' => 'Meal master and prescriptions', 'category' => 'Clinical'],
         'dental'               => ['name' => 'Dental', 'description' => 'Tooth charting and treatment plans', 'category' => 'Clinical'],
+        'ophthalmology'        => ['name' => 'Ophthalmology', 'description' => 'Eye exams, refraction / Rx and treatment plans', 'category' => 'Clinical'],
         'clinical_pathways'    => ['name' => 'Clinical Pathways', 'description' => 'Care-pathway templates and tracking', 'category' => 'Clinical'],
         'consent'              => ['name' => 'Consent Management', 'description' => 'Consent forms and compliance', 'category' => 'Clinical'],
 
@@ -50,7 +51,7 @@ class ModuleCatalog
     public const NEW_MODULE_KEYS = [
         'vaccination', 'dietary', 'dental', 'clinical_pathways', 'consent',
         'inventory', 'incidents', 'housekeeping', 'voice_calls',
-        'lab', 'pharmacy', 'inpatient',
+        'lab', 'pharmacy', 'inpatient', 'ophthalmology',
     ];
 
     /** @return array<string, array> grouped by category, preserving order. */

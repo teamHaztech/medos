@@ -426,6 +426,20 @@ Route::middleware(['auth', 'module:dental'])->prefix('dental')->name('web.dental
 });
 
 // ---------------------------------------------------------------
+// Ophthalmology (Eye Hospital) — exams, refraction/Rx, treatment plan
+// ---------------------------------------------------------------
+Route::middleware(['auth', 'module:ophthalmology'])->prefix('eye')->name('web.eye.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Web\EyeController::class, 'index'])->name('index');
+    Route::post('exam', [\App\Http\Controllers\Web\EyeController::class, 'saveExam'])->name('exam.save');
+    Route::post('treatment', [\App\Http\Controllers\Web\EyeController::class, 'addTreatment'])->name('treatment.add');
+    Route::post('treatment/{id}', [\App\Http\Controllers\Web\EyeController::class, 'updateTreatment'])->name('treatment.update');
+    Route::post('treatment/{id}/delete', [\App\Http\Controllers\Web\EyeController::class, 'deleteTreatment'])->name('treatment.delete');
+    Route::post('bill', [\App\Http\Controllers\Web\EyeController::class, 'billTreatments'])->name('bill');
+    Route::post('procedure', [\App\Http\Controllers\Web\EyeController::class, 'storeProcedure'])->name('procedure.store');
+    Route::post('procedure/{id}', [\App\Http\Controllers\Web\EyeController::class, 'updateProcedure'])->name('procedure.update');
+});
+
+// ---------------------------------------------------------------
 // Voice AI Calls
 // ---------------------------------------------------------------
 Route::middleware(['auth', 'module:voice_calls'])->prefix('voice-calls')->name('web.voice-calls.')->group(function () {
