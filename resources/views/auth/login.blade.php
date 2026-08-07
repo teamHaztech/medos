@@ -163,6 +163,16 @@
                 <span class="ml-auto px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">Nutrition</span>
             </button>
 
+            <button @click="email='eye@haztech.in'; password='password123'; $nextTick(() => $el.closest('div').previousElementSibling.querySelector('form').submit())"
+                class="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg transition-all text-left">
+                <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">Ey</div>
+                <div>
+                    <p class="text-sm font-semibold text-slate-800">Dr. Sanjay Rao</p>
+                    <p class="text-xs text-slate-500">eye@haztech.in</p>
+                </div>
+                <span class="ml-auto px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">Ophthalmology</span>
+            </button>
+
             <button @click="email='billing@haztech.in'; password='password123'; $nextTick(() => $el.closest('div').previousElementSibling.querySelector('form').submit())"
                 class="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-cyan-50 border border-slate-200 hover:border-cyan-300 rounded-lg transition-all text-left">
                 <div class="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-xs font-bold">B</div>
