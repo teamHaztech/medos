@@ -16,8 +16,14 @@ use Illuminate\Support\Facades\Route;
 // ---------------------------------------------------------------
 
 Route::get('login', [WebAuthController::class, 'showLogin'])->name('login');
-Route::post('login', [WebAuthController::class, 'login']);
+Route::post('login', [WebAuthController::class, 'login'])->middleware('throttle:20,1');
 Route::post('logout', [WebAuthController::class, 'logout'])->name('logout');
+
+// Self-service password change (also the target of the forced-change flow).
+Route::middleware('auth')->group(function () {
+    Route::get('change-password', [WebAuthController::class, 'showChangePassword'])->name('password.change');
+    Route::post('change-password', [WebAuthController::class, 'changePassword'])->name('password.change.update');
+});
 
 // ---------------------------------------------------------------
 // Admin Dashboard (auth required)

@@ -1583,6 +1583,7 @@ class AdminWebController extends Controller
             'hospital_id' => $hospitalId,
             'staff_id'    => $staffId,
             'is_active'   => true,
+            'must_change_password' => true,
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
@@ -1722,6 +1723,7 @@ class AdminWebController extends Controller
                     'password' => \Illuminate\Support\Facades\Hash::make($plain),
                     'phone' => $phone, 'role' => $role, 'hospital_id' => $hospitalId,
                     'staff_id' => $staffId, 'is_active' => true,
+                    'must_change_password' => true,
                     'created_at' => now(), 'updated_at' => now(),
                 ]);
                 \DB::table('staff')->where('id', $staffId)->update(['user_id' => $userId]);
@@ -1813,7 +1815,7 @@ class AdminWebController extends Controller
 
         if ($userId) {
             \DB::table('users')->where('id', $userId)->update([
-                'password' => $hash, 'is_active' => true, 'updated_at' => now(),
+                'password' => $hash, 'is_active' => true, 'must_change_password' => true, 'updated_at' => now(),
             ]);
         } else {
             // No login yet — create one so they can sign in.
@@ -1828,6 +1830,7 @@ class AdminWebController extends Controller
                 'hospital_id' => $hospitalId,
                 'staff_id'    => $staff->id,
                 'is_active'   => true,
+                'must_change_password' => true,
                 'created_at'  => now(),
                 'updated_at'  => now(),
             ]);

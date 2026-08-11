@@ -16,7 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Record state-changing actions to the account-activity audit trail
         // (web only — API/token traffic isn't part of the admin incident log).
-        $middleware->web(append: [\App\Http\Middleware\LogActivity::class]);
+        // EnsurePasswordChanged forces admin-provisioned accounts to set their
+        // own password before using the app.
+        $middleware->web(append: [
+            \App\Http\Middleware\EnsurePasswordChanged::class,
+            \App\Http\Middleware\LogActivity::class,
+        ]);
 
         $middleware->alias([
             'resolve.hospital' => \App\Modules\Admin\Middleware\ResolveHospital::class,
@@ -28,6 +33,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {
+        // Prune Sanctum tokens that have been expired for over 24h (security hygiene).
+        $schedule->command('sanctum:prune-expired --hours=24')->daily();
+
         // Queue evaluation every minute
         $schedule->command('medos:evaluate-queues')->everyMinute()->withoutOverlapping();
 

@@ -68,7 +68,11 @@ class AuthController extends Controller
         }
 
         $abilities = self::ROLE_ABILITIES[$user->role->value] ?? [];
-        $token = $user->createToken('auth-token', $abilities)->plainTextToken;
+        // Login-issued tokens expire (default 24h) so a leaked session token
+        // stops working. Long-lived integration keys are issued separately at
+        // Admin → API Keys and are NOT time-boxed. TTL <= 0 disables expiry.
+        $ttlHours = (int) config('medos.api_token_ttl_hours', 24);
+        $token = $user->createToken('auth-token', $abilities, $ttlHours > 0 ? now()->addHours($ttlHours) : null)->plainTextToken;
 
         $user->load(['hospital', 'staff']);
 
@@ -209,7 +213,11 @@ class AuthController extends Controller
 
         // Issue a new one with the same role abilities
         $abilities = self::ROLE_ABILITIES[$user->role->value] ?? [];
-        $token = $user->createToken('auth-token', $abilities)->plainTextToken;
+        // Login-issued tokens expire (default 24h) so a leaked session token
+        // stops working. Long-lived integration keys are issued separately at
+        // Admin → API Keys and are NOT time-boxed. TTL <= 0 disables expiry.
+        $ttlHours = (int) config('medos.api_token_ttl_hours', 24);
+        $token = $user->createToken('auth-token', $abilities, $ttlHours > 0 ? now()->addHours($ttlHours) : null)->plainTextToken;
 
         return response()->json([
             'success' => true,

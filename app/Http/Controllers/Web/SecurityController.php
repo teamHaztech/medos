@@ -288,7 +288,11 @@ class SecurityController extends Controller
         $target = $this->scopedTarget($userId, $isSuper, $hid);
 
         $plain = Str::random(12);
-        $target->update(['password' => Hash::make($plain), 'is_active' => true]);
+        $target->forceFill([
+            'password'             => Hash::make($plain),
+            'is_active'            => true,
+            'must_change_password' => true,   // force the user to set their own at next login
+        ])->save();
         AccountActivity::record($actor, 'update', request(), null, 'Reset password for ' . $target->email);
 
         return back()->with('success', "New password for {$target->name} → {$target->email} / {$plain}  (share securely, they should change it).");

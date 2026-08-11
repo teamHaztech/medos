@@ -307,6 +307,7 @@ class ImportController extends Controller
             'hospital_id' => $hospitalId,
             'staff_id'    => $staffId,
             'is_active'   => true,
+            'must_change_password' => true,
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);

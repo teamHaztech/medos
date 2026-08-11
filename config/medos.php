@@ -6,6 +6,10 @@ return [
 
     'current_hospital_id' => null, // Set at runtime via middleware
 
+    // Hours before a login-issued API token expires. Admin-issued API keys
+    // (Admin → API Keys) are separate and long-lived. Set to 0 to disable expiry.
+    'api_token_ttl_hours' => (int) env('MEDOS_API_TOKEN_TTL_HOURS', 24),
+
     'ai' => [
         'provider' => env('AI_PROVIDER', 'anthropic'), // anthropic, openai
         'anthropic_key' => env('ANTHROPIC_API_KEY'),

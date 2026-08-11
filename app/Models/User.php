@@ -48,10 +48,12 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'role'              => UserRole::class,
-            'is_active'         => 'boolean',
-            'last_login_at'     => 'datetime',
+            'password'             => 'hashed',
+            'role'                 => UserRole::class,
+            'is_active'            => 'boolean',
+            'last_login_at'        => 'datetime',
+            'password_changed_at'  => 'datetime',
+            'must_change_password' => 'boolean',
         ];
     }
 
