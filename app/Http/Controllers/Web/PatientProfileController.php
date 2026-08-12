@@ -97,14 +97,15 @@ class PatientProfileController extends Controller
         $hospital = Hospital::find($p->hospital_id);
 
         return view('public.patient-profile', [
-            'patient'    => $p,
-            'hospital'   => $hospital,
-            'updateUrl'  => URL::temporarySignedRoute(
+            'patient'      => $p,
+            'hospital'     => $hospital,
+            'completeness' => self::completeness($p),
+            'updateUrl'    => URL::temporarySignedRoute(
                 'patient-profile.update',
                 now()->addDays(self::LINK_DAYS),
                 ['patient' => $p->id]
             ),
-            'saved'      => (bool) $request->query('saved'),
+            'saved'        => (bool) $request->query('saved'),
         ]);
     }
 
