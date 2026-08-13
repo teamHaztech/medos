@@ -37,7 +37,7 @@
                     <div :class="msg.from === 'user' ? 'flex justify-end' : 'flex justify-start'">
                         <div :class="msg.from === 'user' ? 'bg-[#dcf8c6] rounded-tl-xl rounded-tr-sm rounded-bl-xl rounded-br-xl' : 'bg-white rounded-tl-sm rounded-tr-xl rounded-bl-xl rounded-br-xl'"
                             class="max-w-[85%] px-3 py-2 shadow-sm">
-                            <p class="text-sm text-slate-800 whitespace-pre-wrap" x-html="formatMsg(msg.text)"></p>
+                            <p class="text-sm text-slate-800 whitespace-pre-wrap" style="overflow-wrap:anywhere;word-break:break-word" x-html="formatMsg(msg.text)"></p>
                             <p class="text-[10px] text-slate-400 text-right mt-0.5" x-text="msg.time"></p>
                         </div>
                     </div>
@@ -152,12 +152,23 @@
             },
 
             formatMsg(text) {
-                // WhatsApp-style formatting: *bold*, _italic_, ~strike~, ```code```
-                return text
+                // Escape first, then turn URLs into tappable links that stay
+                // inside the bubble (long signed links used to overflow the chat).
+                let html = text
                     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/(https?:\/\/[^\s]+)/g, (u) =>
+                        `<a href="${u}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline font-medium" style="overflow-wrap:anywhere;word-break:break-all">${this.shortUrl(u)}</a>`)
+                    // WhatsApp-style formatting: *bold*, _italic_
                     .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
                     .replace(/_([^_]+)_/g, '<em class="text-slate-500">$1</em>')
                     .replace(/\n/g, '<br>');
+                return html;
+            },
+
+            // Friendly, short display for a long URL (host + start of path).
+            shortUrl(u) {
+                const s = u.replace(/^https?:\/\//, '').replace(/&amp;/g, '&');
+                return s.length > 36 ? s.slice(0, 36) + '…' : s;
             },
 
             now() {
