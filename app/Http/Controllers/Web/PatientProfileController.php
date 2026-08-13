@@ -142,6 +142,13 @@ class PatientProfileController extends Controller
             $p->forceFill($update)->save();
         }
 
-        return redirect()->to(self::linkFor($p) . '&saved=1');
+        // Redirect back to a freshly SIGNED link with saved=1 baked into the
+        // signature — appending it after signing would invalidate the signature
+        // and trip the `signed` middleware (403).
+        return redirect()->to(URL::temporarySignedRoute(
+            'patient-profile.edit',
+            now()->addDays(self::LINK_DAYS),
+            ['patient' => $p->id, 'saved' => 1]
+        ));
     }
 }
