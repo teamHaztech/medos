@@ -771,6 +771,7 @@ class DoctorWebController extends Controller
 
         // Notify patient about the referral appointment
         \App\Modules\Core\Services\WhatsAppNotifier::appointmentBooked($apt);
+        \App\Modules\Core\Services\Notifier::appointmentConfirmation($apt);
 
         $msg = $isToday
             ? "Accepted! Patient added to your queue as $token"

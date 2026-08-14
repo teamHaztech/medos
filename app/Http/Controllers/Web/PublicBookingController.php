@@ -251,6 +251,12 @@ class PublicBookingController extends Controller
             throw $e;
         }
 
+        // Send SMS + Email confirmation for the just-booked appointment (best-effort).
+        $apt = \App\Modules\Appointment\Models\Appointment::where('notes', $token)->orderByDesc('created_at')->first();
+        if ($apt) {
+            \App\Modules\Core\Services\Notifier::appointmentConfirmation($apt);
+        }
+
         return redirect()->route('book.confirmed', ['token' => $token]);
     }
 

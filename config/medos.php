@@ -31,6 +31,24 @@ return [
         'gupshup_app_name' => env('GUPSHUP_APP_NAME'),
     ],
 
+    // SMS delivery — provider: log (dev default) | msg91 | twilio | generic.
+    // Per-hospital overrides live in Hospital.config['sms'] (secrets encrypted).
+    'sms' => [
+        'provider'    => env('SMS_PROVIDER', 'log'),
+        'sender_id'   => env('SMS_SENDER_ID', 'MEDOS'),
+        'api_key'     => env('SMS_API_KEY'),           // MSG91 authkey / generic bearer
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token'  => env('TWILIO_AUTH_TOKEN'),
+        'from'        => env('TWILIO_FROM'),
+        'url'         => env('SMS_GENERIC_URL'),        // generic JSON POST gateway
+    ],
+
+    // Email uses the standard Laravel mailer (config/mail.php via .env). A
+    // per-hospital display name can be set in Hospital.config['email']['from_name'].
+    'email' => [
+        'from_name' => env('MAIL_FROM_NAME', 'MedOS'),
+    ],
+
     'triage' => [
         'emergency_threshold' => 0.9,
         'urgent_threshold' => 0.7,

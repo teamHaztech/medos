@@ -446,6 +446,8 @@ class IntegrationController extends Controller
             throw $e;
         }
 
+        \App\Modules\Core\Services\Notifier::appointmentConfirmation($appointment);
+
         return response()->json(['success' => true, 'data' => [
             'appointment_id' => $appointment->id,
             'token'          => $token,

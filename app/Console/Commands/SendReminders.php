@@ -49,6 +49,9 @@ class SendReminders extends Command
                     'appointment',
                 )->onQueue('notifications');
 
+                // SMS + Email reminder inline (works without a queue worker).
+                \App\Modules\Core\Services\Notifier::appointmentReminder($appointment, '24h');
+
                 // Mark as reminded
                 $appointment->update([
                     'notes' => trim(($appointment->notes ?? '') . ' reminder_24h_sent'),
@@ -80,6 +83,9 @@ class SendReminders extends Command
                     $appointment->encounter_id,
                     'appointment',
                 )->onQueue('notifications');
+
+                // SMS + Email reminder inline (works without a queue worker).
+                \App\Modules\Core\Services\Notifier::appointmentReminder($appointment, '2h');
 
                 // Mark as reminded
                 $appointment->update([

@@ -400,6 +400,71 @@
         </div>
     </div>
 
+    {{-- SMS Gateway --}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h3 class="text-base font-semibold text-slate-800 mb-1">SMS Gateway</h3>
+        <p class="text-xs text-slate-500 mb-4">Sends appointment confirmations &amp; reminders by SMS. Leave provider on <strong>Log only</strong> until a gateway account is ready.</p>
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Provider</label>
+                    <select x-model="sms.provider" class="input-field">
+                        <option value="log">Log only (not sending)</option>
+                        <option value="msg91">MSG91</option>
+                        <option value="twilio">Twilio</option>
+                        <option value="generic">Generic HTTP</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Sender ID</label>
+                    <input type="text" x-model="sms.sender_id" maxlength="20" class="input-field" placeholder="MEDOS">
+                </div>
+            </div>
+            <div x-show="sms.provider==='msg91' || sms.provider==='generic'">
+                <label class="block text-sm font-medium text-slate-700 mb-1" x-text="sms.provider==='generic' ? 'Bearer token' : 'MSG91 Auth Key'"></label>
+                <input type="password" x-model="sms.api_key" class="input-field" :placeholder="sms.hasApiKey ? '•••••••• saved — leave blank to keep' : 'Enter key'">
+            </div>
+            <div x-show="sms.provider==='generic'">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Gateway URL</label>
+                <input type="url" x-model="sms.url" class="input-field" placeholder="https://api.provider.com/send">
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" x-show="sms.provider==='twilio'">
+                <div><label class="block text-sm font-medium text-slate-700 mb-1">Account SID</label><input type="text" x-model="sms.account_sid" class="input-field" placeholder="AC…"></div>
+                <div><label class="block text-sm font-medium text-slate-700 mb-1">Auth Token</label><input type="password" x-model="sms.auth_token" class="input-field" :placeholder="sms.hasAuthToken ? '•••• saved' : 'token'"></div>
+                <div><label class="block text-sm font-medium text-slate-700 mb-1">From Number</label><input type="text" x-model="sms.from" class="input-field" placeholder="+1…"></div>
+            </div>
+            <div class="flex justify-end">
+                <button type="button" @click="saveSms()" class="btn-primary">Save SMS Settings</button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Email --}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h3 class="text-base font-semibold text-slate-800 mb-1">Email</h3>
+        <p class="text-xs text-slate-500 mb-4">Sends confirmations &amp; reminders by email. The SMTP server is configured in the server's <code>.env</code> (MAIL_*). Set the sender name shown to patients here.</p>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Sender name</label>
+                <input type="text" x-model="email.from_name" maxlength="80" class="input-field" placeholder="City Care Hospital">
+            </div>
+            <div class="flex justify-end">
+                <button type="button" @click="saveEmail()" class="btn-primary">Save Email Settings</button>
+            </div>
+        </div>
+
+        {{-- Test send --}}
+        <div class="mt-5 pt-4 border-t border-slate-100">
+            <p class="text-sm font-semibold text-slate-700 mb-2">Send a test</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">Test phone</label><input type="tel" x-model="notif.sms" class="input-field" placeholder="9876543210"></div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">Test email</label><input type="email" x-model="notif.email" class="input-field" placeholder="you@example.com"></div>
+                <div><button type="button" @click="sendTest()" class="btn-secondary w-full">Send test SMS / Email</button></div>
+            </div>
+            <p class="text-xs mt-2" :class="notif.ok===false ? 'text-red-600' : 'text-green-600'" x-text="notif.msg"></p>
+        </div>
+    </div>
+
     {{-- Billing Integrations --}}
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div class="flex items-center justify-between mb-1">
@@ -527,6 +592,9 @@ function settingsPage() {
         ai: {{ \Illuminate\Support\Js::from(['provider' => $aiCfg['provider'] ?? 'anthropic', 'model' => $aiCfg['model'] ?? '', 'apiKey' => '', 'hasKey' => $aiCfg['hasKey'] ?? false]) }},
         whatsapp: {{ \Illuminate\Support\Js::from(['number' => $waCfg['number'] ?? '', 'provider' => $waCfg['provider'] ?? 'meta', 'token' => '', 'hasToken' => $waCfg['hasToken'] ?? false]) }},
         webhookUrl: window.location.origin + '/api/whatsapp/webhook',
+        sms: {{ \Illuminate\Support\Js::from(array_merge($smsCfg, ['api_key' => '', 'auth_token' => ''])) }},
+        email: {{ \Illuminate\Support\Js::from($emailCfg) }},
+        notif: { sms: '', email: '', msg: '', ok: null },
         billing: {{ \Illuminate\Support\Js::from([
             'enabled'    => $biCfg['enabled'],
             'connector'  => $biCfg['connector'],
@@ -560,6 +628,27 @@ function settingsPage() {
         async saveWhatsapp() {
             try { const d = await this._post('{{ route("web.admin.settings.whatsapp") }}', { number: this.whatsapp.number, provider: this.whatsapp.provider, token: this.whatsapp.token }); if (this.whatsapp.token) this.whatsapp.hasToken = true; this.whatsapp.token = ''; alert(d.message || 'Saved!'); }
             catch(e) { alert('Failed to save WhatsApp settings.'); }
+        },
+        async saveSms() {
+            try {
+                const d = await this._post('{{ route("web.admin.settings.sms") }}', {
+                    provider: this.sms.provider, sender_id: this.sms.sender_id, api_key: this.sms.api_key,
+                    account_sid: this.sms.account_sid, auth_token: this.sms.auth_token, from: this.sms.from, url: this.sms.url,
+                });
+                if (this.sms.api_key) this.sms.hasApiKey = true;
+                if (this.sms.auth_token) this.sms.hasAuthToken = true;
+                this.sms.api_key = ''; this.sms.auth_token = '';
+                alert(d.message || 'Saved!');
+            } catch(e) { alert('Failed to save SMS settings.'); }
+        },
+        async saveEmail() {
+            try { const d = await this._post('{{ route("web.admin.settings.email") }}', { from_name: this.email.from_name }); alert(d.message || 'Saved!'); }
+            catch(e) { alert('Failed to save email settings.'); }
+        },
+        async sendTest() {
+            this.notif.msg = 'Sending…'; this.notif.ok = null;
+            try { const d = await this._post('{{ route("web.admin.settings.notification-test") }}', { sms: this.notif.sms, email: this.notif.email }); this.notif.ok = !!d.success; this.notif.msg = d.message || (d.success ? 'Sent.' : 'Failed.'); }
+            catch(e) { this.notif.ok = false; this.notif.msg = 'Test failed.'; }
         },
         async saveBilling() {
             try {

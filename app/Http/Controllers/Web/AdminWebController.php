@@ -723,6 +723,17 @@ class AdminWebController extends Controller
             'provider' => $cfg['whatsapp']['provider'] ?? 'meta',
             'hasToken' => ! empty($cfg['whatsapp']['token']),
         ];
+        $smsRaw = $cfg['sms'] ?? [];
+        $smsCfg = [
+            'provider'    => $smsRaw['provider'] ?? 'log',
+            'sender_id'   => $smsRaw['sender_id'] ?? 'MEDOS',
+            'account_sid' => $smsRaw['account_sid'] ?? '',
+            'from'        => $smsRaw['from'] ?? '',
+            'url'         => $smsRaw['url'] ?? '',
+            'hasApiKey'   => ! empty($smsRaw['api_key']),
+            'hasAuthToken' => ! empty($smsRaw['auth_token']),
+        ];
+        $emailCfg = ['from_name' => $cfg['email']['from_name'] ?? ($hospital->name ?? 'MedOS')];
 
         $biRaw = $cfg['billing_integration'] ?? [];
         $biCfg = [
@@ -763,7 +774,7 @@ class AdminWebController extends Controller
             ? Hospital::orderBy('name')->get(['id', 'name', 'is_active'])
             : collect();
 
-        return view('admin.settings', compact('hospital', 'moduleList', 'departments', 'areas', 'gst', 'aiCfg', 'waCfg', 'biCfg', 'biEvents', 'abdmCfg', 'isSuperAdmin', 'manageHospitals'));
+        return view('admin.settings', compact('hospital', 'moduleList', 'departments', 'areas', 'gst', 'aiCfg', 'waCfg', 'smsCfg', 'emailCfg', 'biCfg', 'biEvents', 'abdmCfg', 'isSuperAdmin', 'manageHospitals'));
     }
 
     /** Persist the hospital's GST identity (GSTIN + state) for tax invoices. */
@@ -942,6 +953,77 @@ class AdminWebController extends Controller
         $hospital->update(['config' => $config]);
 
         return response()->json(['success' => true, 'message' => 'WhatsApp settings saved.']);
+    }
+
+    /** Persist per-hospital SMS gateway settings (secrets encrypted). */
+    public function saveSmsSettings(Request $request)
+    {
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
+        $v = $request->validate([
+            'provider'    => 'required|in:log,msg91,twilio,generic',
+            'sender_id'   => 'nullable|string|max:20',
+            'api_key'     => 'nullable|string|max:255',   // MSG91 authkey / generic bearer
+            'account_sid' => 'nullable|string|max:120',   // Twilio
+            'auth_token'  => 'nullable|string|max:255',   // Twilio (secret)
+            'from'        => 'nullable|string|max:30',     // Twilio sender number
+            'url'         => 'nullable|url|max:255',        // generic gateway
+        ]);
+
+        $config = is_array($hospital->config) ? $hospital->config : json_decode($hospital->config ?? '{}', true);
+        $sms = $config['sms'] ?? [];
+        $sms['provider']  = $v['provider'];
+        $sms['sender_id'] = $v['sender_id'] ?? ($sms['sender_id'] ?? 'MEDOS');
+        $sms['account_sid'] = $v['account_sid'] ?? ($sms['account_sid'] ?? null);
+        $sms['from'] = $v['from'] ?? ($sms['from'] ?? null);
+        $sms['url']  = $v['url'] ?? ($sms['url'] ?? null);
+        if (! empty($v['api_key'])) {
+            $sms['api_key'] = encrypt($v['api_key']);
+        }
+        if (! empty($v['auth_token'])) {
+            $sms['auth_token'] = encrypt($v['auth_token']);
+        }
+        $config['sms'] = $sms;
+        $hospital->update(['config' => $config]);
+
+        return response()->json(['success' => true, 'message' => 'SMS settings saved.']);
+    }
+
+    /** Persist the per-hospital email sender name (SMTP itself is set in .env). */
+    public function saveEmailSettings(Request $request)
+    {
+        $hospital = Hospital::findOrFail($this->effectiveHospitalId());
+        $v = $request->validate(['from_name' => 'nullable|string|max:80']);
+
+        $config = is_array($hospital->config) ? $hospital->config : json_decode($hospital->config ?? '{}', true);
+        $config['email'] = ['from_name' => $v['from_name'] ?? ($hospital->name ?? 'MedOS')];
+        $hospital->update(['config' => $config]);
+
+        return response()->json(['success' => true, 'message' => 'Email settings saved.']);
+    }
+
+    /** Fire a test SMS / email from the settings page. */
+    public function sendTestNotification(Request $request)
+    {
+        $v = $request->validate([
+            'sms'   => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+        ]);
+        $hid = $this->effectiveHospitalId();
+        $out = [];
+        if (! empty($v['sms'])) {
+            $ok = \App\Modules\Core\Services\Notifier::sms($hid, $v['sms'], 'MedOS test SMS — delivery is working. ✅', 'test');
+            $out[] = $ok ? "SMS sent/queued to {$v['sms']}" : "SMS failed for {$v['sms']}";
+        }
+        if (! empty($v['email'])) {
+            $html = '<p>This is a <strong>MedOS test email</strong>. If you can read this, email delivery is working. ✅</p>';
+            $ok = \App\Modules\Core\Services\Notifier::email($hid, $v['email'], 'MedOS test email', $html, 'test');
+            $out[] = $ok ? "Email sent to {$v['email']}" : "Email failed for {$v['email']} (check MAIL_MAILER)";
+        }
+        if (! $out) {
+            return response()->json(['success' => false, 'message' => 'Enter a phone and/or email to test.'], 422);
+        }
+
+        return response()->json(['success' => true, 'message' => implode(' · ', $out)]);
     }
 
     /** Persist the hospital's ABDM / ABHA connection config (M1 readiness). */
@@ -2030,6 +2112,7 @@ class AdminWebController extends Controller
         if (! $walkNow) {
             try {
                 \App\Modules\Core\Services\WhatsAppNotifier::appointmentBooked($apt->load('patient', 'doctor'));
+                \App\Modules\Core\Services\Notifier::appointmentConfirmation($apt);
             } catch (\Throwable $e) {
                 \Log::warning('[Appointments] booking notify failed: ' . $e->getMessage());
             }
