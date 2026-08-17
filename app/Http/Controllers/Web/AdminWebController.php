@@ -289,11 +289,26 @@ class AdminWebController extends Controller
             return redirect()->back()->withInput()->with('error', 'A patient with this phone number already exists.');
         }
 
-        $patient = Patient::create(array_merge([
-            'id'          => Str::uuid()->toString(),
-            'hospital_id' => $hospitalId,
-            'created_via' => 'reception',
-        ], $attrs));
+        // The ABHA / Health ID column is globally unique — check up-front so a
+        // duplicate returns a friendly message instead of a DB 500.
+        $healthIdLabel = \App\Modules\Core\Services\RegionService::healthIdLabel();
+        if (! empty($attrs['abha_number'])
+            && Patient::withoutGlobalScopes()->where('abha_number', $attrs['abha_number'])->exists()) {
+            return redirect()->back()->withInput()
+                ->with('error', "A patient with this {$healthIdLabel} is already registered.");
+        }
+
+        try {
+            $patient = Patient::create(array_merge([
+                'id'          => Str::uuid()->toString(),
+                'hospital_id' => $hospitalId,
+                'created_via' => 'reception',
+            ], $attrs));
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Belt-and-suspenders (e.g. a race): never surface a debug page.
+            return redirect()->back()->withInput()
+                ->with('error', "Could not register the patient — the phone number or {$healthIdLabel} is already in use.");
+        }
 
         return redirect()->route('web.admin.patients.show', $patient->id)
             ->with('success', 'Patient registered — ' . $patient->name . '.');
@@ -313,7 +328,19 @@ class AdminWebController extends Controller
             return redirect()->back()->withInput()->with('error', 'Another patient already uses this phone number.');
         }
 
-        $patient->update($attrs);
+        $healthIdLabel = \App\Modules\Core\Services\RegionService::healthIdLabel();
+        if (! empty($attrs['abha_number'])
+            && Patient::withoutGlobalScopes()->where('abha_number', $attrs['abha_number'])->where('id', '!=', $patient->id)->exists()) {
+            return redirect()->back()->withInput()
+                ->with('error', "Another patient is already registered with this {$healthIdLabel}.");
+        }
+
+        try {
+            $patient->update($attrs);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return redirect()->back()->withInput()
+                ->with('error', "Could not update — the phone number or {$healthIdLabel} is already in use.");
+        }
 
         return redirect()->back()->with('success', 'Patient updated successfully.');
     }

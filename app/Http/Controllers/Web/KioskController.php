@@ -466,7 +466,23 @@ class KioskController extends Controller
             if (!empty($validated['abha_number'])) {
                 $patientData['abha_number'] = $validated['abha_number'];
             }
-            $patient = Patient::create($patientData);
+            try {
+                $patient = Patient::create($patientData);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                // Duplicate phone / ABHA — reuse the existing patient instead of a 500.
+                $patient = Patient::withoutGlobalScopes()->where(function ($q) use ($patientData) {
+                    if (!empty($patientData['abha_number'])) {
+                        $q->where('abha_number', $patientData['abha_number']);
+                    }
+                    $q->orWhere(function ($w) use ($patientData) {
+                        $w->where('hospital_id', $patientData['hospital_id'] ?? null)
+                          ->where('phone', $patientData['phone'] ?? null);
+                    });
+                })->first();
+                if (!$patient) {
+                    throw $e;
+                }
+            }
         }
 
         // Find doctor: by direct selection, department, or complaint mapping
