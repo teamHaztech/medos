@@ -173,29 +173,39 @@ class ImportController extends Controller
             return 'duplicate phone ' . $phone;
         }
 
+        // abha_number is globally unique — skip a dup row instead of aborting the import.
+        $abha = ($row['health_id'] ?? '') !== '' ? preg_replace('/[\s-]/', '', $row['health_id']) : null;
+        if ($abha && DB::table('patients')->where('abha_number', $abha)->exists()) {
+            return 'duplicate health id ' . $abha;
+        }
+
         $gender = strtolower($row['gender'] ?? '');
         $gender = in_array($gender, ['male', 'female', 'other']) ? $gender : 'unknown';
 
-        DB::table('patients')->insert([
-            'id'                      => Str::uuid()->toString(),
-            'hospital_id'             => $hospitalId,
-            'name'                    => $row['name'],
-            'phone'                   => $phone,
-            'gender'                  => $gender,
-            'email'                   => $row['email'] ?: null,
-            'date_of_birth'           => $this->parseDate($row['date_of_birth'] ?? ''),
-            'age_approximate'         => is_numeric($row['age_approximate'] ?? '') ? (int) $row['age_approximate'] : null,
-            'language_preference'     => $row['language_preference'] ?: 'en',
-            'blood_group'             => $row['blood_group'] ?: null,
-            'address'                 => $row['address'] ?: null,
-            'city'                    => $row['city'] ?: null,
-            'emergency_contact_name'  => $row['emergency_contact_name'] ?: null,
-            'emergency_contact_phone' => $row['emergency_contact_phone'] ?: null,
-            'abha_number'             => ($row['health_id'] ?? '') !== '' ? preg_replace('/[\s-]/', '', $row['health_id']) : null,
-            'created_via'             => 'import',
-            'created_at'              => now(),
-            'updated_at'              => now(),
-        ]);
+        try {
+            DB::table('patients')->insert([
+                'id'                      => Str::uuid()->toString(),
+                'hospital_id'             => $hospitalId,
+                'name'                    => $row['name'],
+                'phone'                   => $phone,
+                'gender'                  => $gender,
+                'email'                   => $row['email'] ?: null,
+                'date_of_birth'           => $this->parseDate($row['date_of_birth'] ?? ''),
+                'age_approximate'         => is_numeric($row['age_approximate'] ?? '') ? (int) $row['age_approximate'] : null,
+                'language_preference'     => $row['language_preference'] ?: 'en',
+                'blood_group'             => $row['blood_group'] ?: null,
+                'address'                 => $row['address'] ?: null,
+                'city'                    => $row['city'] ?: null,
+                'emergency_contact_name'  => $row['emergency_contact_name'] ?: null,
+                'emergency_contact_phone' => $row['emergency_contact_phone'] ?: null,
+                'abha_number'             => $abha,
+                'created_via'             => 'import',
+                'created_at'              => now(),
+                'updated_at'              => now(),
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return 'duplicate (phone/health id)';
+        }
 
         return 'imported';
     }

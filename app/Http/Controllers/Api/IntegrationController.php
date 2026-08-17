@@ -790,8 +790,12 @@ class IntegrationController extends Controller
         try {
             DB::table('patients')->insert($attrs);
         } catch (\Illuminate\Database\QueryException $e) {
-            // Unique (hospital_id, phone) race — return whoever won.
+            // Unique (hospital_id, phone) race OR a globally-unique abha_number —
+            // return whoever already exists instead of surfacing a 500.
             $again = $this->matchPatientByPhone($hid, $phone);
+            if (! $again && ! empty($attrs['abha_number'])) {
+                $again = Patient::withoutGlobalScopes()->where('abha_number', $attrs['abha_number'])->first();
+            }
             if ($again) {
                 return response()->json(['success' => true, 'data' => [
                     'patient_id' => $again->id, 'name' => $again->name, 'phone' => $again->phone, 'already_registered' => true,
