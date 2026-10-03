@@ -27,6 +27,7 @@ class Staff extends Model
         'role',
         'specialty',
         'specialization',
+        'qualification',
         'department',
         'license_number',
         'phone',

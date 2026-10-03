@@ -80,6 +80,91 @@ POST /api/v1/book-appointment
 
 **Easiest of all:** issue a **hospital-specific API token** (that hospital's admin → *API Keys*). It's pinned to its own hospital, so you send **no** header/param at all — every call just works.
 
+### Interactive Swagger UI & OpenAPI Specification
+- **Interactive Swagger UI:** `https://medos.haztech.cloud/docs/api` (or `/swagger`)
+- **OpenAPI 3.0 Specification:** `https://medos.haztech.cloud/api/v1/openapi.json` (or `/swagger.json`)
+
+---
+
+## 3. Hospital & Clinical Directory Endpoints
+
+### `GET /api/v1/hospital-info[?hospital=city-care]` or `GET /api/v1/hospitals/{hospital}/info`
+Comprehensive hospital operational snapshot: operating hours, open/close status, contact details, currency, SMS & WhatsApp communication status, and active departments with complete doctor credentials (qualifications and specifications).
+
+**Query / Header:** `?hospital=<slug_or_uuid>` or `X-Hospital-ID: <slug_or_uuid>`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "hospital": {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "City Care Hospital",
+      "slug": "city-care",
+      "address": "42, MG Road, Koramangala",
+      "city": "Bangalore",
+      "state": "Karnataka",
+      "country": "IN",
+      "timezone": "Asia/Kolkata",
+      "is_active": true
+    },
+    "open_close": {
+      "open_time": "08:00",
+      "close_time": "21:00",
+      "is_open_now": true,
+      "status": "open",
+      "current_time": "08:28",
+      "timezone": "Asia/Kolkata"
+    },
+    "contact": {
+      "phone": "+918041234567",
+      "email": "admin@citycare.medos.local",
+      "emergency_phone": "108"
+    },
+    "currency": {
+      "code": "INR",
+      "symbol": "₹",
+      "name": "Indian Rupee"
+    },
+    "sms": {
+      "enabled": true,
+      "status": "active",
+      "provider": "msg91",
+      "sender_id": "MEDOS"
+    },
+    "whatsapp": {
+      "enabled": true,
+      "status": "active",
+      "provider": "meta",
+      "number": "+918041234567"
+    },
+    "department_count": 10,
+    "departments": [
+      {
+        "department": "Cardiology",
+        "doctor_count": 1,
+        "doctors": [
+          {
+            "doctor_id": "a0000001-0000-0000-0000-000000000003",
+            "name": "Dr. Amit Patel",
+            "role": "doctor",
+            "department": "Cardiology",
+            "specialty": "Cardiology",
+            "specialization": "Cardiology",
+            "specification": "Cardiology",
+            "qualification": "KA-MED-2012-00987",
+            "phone": "+919845212345",
+            "email": "amit@haztech.in",
+            "consultation_duration_minutes": 20
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ### `GET /api/v1/hospitals`
 Lists the hospitals your token may act for (super-admin → all; hospital token → its own). No `X-Hospital-ID` needed.
 
@@ -92,19 +177,47 @@ Lists the hospitals your token may act for (super-admin → all; hospital token 
 ```
 
 ### `GET /api/v1/departments`
-Every department and its doctors — so the AI can say "we have Cardiology, Pediatrics…" and route the caller.
+Every department and its doctors with **qualifications and specifications** — so the AI can say "we have Cardiology, Pediatrics…" and route the caller.
 ```json
 { "success": true, "data": { "count": 9, "departments": [
-  { "department": "Cardiology", "doctor_count": 1, "doctors": [ { "doctor_id": "a0..", "name": "Dr. Amit Patel", "specialty": "..." } ] }
+  {
+    "department": "Cardiology",
+    "doctor_count": 1,
+    "doctors": [
+      {
+        "doctor_id": "a0..",
+        "name": "Dr. Amit Patel",
+        "role": "doctor",
+        "department": "Cardiology",
+        "specialty": "Cardiology",
+        "specialization": "Cardiology",
+        "specification": "Cardiology",
+        "qualification": "KA-MED-2012-00987",
+        "consultation_duration_minutes": 20
+      }
+    ]
+  }
 ] } }
 ```
 
 ### `GET /api/v1/doctors[?department=Cardiology]`
-List doctors (optionally filtered by department), each with their **next available slot** — so the AI can answer "which doctors do you have?", "who is in Cardiology?", "who is available?" and pick a `doctor_id` to book.
+List doctors (optionally filtered by department), each with their **qualification**, **specification/specialization**, and **next available slot** — so the AI can answer "which doctors do you have?", "who is in Cardiology?", "who is available?" and pick a `doctor_id` to book.
 ```json
 { "success": true, "data": { "count": 11, "doctors": [
-  { "doctor_id": "a0..", "name": "Dr. Amit Patel", "department": "Cardiology", "specialty": "Interventional Cardiology",
-    "available": true, "next_available": { "date": "2026-07-20", "day": "Monday", "time": "09:00" } }
+  {
+    "doctor_id": "a0..",
+    "name": "Dr. Amit Patel",
+    "department": "Cardiology",
+    "specialty": "Cardiology",
+    "specialization": "Cardiology",
+    "specification": "Cardiology",
+    "qualification": "KA-MED-2012-00987",
+    "phone": "+919845212345",
+    "email": "amit@haztech.in",
+    "consultation_duration_minutes": 20,
+    "available": true,
+    "next_available": { "date": "2026-07-20", "day": "Monday", "time": "09:00" }
+  }
 ] } }
 ```
 

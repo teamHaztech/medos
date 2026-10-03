@@ -26,3 +26,4 @@ docs/MedOS-System-Lifecycle.pdf
 
 # Throwaway kernel/probe harnesses (never deploy)
 /_*.php
+/medos/

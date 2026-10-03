@@ -9,6 +9,7 @@ use App\Modules\Core\Models\Hospital;
 use App\Modules\Core\Models\Order;
 use App\Modules\Core\Models\Staff;
 use App\Modules\Core\Services\HospitalContext;
+use App\Modules\Core\Services\RegionService;
 use App\Modules\Patient\Models\Encounter;
 use App\Modules\Patient\Models\Patient;
 use Carbon\Carbon;
@@ -41,7 +42,30 @@ class IntegrationController extends Controller
      */
     private function hid(): string
     {
-        return app(HospitalContext::class)->getHospitalId() ?? Auth::user()->hospital_id;
+        $resolved = app(HospitalContext::class)->getHospitalId();
+        if ($resolved) {
+            return $resolved;
+        }
+
+        $ref = request()->header('X-Hospital-ID')
+            ?? request()->query('hospital')
+            ?? request()->query('hospital_id');
+
+        if (! empty($ref)) {
+            if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $ref)) {
+                return $ref;
+            }
+            $id = Hospital::where('slug', $ref)->value('id');
+            if ($id) {
+                return $id;
+            }
+        }
+
+        if (Auth::check() && ! empty(Auth::user()->hospital_id)) {
+            return Auth::user()->hospital_id;
+        }
+
+        return (string) (Hospital::where('is_active', true)->orderBy('created_at')->value('id') ?? '');
     }
 
     // ---------------------------------------------------------------
@@ -69,10 +93,182 @@ class IntegrationController extends Controller
     }
 
     /**
-     * List the hospital's doctors so the AI can answer "which doctors do you
-     * have?", "who is in Cardiology?" and "who is available?" — and get a
-     * doctor_id to book with. Optional ?department= filters; each doctor carries
-     * their next available slot.
+     * Hospital Information API:
+     * Returns operating hours (open/close, is_open_now, status),
+     * contact information (phone, email, emergency),
+     * currency details (code, symbol, name),
+     * communication channels (SMS & WhatsApp config/status),
+     * and department breakdown with full doctor profiles (qualifications & specializations).
+     *
+     * GET /api/v1/hospital-info?hospital=city-care
+     * GET /api/v1/hospitals/{hospital}/info
+     */
+    public function hospitalInfo(Request $request, ?string $hospital = null): JsonResponse
+    {
+        // 1. Resolve Hospital Model
+        $ref = $hospital
+            ?? $request->header('X-Hospital-ID')
+            ?? $request->query('hospital')
+            ?? $request->query('hospital_id');
+
+        $hospitalModel = null;
+        if (! empty($ref)) {
+            if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $ref)) {
+                $hospitalModel = Hospital::find($ref);
+            } else {
+                $hospitalModel = Hospital::where('slug', $ref)->first();
+            }
+        }
+
+        if (! $hospitalModel) {
+            $contextHid = app(HospitalContext::class)->getHospitalId();
+            if ($contextHid) {
+                $hospitalModel = Hospital::find($contextHid);
+            } elseif (auth('sanctum')->check()) {
+                $user = auth('sanctum')->user();
+                if (! empty($user->hospital_id)) {
+                    $hospitalModel = Hospital::find($user->hospital_id);
+                }
+            }
+        }
+
+        if (! $hospitalModel) {
+            $hospitalModel = Hospital::where('is_active', true)->orderBy('created_at')->first();
+        }
+
+        if (! $hospitalModel) {
+            return response()->json(['success' => false, 'message' => 'Hospital not found.'], 404);
+        }
+
+        $cfg = is_array($hospitalModel->config) ? $hospitalModel->config : json_decode($hospitalModel->config ?? '{}', true);
+
+        // Region settings
+        RegionService::reset();
+        RegionService::setCountryCode($hospitalModel->country ?? 'IN');
+        $tz = $hospitalModel->timezone ?: RegionService::timezone();
+
+        // 2. Open / Close & Operating Hours
+        $operatingHours = $cfg['operating_hours'] ?? ['open' => '08:00', 'close' => '21:00'];
+        $openStr = $operatingHours['open'] ?? '08:00';
+        $closeStr = $operatingHours['close'] ?? '21:00';
+
+        $now = Carbon::now($tz);
+        $isOpenNow = false;
+        try {
+            $openTime = Carbon::createFromTimeString($openStr, $tz);
+            $closeTime = Carbon::createFromTimeString($closeStr, $tz);
+            $isOpenNow = $now->between($openTime, $closeTime);
+        } catch (\Throwable $e) {
+            $isOpenNow = true;
+        }
+        $status = $isOpenNow ? 'open' : 'closed';
+
+        // 3. Contact Numbers & Email
+        $phone = $hospitalModel->phone ?? '';
+        $email = $hospitalModel->email ?? '';
+        $emergencyPhone = RegionService::emergencyNumber();
+
+        // 4. Currency
+        $currencyCode = RegionService::currencyCode();
+        $currencySymbol = trim(RegionService::currency());
+        $regionData = RegionService::get();
+        $currencyName = $regionData['name'] ?? ($currencyCode === 'INR' ? 'Indian Rupee' : 'UAE Dirham');
+
+        // 5. SMS & WhatsApp
+        $smsRaw = $cfg['sms'] ?? [];
+        $smsEnabled = ! empty($cfg['sms_enabled']) || (! empty($smsRaw['provider']) && $smsRaw['provider'] !== 'log');
+        $smsProvider = $smsRaw['provider'] ?? ($smsEnabled ? 'msg91' : 'log');
+        $smsSenderId = $smsRaw['sender_id'] ?? 'MEDOS';
+
+        $waRaw = $cfg['whatsapp'] ?? [];
+        $waEnabled = ! empty($cfg['whatsapp_bot']) || ! empty($waRaw['provider']);
+        $waProvider = $waRaw['provider'] ?? ($waEnabled ? 'meta' : 'none');
+        $waNumber = $waRaw['number'] ?? $phone;
+
+        // 6. Departments & Doctors with Qualification & Specification
+        $doctors = Staff::where('hospital_id', $hospitalModel->id)
+            ->where('is_active', true)
+            ->whereIn('role', ['doctor', 'hospital_admin', 'dentist', 'dietitian'])
+            ->whereNotNull('department')
+            ->orderBy('department')
+            ->orderBy('name')
+            ->get();
+
+        $departments = $doctors->groupBy('department')->map(function ($docs, $deptName) {
+            return [
+                'department'   => $deptName,
+                'doctor_count' => $docs->count(),
+                'doctors'      => $docs->map(fn ($d) => [
+                    'doctor_id'                     => $d->id,
+                    'name'                          => $d->name,
+                    'role'                          => is_object($d->role) ? $d->role->value : $d->role,
+                    'department'                    => $d->department,
+                    'specialty'                     => $d->specialization ?: ($d->specialty ?: $d->department),
+                    'specialization'                => $d->specialization ?: ($d->specialty ?: $d->department),
+                    'specification'                 => $d->specialization ?: ($d->specialty ?: $d->department),
+                    'qualification'                 => $d->qualification ?: '',
+                    'phone'                         => $d->phone,
+                    'email'                         => $d->email,
+                    'consultation_duration_minutes' => $d->consultation_duration_default ?: 15,
+                ])->values(),
+            ];
+        })->values();
+
+        $data = [
+            'hospital' => [
+                'id'        => $hospitalModel->id,
+                'name'      => $hospitalModel->name,
+                'slug'      => $hospitalModel->slug,
+                'address'   => $hospitalModel->address,
+                'city'      => $hospitalModel->city,
+                'state'     => $hospitalModel->state,
+                'country'   => $hospitalModel->country,
+                'timezone'  => $tz,
+                'is_active' => (bool) $hospitalModel->is_active,
+            ],
+            'open_close' => [
+                'open_time'    => $openStr,
+                'close_time'   => $closeStr,
+                'is_open_now'  => $isOpenNow,
+                'status'       => $status,
+                'current_time' => $now->format('H:i'),
+                'timezone'     => $tz,
+            ],
+            'contact' => [
+                'phone'           => $phone,
+                'email'           => $email,
+                'emergency_phone' => $emergencyPhone,
+            ],
+            'currency' => [
+                'code'   => $currencyCode,
+                'symbol' => $currencySymbol,
+                'name'   => $currencyName,
+            ],
+            'sms' => [
+                'enabled'   => $smsEnabled,
+                'status'    => $smsEnabled ? 'active' : 'disabled',
+                'provider'  => $smsProvider,
+                'sender_id' => $smsSenderId,
+            ],
+            'whatsapp' => [
+                'enabled'  => $waEnabled,
+                'status'   => $waEnabled ? 'active' : 'disabled',
+                'provider' => $waProvider,
+                'number'   => $waNumber,
+            ],
+            'department_count' => $departments->count(),
+            'departments'      => $departments,
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data'    => $data,
+        ]);
+    }
+
+    /**
+     * List the hospital's doctors with qualification, specification/specialization,
+     * availability and next free slot so the caller/AI can answer doctor queries.
      *
      * GET /api/v1/doctors?department=Cardiology
      */
@@ -90,12 +286,19 @@ class IntegrationController extends Controller
                 $first    = $schedule[0] ?? null;
 
                 return [
-                    'doctor_id'      => $d->id,
-                    'name'           => $d->name,
-                    'department'     => $d->department,
-                    'specialty'      => $d->specialization,
-                    'available'      => $first !== null,
-                    'next_available' => $first
+                    'doctor_id'                     => $d->id,
+                    'name'                          => $d->name,
+                    'role'                          => is_object($d->role) ? $d->role->value : $d->role,
+                    'department'                    => $d->department,
+                    'specialty'                     => $d->specialization ?: ($d->specialty ?: $d->department),
+                    'specialization'                => $d->specialization ?: ($d->specialty ?: $d->department),
+                    'specification'                 => $d->specialization ?: ($d->specialty ?: $d->department),
+                    'qualification'                 => $d->qualification ?: '',
+                    'phone'                         => $d->phone,
+                    'email'                         => $d->email,
+                    'consultation_duration_minutes' => $d->consultation_duration_default ?: 15,
+                    'available'                     => $first !== null,
+                    'next_available'                => $first
                         ? ['date' => $first['date'], 'day' => $first['day'], 'time' => $first['available_slots'][0] ?? null]
                         : null,
                 ];
@@ -108,8 +311,8 @@ class IntegrationController extends Controller
     }
 
     /**
-     * List the hospital's departments (each with its doctors) so the AI can say
-     * "we have Cardiology, Pediatrics…" and route the caller.
+     * List the hospital's departments (each with its doctors, qualifications, and specializations)
+     * so the AI/caller can navigate specialties and staff.
      *
      * GET /api/v1/departments
      */
@@ -124,13 +327,41 @@ class IntegrationController extends Controller
             ->map(fn ($docs, $name) => [
                 'department'   => $name,
                 'doctor_count' => $docs->count(),
-                'doctors'      => $docs->map(fn ($d) => ['doctor_id' => $d->id, 'name' => $d->name, 'specialty' => $d->specialization])->values(),
+                'doctors'      => $docs->map(fn ($d) => [
+                    'doctor_id'                     => $d->id,
+                    'name'                          => $d->name,
+                    'role'                          => is_object($d->role) ? $d->role->value : $d->role,
+                    'department'                    => $d->department,
+                    'specialty'                     => $d->specialization ?: ($d->specialty ?: $d->department),
+                    'specialization'                => $d->specialization ?: ($d->specialty ?: $d->department),
+                    'specification'                 => $d->specialization ?: ($d->specialty ?: $d->department),
+                    'qualification'                 => $d->qualification ?: '',
+                    'phone'                         => $d->phone,
+                    'email'                         => $d->email,
+                    'consultation_duration_minutes' => $d->consultation_duration_default ?: 15,
+                ])->values(),
             ])->values();
 
         return response()->json(['success' => true, 'data' => [
             'count'       => $byDept->count(),
             'departments' => $byDept,
         ]]);
+    }
+
+    /**
+     * Output OpenAPI / Swagger specification JSON for external tools.
+     *
+     * GET /api/v1/openapi.json
+     */
+    public function openapiJson(): JsonResponse
+    {
+        $path = public_path('swagger.json');
+        if (file_exists($path)) {
+            $json = json_decode(file_get_contents($path), true);
+            return response()->json($json);
+        }
+
+        return response()->json(['error' => 'Swagger specification not found'], 404);
     }
 
     /** staff.schedule may be an array (Eloquent cast) or a JSON string — normalise to array. */

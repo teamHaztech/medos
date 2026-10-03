@@ -26,6 +26,13 @@ Route::middleware('auth')->group(function () {
 });
 
 // ---------------------------------------------------------------
+// API Documentation / Swagger UI
+// ---------------------------------------------------------------
+Route::get('docs/api', fn () => view('docs.swagger'))->name('api.docs');
+Route::get('swagger', fn () => redirect()->route('api.docs'))->name('swagger');
+Route::get('api/documentation', fn () => redirect()->route('api.docs'));
+
+// ---------------------------------------------------------------
 // Admin Dashboard (auth required)
 // ---------------------------------------------------------------
 

@@ -97,9 +97,10 @@ routes/api_v1.php     — all API routes
 /ip/*                           — inpatient: dashboard (bed board), admissions, {id} (case sheet + running bill), {id}/charge|bill|discharge
 /chat                           — WhatsApp bot simulator (scopes to ?hospital_id / session)
 /super-admin                    — hospital management; /super-admin/users (IAM: accounts by hospital, orphan detection, {id} sign-in history); /super-admin/activity (platform-wide Activity Log, hospital-filterable)
-/ajax/doctor-slots/{id}         — 14-day slot calendar (staff) · /ajax/patients?q= · /ajax/info-desk?q= (token|name auto-detect)
+/docs/api (or /swagger)         — Swagger UI interactive API documentation & playground
 /api/v1/auth/login              — API token (send Accept: application/json + email/password, NOT "admin")
-/api/v1/{customer,doctor-schedule,my-appointments,hospitals} (GET) · {register-patient,book-appointment,reschedule-appointment,cancel-appointment,book-lab-test} (POST) — voice-AI/chatbot integration (Sanctum, throttle:30,1; multi-hospital via X-Hospital-ID — see Voice-AI API note)
+/api/v1/hospital-info           — Hospital profile: open/close hours, phone, email, currency, SMS/WhatsApp, departments & doctors (with qualifications & specifications)
+/api/v1/{customer,doctor-schedule,my-appointments,hospitals,doctors,departments,openapi.json} (GET) · {register-patient,book-appointment,reschedule-appointment,cancel-appointment,book-lab-test} (POST) — voice-AI/chatbot integration (Sanctum, throttle:30,1; multi-hospital via X-Hospital-ID — see Voice-AI API note)
 /api/v1/billing/*               — bill read/write (ability:billing) · /api/v1/abha/* · /insurance/*
 ```
 

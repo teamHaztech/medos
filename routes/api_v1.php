@@ -50,12 +50,22 @@ Route::prefix('auth')->name('auth.')->group(function () {
 });
 
 // -----------------------------------------------------------------
-// Hospital directory — auth only (no hospital context needed). A super-admin
-// (platform) token lists every hospital; a hospital token gets only its own.
-// Lets the voice-AI vendor map an inbound phone line / DID → hospital_id.
+// Hospital directory & info — public / token accessible.
+// Lets callers, bots, and integrations query hospital profile,
+// operating hours, contact numbers, currency, and departments/doctors.
 // -----------------------------------------------------------------
-Route::middleware('auth:sanctum')->get('hospitals', [\App\Http\Controllers\Api\IntegrationController::class, 'hospitals'])
+Route::get('hospitals', [\App\Http\Controllers\Api\IntegrationController::class, 'hospitals'])
     ->name('hospitals');
+Route::get('hospital-info', [\App\Http\Controllers\Api\IntegrationController::class, 'hospitalInfo'])
+    ->name('hospital-info');
+Route::get('hospitals/{hospital}/info', [\App\Http\Controllers\Api\IntegrationController::class, 'hospitalInfo'])
+    ->name('hospitals.info');
+Route::get('doctors', [\App\Http\Controllers\Api\IntegrationController::class, 'doctors'])
+    ->name('doctors');
+Route::get('departments', [\App\Http\Controllers\Api\IntegrationController::class, 'departments'])
+    ->name('departments');
+Route::get('openapi.json', [\App\Http\Controllers\Api\IntegrationController::class, 'openapiJson'])
+    ->name('openapi.json');
 
 // -----------------------------------------------------------------
 // Authenticated + Hospital-scoped routes
@@ -82,8 +92,6 @@ Route::middleware(['auth:sanctum', 'resolve.hospital'])->group(function () {
     // Rate-limited to blunt patient enumeration / booking abuse (per authenticated token).
     Route::middleware('throttle:30,1')->group(function () {
         Route::get('customer', [\App\Http\Controllers\Api\IntegrationController::class, 'customer'])->name('customer');
-        Route::get('doctors', [\App\Http\Controllers\Api\IntegrationController::class, 'doctors'])->name('doctors');
-        Route::get('departments', [\App\Http\Controllers\Api\IntegrationController::class, 'departments'])->name('departments');
         Route::get('doctor-schedule', [\App\Http\Controllers\Api\IntegrationController::class, 'doctorSchedule'])->name('doctor-schedule');
         Route::get('my-appointments', [\App\Http\Controllers\Api\IntegrationController::class, 'myAppointments'])->name('my-appointments');
         Route::post('register-patient', [\App\Http\Controllers\Api\IntegrationController::class, 'registerPatient'])->name('register-patient');

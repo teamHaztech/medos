@@ -22,8 +22,16 @@
 
     {{-- Create --}}
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 class="text-base font-semibold text-slate-800 mb-1">Create an API key</h3>
-        <p class="text-xs text-slate-500 mb-4">Lets your own billing / accounting software read (and optionally write) billing data from MedOS over the API. Scoped to this hospital.</p>
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-base font-semibold text-slate-800">Create an API key</h3>
+                <p class="text-xs text-slate-500">Lets your software read and write data over the MedOS API. Scoped to this hospital.</p>
+            </div>
+            <a href="{{ route('api.docs') }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 text-xs font-medium transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                Swagger API Docs &rarr;
+            </a>
+        </div>
         <form method="POST" action="{{ route('web.admin.api-keys.create') }}" class="space-y-4">
             @csrf
             <div>
