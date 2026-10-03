@@ -1,664 +1,1063 @@
 {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "MedOS API — Hospital Information & Integration",
-    "version": "1.0.0",
-    "description": "Comprehensive API for MedOS — Hospital Information (operating hours, open/close status, contact details, currency, SMS and WhatsApp communication) and Doctor & Department directory (including doctor qualifications, specifications/specializations, consultation duration, and scheduling) along with patient and appointment workflows.",
-    "contact": {
-      "name": "Haztech Digital Innovation Agency",
-      "url": "https://medos.haztech.cloud",
-      "email": "support@haztech.in"
-    }
-  },
-  "servers": [
-    {
-      "url": "/",
-      "description": "Current Server (Auto)"
-    },
-    {
-      "url": "https://medos.haztech.cloud",
-      "description": "Production Server"
-    },
-    {
-      "url": "http://127.0.0.1:8000",
-      "description": "Local Development Server"
-    }
-  ],
-  "tags": [
-    {
-      "name": "Hospital",
-      "description": "Hospital profile, operating hours (open/close), contact, currency, SMS & WhatsApp communication"
-    },
-    {
-      "name": "Departments & Doctors",
-      "description": "Departments, doctor profiles, qualifications, specifications, and availability"
-    },
-    {
-      "name": "Appointments",
-      "description": "Doctor scheduling, slot discovery, booking, rescheduling, and cancellation"
-    },
-    {
-      "name": "Patients",
-      "description": "Patient lookup, verification, and registration"
-    },
-    {
-      "name": "Auth",
-      "description": "API authentication and token generation"
-    }
-  ],
-  "paths": {
-    "/api/v1/hospital-info": {
-      "get": {
-        "tags": ["Hospital"],
-        "summary": "Get Hospital Information",
-        "description": "Returns comprehensive hospital information: open and close timings, real-time operating status (is_open_now), contact numbers, email, regional currency (code, symbol, name), SMS & WhatsApp configuration and status, and active departments with complete doctor profiles including qualifications and specifications.",
-        "operationId": "getHospitalInfo",
-        "parameters": [
-          {
-            "name": "hospital",
-            "in": "query",
-            "description": "Hospital slug (e.g. `city-care`, `gulf-medical`) or UUID",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "example": "city-care"
-            }
-          },
-          {
-            "name": "X-Hospital-ID",
-            "in": "header",
-            "description": "Hospital slug or UUID (multi-tenant target)",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "example": "city-care"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Hospital details retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HospitalInfoResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Hospital not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
+    "openapi": "3.0.3",
+    "info": {
+        "title": "MedOS API \u2014 Hospital Information & Integration",
+        "version": "1.0.0",
+        "description": "Comprehensive API for MedOS \u2014 Hospital Information (operating hours, open/close status, contact details, currency, SMS and WhatsApp communication) and Doctor & Department directory (including doctor qualifications, specifications/specializations, consultation duration, and scheduling) along with patient and appointment workflows.",
+        "contact": {
+            "name": "Haztech Digital Innovation Agency",
+            "url": "https://medos.haztech.cloud",
+            "email": "support@haztech.in"
         }
-      }
     },
-    "/api/v1/hospitals/{hospital}/info": {
-      "get": {
-        "tags": ["Hospital"],
-        "summary": "Get Hospital Information by Slug or ID",
-        "description": "Direct lookup of hospital info by slug (e.g. `city-care`) or UUID in URL path.",
-        "operationId": "getHospitalInfoBySlug",
-        "parameters": [
-          {
-            "name": "hospital",
-            "in": "path",
-            "required": true,
-            "description": "Hospital slug or UUID",
-            "schema": {
-              "type": "string",
-              "example": "city-care"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Hospital details retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HospitalInfoResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Hospital not found"
-          }
+    "servers": [
+        {
+            "url": "/",
+            "description": "Current Server (Auto)"
+        },
+        {
+            "url": "https://medos.haztech.cloud",
+            "description": "Production Server"
+        },
+        {
+            "url": "http://127.0.0.1:8000",
+            "description": "Local Development Server"
         }
-      }
-    },
-    "/api/v1/hospitals": {
-      "get": {
-        "tags": ["Hospital"],
-        "summary": "List Hospitals",
-        "description": "Lists all active hospitals in MedOS with name, slug, city, and reception phone.",
-        "operationId": "listHospitals",
-        "responses": {
-          "200": {
-            "description": "List of active hospitals",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "example": true },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "hospitals": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/HospitalListItem"
-                          }
+    ],
+    "tags": [
+        {
+            "name": "Hospital",
+            "description": "Hospital profile, operating hours (open/close), contact, currency, SMS & WhatsApp communication"
+        },
+        {
+            "name": "Departments & Doctors",
+            "description": "Departments, doctor profiles, qualifications, specifications, and availability"
+        },
+        {
+            "name": "Appointments",
+            "description": "Doctor scheduling, slot discovery, booking, rescheduling, and cancellation"
+        },
+        {
+            "name": "Patients",
+            "description": "Patient lookup, verification, and registration"
+        },
+        {
+            "name": "Auth",
+            "description": "API authentication and token generation"
+        }
+    ],
+    "paths": {
+        "/api/v1/hospital-info": {
+            "get": {
+                "tags": [
+                    "Hospital"
+                ],
+                "summary": "Get Hospital Information",
+                "description": "Returns comprehensive hospital information: open and close timings, real-time operating status (is_open_now), contact numbers, email, regional currency (code, symbol, name), SMS & WhatsApp configuration and status, and active departments with complete doctor profiles including qualifications and specifications.",
+                "operationId": "getHospitalInfo",
+                "parameters": [
+                    {
+                        "name": "hospital",
+                        "in": "query",
+                        "description": "Hospital slug (e.g. `city-care`, `gulf-medical`) or UUID",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
                         }
-                      }
+                    },
+                    {
+                        "name": "X-Hospital-ID",
+                        "in": "header",
+                        "description": "Hospital slug or UUID (multi-tenant target)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
+                        }
                     }
-                  }
-                }
-              }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Hospital details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HospitalInfoResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hospital not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
             }
-          }
-        }
-      }
-    },
-    "/api/v1/departments": {
-      "get": {
-        "tags": ["Departments & Doctors"],
-        "summary": "List Departments & Doctors with Qualifications",
-        "description": "Returns all active hospital departments grouped with their doctor profiles, including qualification, specialization (specification), phone, email, and consultation duration.",
-        "operationId": "listDepartments",
-        "parameters": [
-          {
-            "name": "X-Hospital-ID",
-            "in": "header",
-            "description": "Target hospital ID or slug",
-            "schema": { "type": "string", "example": "city-care" }
-          },
-          {
-            "name": "hospital",
-            "in": "query",
-            "description": "Hospital slug or UUID",
-            "schema": { "type": "string", "example": "city-care" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Departments and associated doctors",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DepartmentsResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/doctors": {
-      "get": {
-        "tags": ["Departments & Doctors"],
-        "summary": "List Doctors with Qualifications & Specifications",
-        "description": "Lists all active doctors in the hospital with their qualification, specification/specialization, department, contact info, consultation duration, and next available appointment slot. Can be filtered by department.",
-        "operationId": "listDoctors",
-        "parameters": [
-          {
-            "name": "department",
-            "in": "query",
-            "required": false,
-            "description": "Filter by department name (e.g. Cardiology, Pediatrics)",
-            "schema": { "type": "string", "example": "Cardiology" }
-          },
-          {
-            "name": "X-Hospital-ID",
-            "in": "header",
-            "schema": { "type": "string", "example": "city-care" }
-          },
-          {
-            "name": "hospital",
-            "in": "query",
-            "schema": { "type": "string", "example": "city-care" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of doctors matching criteria",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DoctorsResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/doctor-schedule": {
-      "get": {
-        "tags": ["Appointments"],
-        "summary": "Get Doctor Schedule & Free Slots",
-        "description": "Fuzzy-matches a doctor by name (e.g. 'Amit', 'Dr. Patel') and returns their free appointment slots for the next N days.",
-        "operationId": "getDoctorSchedule",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "required": true,
-            "description": "Doctor name or fragment",
-            "schema": { "type": "string", "example": "Amit" }
-          },
-          {
-            "name": "days",
-            "in": "query",
-            "required": false,
-            "description": "Days forward to scan (default 14, max 30)",
-            "schema": { "type": "integer", "example": 7 }
-          },
-          {
-            "name": "X-Hospital-ID",
-            "in": "header",
-            "schema": { "type": "string", "example": "city-care" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Doctor schedule with daily slots"
-          }
-        }
-      }
-    },
-    "/api/v1/customer": {
-      "get": {
-        "tags": ["Patients"],
-        "summary": "Customer / Patient Lookup by Phone",
-        "description": "Looks up a registered patient by phone number and returns patient details and upcoming appointments.",
-        "operationId": "getCustomerByPhone",
-        "parameters": [
-          {
-            "name": "phone",
-            "in": "query",
-            "required": true,
-            "description": "Patient phone number (last 10 digits matched)",
-            "schema": { "type": "string", "example": "9876543210" }
-          },
-          {
-            "name": "X-Hospital-ID",
-            "in": "header",
-            "schema": { "type": "string", "example": "city-care" }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Customer found" },
-          "404": { "description": "Customer not found" }
-        }
-      }
-    },
-    "/api/v1/register-patient": {
-      "post": {
-        "tags": ["Patients"],
-        "summary": "Register or Resolve Patient",
-        "description": "Idempotent registration: matches existing patient by phone or creates a new patient record.",
-        "operationId": "registerPatient",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["name", "phone"],
-                "properties": {
-                  "name": { "type": "string", "example": "Rahul Sharma" },
-                  "phone": { "type": "string", "example": "+919876543210" },
-                  "gender": { "type": "string", "enum": ["male", "female", "other"], "example": "male" },
-                  "date_of_birth": { "type": "string", "format": "date", "example": "1990-05-15" },
-                  "email": { "type": "string", "format": "email", "example": "rahul@example.com" }
-                }
-              }
-            }
-          }
         },
-        "responses": {
-          "200": { "description": "Patient registered or existing profile returned" }
-        }
-      }
-    },
-    "/api/v1/book-appointment": {
-      "post": {
-        "tags": ["Appointments"],
-        "summary": "Book an Appointment",
-        "description": "Books a doctor appointment atomically. Re-checks slot availability with lock to prevent clashes.",
-        "operationId": "bookAppointment",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["doctor_id", "date", "time"],
-                "properties": {
-                  "patient_id": { "type": "string", "format": "uuid" },
-                  "phone": { "type": "string", "example": "9876543210" },
-                  "name": { "type": "string", "example": "Rahul Sharma" },
-                  "doctor_id": { "type": "string", "format": "uuid" },
-                  "date": { "type": "string", "format": "date", "example": "2026-10-05" },
-                  "time": { "type": "string", "example": "10:00" },
-                  "reason": { "type": "string", "example": "Chest discomfort" }
-                }
-              }
+        "/api/v1/hospitals/{hospital}/info": {
+            "get": {
+                "tags": [
+                    "Hospital"
+                ],
+                "summary": "Get Hospital Information by Slug or ID",
+                "description": "Direct lookup of hospital info by slug (e.g. `city-care`) or UUID in URL path.",
+                "operationId": "getHospitalInfoBySlug",
+                "parameters": [
+                    {
+                        "name": "hospital",
+                        "in": "path",
+                        "required": true,
+                        "description": "Hospital slug or UUID",
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Hospital details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HospitalInfoResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hospital not found"
+                    }
+                },
+                "security": []
             }
-          }
         },
-        "responses": {
-          "200": { "description": "Appointment confirmed" },
-          "409": { "description": "Slot already booked" }
-        }
-      }
-    },
-    "/api/v1/reschedule-appointment": {
-      "post": {
-        "tags": ["Appointments"],
-        "summary": "Reschedule Appointment",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["appointment_id", "date", "time"],
-                "properties": {
-                  "appointment_id": { "type": "string", "format": "uuid" },
-                  "date": { "type": "string", "format": "date", "example": "2026-10-06" },
-                  "time": { "type": "string", "example": "11:30" }
-                }
-              }
+        "/api/v1/hospitals": {
+            "get": {
+                "tags": [
+                    "Hospital"
+                ],
+                "summary": "List Hospitals",
+                "description": "Lists all active hospitals in MedOS with name, slug, city, and reception phone.",
+                "operationId": "listHospitals",
+                "responses": {
+                    "200": {
+                        "description": "List of active hospitals",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "hospitals": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/HospitalListItem"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
             }
-          }
         },
-        "responses": {
-          "200": { "description": "Appointment rescheduled" }
-        }
-      }
-    },
-    "/api/v1/cancel-appointment": {
-      "post": {
-        "tags": ["Appointments"],
-        "summary": "Cancel Appointment",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["appointment_id"],
-                "properties": {
-                  "appointment_id": { "type": "string", "format": "uuid" },
-                  "reason": { "type": "string", "example": "Patient unavailable" }
-                }
-              }
+        "/api/v1/departments": {
+            "get": {
+                "tags": [
+                    "Departments & Doctors"
+                ],
+                "summary": "List Departments & Doctors with Qualifications",
+                "description": "Returns all active hospital departments grouped with their doctor profiles, including qualification, specialization (specification), phone, email, and consultation duration.",
+                "operationId": "listDepartments",
+                "parameters": [
+                    {
+                        "name": "X-Hospital-ID",
+                        "in": "header",
+                        "description": "Target hospital ID or slug",
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
+                        }
+                    },
+                    {
+                        "name": "hospital",
+                        "in": "query",
+                        "description": "Hospital slug or UUID",
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Departments and associated doctors",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DepartmentsResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
             }
-          }
         },
-        "responses": {
-          "200": { "description": "Appointment cancelled" }
-        }
-      }
-    },
-    "/api/v1/auth/login": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Generate API Bearer Token",
-        "description": "Authenticate with email and password to receive a long-lived Sanctum API Bearer token.",
-        "operationId": "login",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["email", "password"],
-                "properties": {
-                  "email": { "type": "string", "example": "admin@haztech.in" },
-                  "password": { "type": "string", "example": "password123" }
-                }
-              }
+        "/api/v1/doctors": {
+            "get": {
+                "tags": [
+                    "Departments & Doctors"
+                ],
+                "summary": "List Doctors with Qualifications & Specifications",
+                "description": "Lists all active doctors in the hospital with their qualification, specification/specialization, department, contact info, consultation duration, and next available appointment slot. Can be filtered by department.",
+                "operationId": "listDoctors",
+                "parameters": [
+                    {
+                        "name": "department",
+                        "in": "query",
+                        "required": false,
+                        "description": "Filter by department name (e.g. Cardiology, Pediatrics)",
+                        "schema": {
+                            "type": "string",
+                            "example": "Cardiology"
+                        }
+                    },
+                    {
+                        "name": "X-Hospital-ID",
+                        "in": "header",
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
+                        }
+                    },
+                    {
+                        "name": "hospital",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of doctors matching criteria",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DoctorsResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
             }
-          }
         },
-        "responses": {
-          "200": {
-            "description": "Token generated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean", "example": true },
+        "/api/v1/doctor-schedule": {
+            "get": {
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Get Doctor Schedule & Free Slots",
+                "description": "Fuzzy-matches a doctor by name (e.g. 'Amit', 'Dr. Patel') and returns their free appointment slots for the next N days.",
+                "operationId": "getDoctorSchedule",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "required": true,
+                        "description": "Doctor name or fragment",
+                        "schema": {
+                            "type": "string",
+                            "example": "Amit"
+                        }
+                    },
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "required": false,
+                        "description": "Days forward to scan (default 14, max 30)",
+                        "schema": {
+                            "type": "integer",
+                            "example": 7
+                        }
+                    },
+                    {
+                        "name": "X-Hospital-ID",
+                        "in": "header",
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Doctor schedule with daily slots"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": [],
+                        "HospitalHeader": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/customer": {
+            "get": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "Customer / Patient Lookup by Phone",
+                "description": "Looks up a registered patient by phone number and returns patient details and upcoming appointments.",
+                "operationId": "getCustomerByPhone",
+                "parameters": [
+                    {
+                        "name": "phone",
+                        "in": "query",
+                        "required": true,
+                        "description": "Patient phone number (last 10 digits matched)",
+                        "schema": {
+                            "type": "string",
+                            "example": "9876543210"
+                        }
+                    },
+                    {
+                        "name": "X-Hospital-ID",
+                        "in": "header",
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Customer found"
+                    },
+                    "404": {
+                        "description": "Customer not found"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": [],
+                        "HospitalHeader": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/register-patient": {
+            "post": {
+                "tags": [
+                    "Patients"
+                ],
+                "summary": "Register or Resolve Patient",
+                "description": "Idempotent registration: matches existing patient by phone or creates a new patient record.",
+                "operationId": "registerPatient",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "name",
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Rahul Sharma"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+919876543210"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female",
+                                            "other"
+                                        ],
+                                        "example": "male"
+                                    },
+                                    "date_of_birth": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1990-05-15"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "rahul@example.com"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Patient registered or existing profile returned"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": [],
+                        "HospitalHeader": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/book-appointment": {
+            "post": {
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Book an Appointment",
+                "description": "Books a doctor appointment atomically. Re-checks slot availability with lock to prevent clashes.",
+                "operationId": "bookAppointment",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "doctor_id",
+                                    "date",
+                                    "time"
+                                ],
+                                "properties": {
+                                    "patient_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "9876543210"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Rahul Sharma"
+                                    },
+                                    "doctor_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-10-05"
+                                    },
+                                    "time": {
+                                        "type": "string",
+                                        "example": "10:00"
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Chest discomfort"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Appointment confirmed"
+                    },
+                    "409": {
+                        "description": "Slot already booked"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": [],
+                        "HospitalHeader": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/reschedule-appointment": {
+            "post": {
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Reschedule Appointment",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "appointment_id",
+                                    "date",
+                                    "time"
+                                ],
+                                "properties": {
+                                    "appointment_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-10-06"
+                                    },
+                                    "time": {
+                                        "type": "string",
+                                        "example": "11:30"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Appointment rescheduled"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": [],
+                        "HospitalHeader": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/cancel-appointment": {
+            "post": {
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Cancel Appointment",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "appointment_id"
+                                ],
+                                "properties": {
+                                    "appointment_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Patient unavailable"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Appointment cancelled"
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": [],
+                        "HospitalHeader": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Generate API Bearer Token",
+                "description": "Authenticate with email and password to receive a long-lived Sanctum API Bearer token.",
+                "operationId": "login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "example": "admin@haztech.in"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Token generated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "1|AbCdEf12345..."
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "Sanctum Token",
+                "description": "Enter your Sanctum API token obtained from POST /api/v1/auth/login or Admin -> API Keys. Swagger UI automatically prepends 'Bearer ' when sending requests."
+            },
+            "HospitalHeader": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Hospital-ID",
+                "description": "Target hospital slug (e.g. 'city-care', 'gulf-medical') or hospital UUID for multi-tenant routing."
+            }
+        },
+        "schemas": {
+            "HospitalInfoResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
                     "data": {
-                      "type": "object",
-                      "properties": {
-                        "token": { "type": "string", "example": "1|AbCdEf12345..." }
-                      }
+                        "type": "object",
+                        "properties": {
+                            "hospital": {
+                                "$ref": "#/components/schemas/HospitalProfile"
+                            },
+                            "open_close": {
+                                "$ref": "#/components/schemas/OperatingHours"
+                            },
+                            "contact": {
+                                "$ref": "#/components/schemas/ContactDetails"
+                            },
+                            "currency": {
+                                "$ref": "#/components/schemas/CurrencyDetails"
+                            },
+                            "sms": {
+                                "$ref": "#/components/schemas/SmsDetails"
+                            },
+                            "whatsapp": {
+                                "$ref": "#/components/schemas/WhatsappDetails"
+                            },
+                            "department_count": {
+                                "type": "integer",
+                                "example": 10
+                            },
+                            "departments": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/DepartmentWithDoctors"
+                                }
+                            }
+                        }
                     }
-                  }
                 }
-              }
+            },
+            "HospitalProfile": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "11111111-1111-1111-1111-111111111111"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "City Care Hospital"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "city-care"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "42, MG Road, Koramangala"
+                    },
+                    "city": {
+                        "type": "string",
+                        "example": "Bangalore"
+                    },
+                    "state": {
+                        "type": "string",
+                        "example": "Karnataka"
+                    },
+                    "country": {
+                        "type": "string",
+                        "example": "IN"
+                    },
+                    "timezone": {
+                        "type": "string",
+                        "example": "Asia/Kolkata"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                }
+            },
+            "OperatingHours": {
+                "type": "object",
+                "properties": {
+                    "open_time": {
+                        "type": "string",
+                        "example": "08:00"
+                    },
+                    "close_time": {
+                        "type": "string",
+                        "example": "21:00"
+                    },
+                    "is_open_now": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "open",
+                            "closed"
+                        ],
+                        "example": "open"
+                    },
+                    "current_time": {
+                        "type": "string",
+                        "example": "09:30"
+                    },
+                    "timezone": {
+                        "type": "string",
+                        "example": "Asia/Kolkata"
+                    }
+                }
+            },
+            "ContactDetails": {
+                "type": "object",
+                "properties": {
+                    "phone": {
+                        "type": "string",
+                        "example": "+918041234567"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "admin@citycare.medos.local"
+                    },
+                    "emergency_phone": {
+                        "type": "string",
+                        "example": "108"
+                    }
+                }
+            },
+            "CurrencyDetails": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "example": "INR"
+                    },
+                    "symbol": {
+                        "type": "string",
+                        "example": "\u20b9"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Indian Rupee"
+                    }
+                }
+            },
+            "SmsDetails": {
+                "type": "object",
+                "properties": {
+                    "enabled": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "disabled"
+                        ],
+                        "example": "active"
+                    },
+                    "provider": {
+                        "type": "string",
+                        "example": "msg91"
+                    },
+                    "sender_id": {
+                        "type": "string",
+                        "example": "MEDOS"
+                    }
+                }
+            },
+            "WhatsappDetails": {
+                "type": "object",
+                "properties": {
+                    "enabled": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "disabled"
+                        ],
+                        "example": "active"
+                    },
+                    "provider": {
+                        "type": "string",
+                        "example": "meta"
+                    },
+                    "number": {
+                        "type": "string",
+                        "example": "+918041234567"
+                    }
+                }
+            },
+            "DoctorProfile": {
+                "type": "object",
+                "properties": {
+                    "doctor_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "a0000001-0000-0000-0000-000000000003"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Dr. Amit Patel"
+                    },
+                    "role": {
+                        "type": "string",
+                        "example": "doctor"
+                    },
+                    "department": {
+                        "type": "string",
+                        "example": "Cardiology"
+                    },
+                    "specialty": {
+                        "type": "string",
+                        "example": "Cardiology"
+                    },
+                    "specialization": {
+                        "type": "string",
+                        "example": "Cardiology"
+                    },
+                    "specification": {
+                        "type": "string",
+                        "example": "Cardiology"
+                    },
+                    "qualification": {
+                        "type": "string",
+                        "example": "MBBS, MD, DM (Cardiology)"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "+919845012347"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "amit@haztech.in"
+                    },
+                    "consultation_duration_minutes": {
+                        "type": "integer",
+                        "example": 20
+                    },
+                    "available": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "next_available": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "date": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "2026-10-05"
+                            },
+                            "day": {
+                                "type": "string",
+                                "example": "Monday"
+                            },
+                            "time": {
+                                "type": "string",
+                                "example": "10:00"
+                            }
+                        }
+                    }
+                }
+            },
+            "DepartmentWithDoctors": {
+                "type": "object",
+                "properties": {
+                    "department": {
+                        "type": "string",
+                        "example": "Cardiology"
+                    },
+                    "doctor_count": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "doctors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DoctorProfile"
+                        }
+                    }
+                }
+            },
+            "DepartmentsResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "type": "integer",
+                                "example": 10
+                            },
+                            "departments": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/DepartmentWithDoctors"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "DoctorsResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "type": "integer",
+                                "example": 12
+                            },
+                            "doctors": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/DoctorProfile"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "HospitalListItem": {
+                "type": "object",
+                "properties": {
+                    "hospital_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "11111111-1111-1111-1111-111111111111"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "City Care Hospital"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "city-care"
+                    },
+                    "city": {
+                        "type": "string",
+                        "example": "Bangalore"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "+918041234567"
+                    }
+                }
+            },
+            "ErrorResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Hospital not found."
+                    }
+                }
             }
-          }
         }
-      }
-    }
-  },
-  "components": {
-    "securitySchemes": {
-      "BearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "Sanctum Token",
-        "description": "Send Sanctum API token in Authorization header: Bearer <token>"
-      },
-      "HospitalHeader": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-Hospital-ID",
-        "description": "Optional hospital slug (e.g. `city-care`) or UUID for multi-tenant routing"
-      }
     },
-    "schemas": {
-      "HospitalInfoResponse": {
-        "type": "object",
-        "properties": {
-          "success": { "type": "boolean", "example": true },
-          "data": {
-            "type": "object",
-            "properties": {
-              "hospital": {
-                "$ref": "#/components/schemas/HospitalProfile"
-              },
-              "open_close": {
-                "$ref": "#/components/schemas/OperatingHours"
-              },
-              "contact": {
-                "$ref": "#/components/schemas/ContactDetails"
-              },
-              "currency": {
-                "$ref": "#/components/schemas/CurrencyDetails"
-              },
-              "sms": {
-                "$ref": "#/components/schemas/SmsDetails"
-              },
-              "whatsapp": {
-                "$ref": "#/components/schemas/WhatsappDetails"
-              },
-              "department_count": { "type": "integer", "example": 10 },
-              "departments": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/DepartmentWithDoctors"
-                }
-              }
-            }
-          }
+    "security": [
+        {
+            "BearerAuth": []
         }
-      },
-      "HospitalProfile": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid", "example": "11111111-1111-1111-1111-111111111111" },
-          "name": { "type": "string", "example": "City Care Hospital" },
-          "slug": { "type": "string", "example": "city-care" },
-          "address": { "type": "string", "example": "42, MG Road, Koramangala" },
-          "city": { "type": "string", "example": "Bangalore" },
-          "state": { "type": "string", "example": "Karnataka" },
-          "country": { "type": "string", "example": "IN" },
-          "timezone": { "type": "string", "example": "Asia/Kolkata" },
-          "is_active": { "type": "boolean", "example": true }
-        }
-      },
-      "OperatingHours": {
-        "type": "object",
-        "properties": {
-          "open_time": { "type": "string", "example": "08:00" },
-          "close_time": { "type": "string", "example": "21:00" },
-          "is_open_now": { "type": "boolean", "example": true },
-          "status": { "type": "string", "enum": ["open", "closed"], "example": "open" },
-          "current_time": { "type": "string", "example": "09:30" },
-          "timezone": { "type": "string", "example": "Asia/Kolkata" }
-        }
-      },
-      "ContactDetails": {
-        "type": "object",
-        "properties": {
-          "phone": { "type": "string", "example": "+918041234567" },
-          "email": { "type": "string", "example": "admin@citycare.medos.local" },
-          "emergency_phone": { "type": "string", "example": "108" }
-        }
-      },
-      "CurrencyDetails": {
-        "type": "object",
-        "properties": {
-          "code": { "type": "string", "example": "INR" },
-          "symbol": { "type": "string", "example": "₹" },
-          "name": { "type": "string", "example": "Indian Rupee" }
-        }
-      },
-      "SmsDetails": {
-        "type": "object",
-        "properties": {
-          "enabled": { "type": "boolean", "example": true },
-          "status": { "type": "string", "enum": ["active", "disabled"], "example": "active" },
-          "provider": { "type": "string", "example": "msg91" },
-          "sender_id": { "type": "string", "example": "MEDOS" }
-        }
-      },
-      "WhatsappDetails": {
-        "type": "object",
-        "properties": {
-          "enabled": { "type": "boolean", "example": true },
-          "status": { "type": "string", "enum": ["active", "disabled"], "example": "active" },
-          "provider": { "type": "string", "example": "meta" },
-          "number": { "type": "string", "example": "+918041234567" }
-        }
-      },
-      "DoctorProfile": {
-        "type": "object",
-        "properties": {
-          "doctor_id": { "type": "string", "format": "uuid", "example": "a0000001-0000-0000-0000-000000000003" },
-          "name": { "type": "string", "example": "Dr. Amit Patel" },
-          "role": { "type": "string", "example": "doctor" },
-          "department": { "type": "string", "example": "Cardiology" },
-          "specialty": { "type": "string", "example": "Cardiology" },
-          "specialization": { "type": "string", "example": "Cardiology" },
-          "specification": { "type": "string", "example": "Cardiology" },
-          "qualification": { "type": "string", "example": "MBBS, MD, DM (Cardiology)" },
-          "phone": { "type": "string", "example": "+919845012347" },
-          "email": { "type": "string", "example": "amit@haztech.in" },
-          "consultation_duration_minutes": { "type": "integer", "example": 20 },
-          "available": { "type": "boolean", "example": true },
-          "next_available": {
-            "type": "object",
-            "nullable": true,
-            "properties": {
-              "date": { "type": "string", "format": "date", "example": "2026-10-05" },
-              "day": { "type": "string", "example": "Monday" },
-              "time": { "type": "string", "example": "10:00" }
-            }
-          }
-        }
-      },
-      "DepartmentWithDoctors": {
-        "type": "object",
-        "properties": {
-          "department": { "type": "string", "example": "Cardiology" },
-          "doctor_count": { "type": "integer", "example": 1 },
-          "doctors": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DoctorProfile"
-            }
-          }
-        }
-      },
-      "DepartmentsResponse": {
-        "type": "object",
-        "properties": {
-          "success": { "type": "boolean", "example": true },
-          "data": {
-            "type": "object",
-            "properties": {
-              "count": { "type": "integer", "example": 10 },
-              "departments": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/DepartmentWithDoctors"
-                }
-              }
-            }
-          }
-        }
-      },
-      "DoctorsResponse": {
-        "type": "object",
-        "properties": {
-          "success": { "type": "boolean", "example": true },
-          "data": {
-            "type": "object",
-            "properties": {
-              "count": { "type": "integer", "example": 12 },
-              "doctors": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/DoctorProfile"
-                }
-              }
-            }
-          }
-        }
-      },
-      "HospitalListItem": {
-        "type": "object",
-        "properties": {
-          "hospital_id": { "type": "string", "format": "uuid", "example": "11111111-1111-1111-1111-111111111111" },
-          "name": { "type": "string", "example": "City Care Hospital" },
-          "slug": { "type": "string", "example": "city-care" },
-          "city": { "type": "string", "example": "Bangalore" },
-          "phone": { "type": "string", "example": "+918041234567" }
-        }
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "success": { "type": "boolean", "example": false },
-          "message": { "type": "string", "example": "Hospital not found." }
-        }
-      }
-    }
-  }
+    ]
 }

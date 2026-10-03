@@ -30,17 +30,79 @@ Visit `https://medos.haztech.cloud/docs/api` (or `http://127.0.0.1:8000/docs/api
 4. Click the blue **"Execute"** button.
 5. Review the live JSON response, status code, response headers, and ready-to-copy cURL command.
 
-### Step 3: Authenticating for Protected Endpoints
-For endpoints requiring authentication (such as booking appointments or patient search):
-1. Click the green **"Authorize"** button at the top right of the Swagger UI.
-2. In the `BearerAuth` field, enter your Sanctum token (format: `your-token-here` or `Bearer your-token-here`).
-3. Click **Authorize**, then **Close**. All subsequent requests from the Swagger UI will automatically include the `Authorization` header.
+---
 
-> **How to get a token:** Call `POST /api/v1/auth/login` with your email and password, or generate an API key from the MedOS Admin panel at `/admin/api-keys`.
+## 3. 🔐 The "Authorize" Button — Complete Authentication Guide
+
+On the top right of the Swagger UI (above the endpoints list), you will see the green **"Authorize 🔓"** button. This button manages API authentication across the playground so you can test protected endpoints without manually passing headers on every request.
+
+```
++-------------------------------------------------------------+
+| Available authorizations                                    |
++-------------------------------------------------------------+
+|                                                             |
+| BearerAuth (http, Bearer)                                   |
+| Value: [ 1|abcdef123456789...                             ] |
+|                                                             |
+| HospitalHeader (apiKey in header: X-Hospital-ID)            |
+| Value: [ city-care                                        ] |
+|                                                             |
+|                      [ Authorize ]   [ Close ]              |
++-------------------------------------------------------------+
+```
+
+### 1. What Each Field Means:
+- **`BearerAuth` (HTTP Bearer / Laravel Sanctum):**
+  - Enter your API token string (e.g. `1|AbCdEf123...`).
+  - Swagger UI automatically prepends `Bearer ` when making HTTP requests to endpoints requiring authentication.
+- **`HospitalHeader` (`X-Hospital-ID`):**
+  - Enter the hospital slug (e.g. `city-care`, `gulf-medical`) or hospital UUID.
+  - Used for multi-tenant hospital routing when using a platform or super-admin token.
+
+### 2. How to Authenticate Step-by-Step in 60 Seconds:
+1. **Get a Token right from Swagger:**
+   - Scroll down to the **Auth** section and expand `POST /api/v1/auth/login`.
+   - Click **Try it out**.
+   - Use the test credentials:
+     ```json
+     {
+       "email": "admin@haztech.in",
+       "password": "password123"
+     }
+     ```
+   - Click **Execute**.
+   - In the JSON response, copy the `token` string inside `data.token`:
+     ```json
+     {
+       "success": true,
+       "data": {
+         "token": "1|N4GZfUj5B..."
+       }
+     }
+     ```
+2. **Authorize the Playground:**
+   - Scroll back up and click the green **"Authorize 🔓"** button.
+   - Paste the token into the **`BearerAuth`** text box.
+   - (Optional) Enter `city-care` in **`HospitalHeader`**.
+   - Click **Authorize**, then click **Close**.
+3. **Verify:**
+   - Notice the green button now shows **"Authorize 🔒"** (locked padlock).
+   - All protected endpoints (such as `POST /api/v1/book-appointment`, `GET /api/v1/customer`, `GET /api/v1/doctor-schedule`) will now execute with full authentication!
+
+### 3. Available Test Accounts
+
+All demo accounts use password `password123`:
+
+| Email | Role | Pinned Hospital | Notes |
+|---|---|---|---|
+| `superadmin@haztech.in` | Super Admin | Platform-wide | Can target any hospital with `X-Hospital-ID` |
+| `admin@haztech.in` | Hospital Admin | City Care (`city-care`) | Pinned to City Care Hospital |
+| `priya@haztech.in` | Doctor (Pediatrics) | City Care (`city-care`) | Clinical doctor access |
+| `amit@haztech.in` | Doctor (Cardiology) | City Care (`city-care`) | Clinical doctor access |
 
 ---
 
-## 3. Multi-Tenant Targeting (`X-Hospital-ID`)
+## 4. Multi-Tenant Targeting (`X-Hospital-ID`)
 
 MedOS is a multi-tenant platform hosting multiple hospitals. Requests are routed to a hospital in one of the following ways:
 

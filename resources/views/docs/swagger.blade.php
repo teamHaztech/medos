@@ -133,6 +133,37 @@
     </header>
 
     <div class="swagger-container">
+        <!-- Authorize Instructions Card -->
+        <div style="background: #ffffff; border: 1px solid #cbd5e1; border-left: 4px solid #10b981; border-radius: 0.5rem; padding: 1.1rem 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 280px;">
+                    <div style="font-weight: 700; color: #065f46; font-size: 0.95rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🔐 How to Authorize in Swagger UI</span>
+                        <span style="font-size: 0.75rem; background: #d1fae5; color: #065f46; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 600;">Sanctum Bearer Token</span>
+                    </div>
+                    <p style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #334155; line-height: 1.45;">
+                        Protected endpoints (booking, patient lookup, customer) require a Bearer token. To authenticate:
+                    </p>
+                    <ol style="margin: 0; padding-left: 1.25rem; font-size: 0.825rem; color: #475569; line-height: 1.6;">
+                        <li>Under the <strong>Auth</strong> section below, open <code>POST /api/v1/auth/login</code> and click <em>Try it out</em>.</li>
+                        <li>Execute using <code>admin@haztech.in</code> / <code>password123</code> and copy the <code>token</code> string from the JSON response.</li>
+                        <li>Click the green <strong>"Authorize 🔓"</strong> button on the right.</li>
+                        <li>Paste your token into the <strong>BearerAuth</strong> input field and click <strong>Authorize</strong>.</li>
+                        <li>(Optional) Enter <code>city-care</code> in <strong>HospitalHeader (X-Hospital-ID)</strong> for multi-tenant hospital routing.</li>
+                    </ol>
+                </div>
+                <div style="background: #f8fafc; padding: 0.85rem 1rem; border-radius: 0.375rem; font-size: 0.8rem; border: 1px solid #e2e8f0; min-width: 240px;">
+                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                        Quick Demo Credentials
+                    </div>
+                    <div style="margin-bottom: 0.2rem; color: #475569;">Email: <code style="background: #e2e8f0; padding: 0.1rem 0.3rem; border-radius: 0.2rem;">admin@haztech.in</code></div>
+                    <div style="margin-bottom: 0.2rem; color: #475569;">Password: <code style="background: #e2e8f0; padding: 0.1rem 0.3rem; border-radius: 0.2rem;">password123</code></div>
+                    <div style="color: #64748b; font-size: 0.77rem; margin-top: 0.35rem;">Default Hospital: <code>city-care</code></div>
+                </div>
+            </div>
+        </div>
+
         <div class="quick-banner">
             <div>
                 <strong>Multi-Tenant Targeting:</strong> Send <code>X-Hospital-ID: city-care</code> or query param <code>?hospital=city-care</code> to test specific hospital endpoints.

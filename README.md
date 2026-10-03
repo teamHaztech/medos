@@ -22,6 +22,18 @@ MedOS includes a built-in, interactive **Swagger UI playground** for frontend de
 - **OpenAPI 3.0 JSON:** [`/api/v1/openapi.json`](https://medos.haztech.cloud/api/v1/openapi.json) (and versioned at [`public/swagger.json`](public/swagger.json) / [`docs/swagger.json`](docs/swagger.json))
 - **Comprehensive Developer Guide:** See [docs/SWAGGER_API_GUIDE.md](docs/SWAGGER_API_GUIDE.md)
 
+### 🔐 How to Authorize in Swagger UI
+
+To test protected endpoints (booking, patient lookup, doctor schedules) directly inside Swagger UI:
+1. Open the [Swagger UI Playground](https://medos.haztech.cloud/docs/api).
+2. Under **Auth**, execute `POST /api/v1/auth/login` with demo credentials:
+   - **Email:** `admin@haztech.in` | **Password:** `password123`
+3. Copy the `token` string from the JSON response.
+4. Click the green **"Authorize 🔓"** button at the top right of the Swagger UI.
+5. Paste your token into the **BearerAuth** input field and click **Authorize**.
+6. *(Optional)* Set `city-care` in **HospitalHeader** (`X-Hospital-ID`) for multi-tenant hospital routing.
+7. Click **Close** — the lock icon updates to **Authorize 🔒** and all protected requests are authenticated automatically.
+
 ### Key API Capabilities
 
 #### 1. Hospital Information (`GET /api/v1/hospital-info`)
