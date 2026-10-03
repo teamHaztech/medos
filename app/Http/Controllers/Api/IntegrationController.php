@@ -74,10 +74,10 @@ class IntegrationController extends Controller
     public function hospitals(Request $request): JsonResponse
     {
         $user = $request->user();
-        $role = is_object($user->role) ? $user->role->value : $user->role;
+        $role = $user ? (is_object($user->role) ? $user->role->value : $user->role) : 'guest';
 
         $query = Hospital::where('is_active', true);
-        if ($role !== 'super_admin') {
+        if ($user && $role !== 'super_admin' && ! empty($user->hospital_id)) {
             $query->where('id', $user->hospital_id); // a hospital token only sees its own
         }
 

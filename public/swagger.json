@@ -459,7 +459,7 @@
                                     },
                                     "phone": {
                                         "type": "string",
-                                        "example": "9876543210"
+                                        "example": "+919876543210"
                                     },
                                     "name": {
                                         "type": "string",
@@ -467,7 +467,8 @@
                                     },
                                     "doctor_id": {
                                         "type": "string",
-                                        "format": "uuid"
+                                        "format": "uuid",
+                                        "example": "a0000001-0000-0000-0000-000000000003"
                                     },
                                     "date": {
                                         "type": "string",
@@ -654,6 +655,151 @@
                     }
                 },
                 "security": []
+            }
+        },
+        "/api/v1/my-appointments": {
+            "get": {
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Get Patient Appointments",
+                "description": "Retrieve upcoming and historical appointments for a patient by phone number or patient ID.",
+                "operationId": "myAppointments",
+                "security": [
+                    {
+                        "BearerAuth": [],
+                        "HospitalHeader": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "phone",
+                        "in": "query",
+                        "required": false,
+                        "description": "Patient phone number",
+                        "schema": {
+                            "type": "string",
+                            "example": "+919876543210"
+                        }
+                    },
+                    {
+                        "name": "patient_id",
+                        "in": "query",
+                        "required": false,
+                        "description": "Patient UUID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "include_past",
+                        "in": "query",
+                        "required": false,
+                        "description": "Whether to include past completed/cancelled appointments",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "X-Hospital-ID",
+                        "in": "header",
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Patient appointment history and upcoming slots"
+                    },
+                    "404": {
+                        "description": "Patient not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/book-lab-test": {
+            "post": {
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Book a Lab Test or Scan",
+                "description": "Books laboratory or imaging orders for a registered patient, checking tests against available masters.",
+                "operationId": "bookLabTest",
+                "security": [
+                    {
+                        "BearerAuth": [],
+                        "HospitalHeader": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "X-Hospital-ID",
+                        "in": "header",
+                        "schema": {
+                            "type": "string",
+                            "example": "city-care"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+919876543210"
+                                    },
+                                    "patient_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "test": {
+                                        "type": "string",
+                                        "example": "Complete Blood Count (CBC)"
+                                    },
+                                    "tests": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "Complete Blood Count (CBC)",
+                                            "Lipid Profile"
+                                        ]
+                                    },
+                                    "priority": {
+                                        "type": "string",
+                                        "enum": [
+                                            "routine",
+                                            "urgent",
+                                            "stat"
+                                        ],
+                                        "example": "routine"
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Doctor requested test"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Lab test booked and orders generated"
+                    },
+                    "404": {
+                        "description": "Patient not found"
+                    }
+                }
             }
         }
     },
