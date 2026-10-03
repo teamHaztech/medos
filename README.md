@@ -1,58 +1,104 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# MedOS — AI-First Hospital Operating System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+[![MedOS Status](https://img.shields.io/badge/MedOS-v1.0-blue.svg)](https://medos.haztech.cloud)
+[![Laravel](https://img.shields.io/badge/Laravel-13-red.svg)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-8.4-purple.svg)](https://php.net)
+[![OpenAPI 3.0](https://img.shields.io/badge/OpenAPI-3.0-green.svg)](https://medos.haztech.cloud/docs/api)
+[![Swagger UI](https://img.shields.io/badge/Swagger-UI-85ea2d.svg)](https://medos.haztech.cloud/docs/api)
 
-## About Laravel
+Built by **Haztech Digital Innovation Agency**.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Live Application:** [https://medos.haztech.cloud](https://medos.haztech.cloud)
+- **Interactive Swagger UI:** [https://medos.haztech.cloud/docs/api](https://medos.haztech.cloud/docs/api) (or `/swagger`)
+- **OpenAPI 3.0 Specification:** [https://medos.haztech.cloud/api/v1/openapi.json](https://medos.haztech.cloud/api/v1/openapi.json)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 📖 API Documentation & Swagger UI
 
-## Learning Laravel
+MedOS includes a built-in, interactive **Swagger UI playground** for frontend developers, voice-AI partners, and external integrations:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **Swagger UI Interactive Playground:** [`/docs/api`](https://medos.haztech.cloud/docs/api) or [`/swagger`](https://medos.haztech.cloud/swagger)
+- **OpenAPI 3.0 JSON:** [`/api/v1/openapi.json`](https://medos.haztech.cloud/api/v1/openapi.json) (and versioned at [`public/swagger.json`](public/swagger.json) / [`docs/swagger.json`](docs/swagger.json))
+- **Comprehensive Developer Guide:** See [docs/SWAGGER_API_GUIDE.md](docs/SWAGGER_API_GUIDE.md)
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Key API Capabilities
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+#### 1. Hospital Information (`GET /api/v1/hospital-info`)
+Fetch real-time operational status and full profile of a hospital:
+- **Open / Close Timings & Real-Time Status:** `open_time`, `close_time`, `is_open_now` (calculated in real time in hospital timezone), localized `current_time`.
+- **Contact Info:** Reception `phone`, `email`, regional `emergency_phone` (`108` in India, `999` in UAE).
+- **Regional Currency:** ISO `code` (e.g. `INR`, `AED`), symbol (`₹`, `AED`), and country name.
+- **Communication Channels:** SMS gateway (`enabled`, `provider`, `sender_id`) and WhatsApp status (`enabled`, `number`, `provider`).
+- **Departments & Doctors:** Full department breakdown with doctor count and doctor profiles including **qualifications and specifications**.
 
 ```bash
-composer require laravel/boost --dev
+# Query by slug
+curl -s "https://medos.haztech.cloud/api/v1/hospital-info?hospital=city-care"
 
-php artisan boost:install
+# Direct URL lookup
+curl -s "https://medos.haztech.cloud/api/v1/hospitals/city-care/info"
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+#### 2. Doctors with Qualifications & Specifications (`GET /api/v1/doctors`)
+List all doctors or filter by department. Each doctor profile includes:
+- `qualification` (e.g. `MBBS, MD`, `BDS, MDS`, `KA-MED-2012-00987`)
+- `specialization` / `specification` (e.g. `Cardiology`, `Pediatrics`)
+- `consultation_duration_minutes`
+- `available` (bool) and `next_available` slot details
 
-## Contributing
+```bash
+curl -s "https://medos.haztech.cloud/api/v1/doctors?department=Cardiology&hospital=city-care"
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+#### 3. Departments & Doctors (`GET /api/v1/departments`)
+Lists all hospital departments grouped with their doctor rosters, qualifications, and consultation duration:
 
-## Code of Conduct
+```bash
+curl -s "https://medos.haztech.cloud/api/v1/departments?hospital=city-care"
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+#### 4. Appointment Booking & Doctor Schedule
+- `GET /api/v1/doctor-schedule?name=Amit&hospital=city-care` — Doctor slot calendar.
+- `POST /api/v1/book-appointment` — Atomic booking with lock to prevent double-booking.
+- `POST /api/v1/reschedule-appointment` — Reschedule existing appointment.
+- `POST /api/v1/cancel-appointment` — Cancel appointment with reason.
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 🏥 Architecture & Tech Stack
 
-## License
+- **Backend:** Laravel 13, PHP 8.4, SQLite database
+- **Frontend:** Blade + Tailwind CSS v4 + Alpine.js
+- **Auth:** Laravel Sanctum (Bearer Token) + Session Auth
+- **Multi-Tenant:** Every table is scoped by `hospital_id`. External requests use `X-Hospital-ID` header or `?hospital=<slug>`.
+- **Primary Modules:** OPD, IPD, Billing & Charge-Capture ledger, Queue Management, Pharmacy, Lab, Radiology, Dental, Clinical Nutrition, WhatsApp Bot, Voice-AI.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 💻 Local Development
+
+Use the WinGet PHP 8.4 binary on Windows or system PHP 8.4:
+
+```bash
+# Serve application
+php artisan serve --host=127.0.0.1 --port=8000
+
+# Run migrations
+php artisan migrate --force
+
+# Clear caches after route/view/config changes
+php artisan optimize:clear
+
+# Open Swagger documentation locally
+http://127.0.0.1:8000/docs/api
+```
+
+---
+
+## 📚 Documentation Index
+
+- [Swagger UI & API Developer Guide](docs/SWAGGER_API_GUIDE.md)
+- [Voice-AI / Appointment Integration API Guide](docs/VOICE_AI_API.md)
+- [MedOS Product Overview](docs/MedOS-Product-Document.md)
+- [Architecture & Development Guidelines](CLAUDE.md)
