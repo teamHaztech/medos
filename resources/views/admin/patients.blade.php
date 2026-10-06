@@ -16,7 +16,7 @@
                     name="search"
                     value="{{ request('search') }}"
                     placeholder="Search by name or phone..."
-                    class="input-field pl-10"
+                    class="input-field pl-10" style="padding-left: 2.5rem"
                 >
             </div>
         </form>
